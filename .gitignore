@@ -31,12 +31,16 @@ distro/opensuse/**/*.src.rpm
 **/*-download/
 **/*-source.tar.*
 
-# Extracted source trees (should be downloaded/extracted during build)
-distro/ubuntu/niri-git/niri/
-distro/ubuntu/niri/niri/
-distro/ubuntu/quickshell-git/quickshell/
-distro/ubuntu/cliphist/cliphist/
-distro/ubuntu/matugen/matugen/
+# Extracted source trees in Ubuntu package directories
+distro/ubuntu/*/niri/
+distro/ubuntu/*/niri-*/
+distro/ubuntu/*/quickshell/
+distro/ubuntu/*/quickshell-*/
+distro/ubuntu/*/cliphist/
+distro/ubuntu/*/cliphist-*/
+distro/ubuntu/*/matugen/
+distro/ubuntu/*/matugen-*/
+distro/ubuntu/*/dms-*/
 
 # User-specific config files
 distro/ubuntu/.dput.cf
