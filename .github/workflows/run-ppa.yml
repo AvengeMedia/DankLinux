@@ -15,6 +15,10 @@ on:
         options:
           - 'false'
           - 'true'
+      rebuild_release:
+        description: 'Release number for rebuilds (e.g., 2, 3, 4 for ppa2, ppa3, ppa4)'
+        required: false
+        default: ''
   schedule:
     - cron: '0 */6 * * *'  # Every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
 
@@ -70,8 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event.inputs.force_upload == 'true' ||
-      needs.check-updates.outputs.has_updates == 'true' ||
-      github.event.inputs.package != 'auto'
+      (needs.check-updates.outputs.has_updates == 'true' && needs.check-updates.outputs.updated_packages != '')
     
     steps:
       - name: Checkout
@@ -133,6 +136,8 @@ jobs:
           fi
       
       - name: Upload to PPA
+        env:
+          REBUILD_RELEASE: ${{ github.event.inputs.rebuild_release }}
         run: |
           PACKAGES="${{ steps.packages.outputs.packages }}"
           
@@ -141,6 +146,9 @@ jobs:
           for pkg in $PACKAGES; do
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo "Uploading $pkg to PPA..."
+            if [ -n "$REBUILD_RELEASE" ]; then
+              echo "🔄 Using rebuild release number: ppa$REBUILD_RELEASE"
+            fi
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             bash create-and-upload.sh "../$pkg" danklinux questing || echo "⚠️ Failed to upload $pkg"
           done

@@ -326,7 +326,12 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
         # If current version matches the base version, increment PPA number
         # Escape special regex characters in BASE_VERSION for pattern matching
         ESCAPED_BASE=$(echo "$BASE_VERSION" | sed 's/\./\\./g' | sed 's/+/\\+/g')
-        if [[ "$CURRENT_VERSION" =~ ^${ESCAPED_BASE}ppa([0-9]+)$ ]]; then
+        
+        # Check if manual rebuild release number is specified via environment variable
+        if [ -n "${REBUILD_RELEASE:-}" ]; then
+            PPA_NUM=$REBUILD_RELEASE
+            info "🔄 Using manual rebuild release number: ppa$PPA_NUM"
+        elif [[ "$CURRENT_VERSION" =~ ^${ESCAPED_BASE}ppa([0-9]+)$ ]]; then
             PPA_NUM=$((BASH_REMATCH[1] + 1))
             info "Detected rebuild of same commit (current: $CURRENT_VERSION), incrementing PPA number to $PPA_NUM"
         else
@@ -456,8 +461,11 @@ elif [ -n "$GIT_REPO" ]; then
         if [[ "$SOURCE_FORMAT" == *"native"* ]]; then
             # Native format: 0.2.1ppa1 (no dash, no revision)
             BASE_VERSION="${LATEST_TAG}"
-            # Check if we're rebuilding the same version (increment PPA number if so)
-            if [[ "$CURRENT_VERSION" =~ ^${LATEST_TAG}ppa([0-9]+)$ ]]; then
+            # Check if manual rebuild release number is specified
+            if [ -n "${REBUILD_RELEASE:-}" ]; then
+                PPA_NUM=$REBUILD_RELEASE
+                info "🔄 Using manual rebuild release number: ppa$PPA_NUM"
+            elif [[ "$CURRENT_VERSION" =~ ^${LATEST_TAG}ppa([0-9]+)$ ]]; then
                 PPA_NUM=$((BASH_REMATCH[1] + 1))
                 info "Detected rebuild of same version (current: $CURRENT_VERSION), incrementing PPA number to $PPA_NUM"
             else
@@ -467,13 +475,19 @@ elif [ -n "$GIT_REPO" ]; then
         else
             # Quilt format: 0.2.1-1ppa1 (with revision)
             BASE_VERSION="${LATEST_TAG}-1"
-            # Check if we're rebuilding the same version (increment PPA number if so)
-            ESCAPED_BASE=$(echo "$BASE_VERSION" | sed 's/\./\\./g' | sed 's/-/\\-/g')
-            if [[ "$CURRENT_VERSION" =~ ^${ESCAPED_BASE}ppa([0-9]+)$ ]]; then
-                PPA_NUM=$((BASH_REMATCH[1] + 1))
-                info "Detected rebuild of same version (current: $CURRENT_VERSION), incrementing PPA number to $PPA_NUM"
+            # Check if manual rebuild release number is specified
+            if [ -n "${REBUILD_RELEASE:-}" ]; then
+                PPA_NUM=$REBUILD_RELEASE
+                info "🔄 Using manual rebuild release number: ppa$PPA_NUM"
             else
-                info "New version or first build, using PPA number $PPA_NUM"
+                # Check if we're rebuilding the same version (increment PPA number if so)
+                ESCAPED_BASE=$(echo "$BASE_VERSION" | sed 's/\./\\./g' | sed 's/-/\\-/g')
+                if [[ "$CURRENT_VERSION" =~ ^${ESCAPED_BASE}ppa([0-9]+)$ ]]; then
+                    PPA_NUM=$((BASH_REMATCH[1] + 1))
+                    info "Detected rebuild of same version (current: $CURRENT_VERSION), incrementing PPA number to $PPA_NUM"
+                else
+                    info "New version or first build, using PPA number $PPA_NUM"
+                fi
             fi
             NEW_VERSION="${BASE_VERSION}ppa${PPA_NUM}"
         fi
@@ -678,14 +692,62 @@ esac
 
 cd - > /dev/null
 
+# Check if this version already exists on PPA (only in CI environment)
+if command -v rmadison >/dev/null 2>&1; then
+    info "Checking if version already exists on PPA..."
+    PPA_VERSION_CHECK=$(rmadison -u ppa:avengemedia/danklinux "$PACKAGE_NAME" 2>/dev/null | grep "$VERSION" || true)
+    if [ -n "$PPA_VERSION_CHECK" ]; then
+        warn "Version $VERSION already exists on PPA:"
+        echo "$PPA_VERSION_CHECK"
+        echo
+        warn "Skipping upload to avoid duplicate. If this is a rebuild, increment the ppa number."
+        cd "$PACKAGE_DIR"
+        case "$PACKAGE_NAME" in
+            niri-git|niri)
+                rm -rf niri
+                success "Cleaned up niri/ directory"
+                ;;
+            quickshell-git)
+                rm -rf quickshell-source
+                success "Cleaned up quickshell-source/ directory"
+                ;;
+            cliphist)
+                rm -rf cliphist-*
+                success "Cleaned up cliphist-*/ directory"
+                ;;
+            matugen)
+                rm -rf matugen-*
+                success "Cleaned up matugen-*/ directory"
+                ;;
+            danksearch)
+                rm -rf danksearch-*
+                success "Cleaned up danksearch-*/ directory"
+                ;;
+            dgop)
+                rm -rf dgop-*
+                success "Cleaned up dgop-*/ directory"
+                ;;
+        esac
+        exit 0
+    fi
+fi
+
 # Build source package
 info "Building source package..."
 echo
 
-# Use -S for source only, -sa to include original source
-# -d skips dependency checking (we're building on Fedora, not Ubuntu)
-# Pipe yes to automatically answer prompts (e.g., "continue anyway?")
-if yes | DEBIAN_FRONTEND=noninteractive debuild -S -sa -d; then
+# Determine if we need to include orig tarball (-sa) or just debian changes (-sd)
+ORIG_TARBALL="${PACKAGE_NAME}_${VERSION%.ppa*}.orig.tar.xz"
+if [ -f "../$ORIG_TARBALL" ]; then
+    info "Found existing orig tarball, using -sd (debian changes only)"
+    DEBUILD_SOURCE_FLAG="-sd"
+else
+    info "No existing orig tarball found, using -sa (include original source)"
+    DEBUILD_SOURCE_FLAG="-sa"
+fi
+
+# Use -S for source only, -sa/-sd for source inclusion
+if yes | DEBIAN_FRONTEND=noninteractive debuild -S $DEBUILD_SOURCE_FLAG -d; then
     echo
     success "Source package built successfully!"
 
@@ -700,10 +762,6 @@ if yes | DEBIAN_FRONTEND=noninteractive debuild -S -sa -d; then
             info "Cleaning up extracted source directory..."
             rm -rf quickshell-source quickshell
             ;;
-        dms-git)
-            info "Cleaning up extracted source directory..."
-            rm -rf dms-git-repo
-            ;;
         niri)
             info "Cleaning up extracted source directory..."
             rm -rf niri-[0-9]*.[0-9]*.[0-9]*
@@ -711,6 +769,18 @@ if yes | DEBIAN_FRONTEND=noninteractive debuild -S -sa -d; then
         cliphist)
             info "Cleaning up extracted source directory..."
             rm -rf cliphist-[0-9]*.[0-9]*.[0-9]*
+            ;;
+        matugen)
+            info "Cleaning up extracted source directory..."
+            rm -rf matugen-[0-9]*.[0-9]*.[0-9]*
+            ;;
+        danksearch)
+            info "Cleaning up extracted source directory..."
+            rm -rf danksearch-[0-9]*.[0-9]*.[0-9]*
+            ;;
+        dgop)
+            info "Cleaning up extracted source directory..."
+            rm -rf dgop-[0-9]*.[0-9]*.[0-9]*
             ;;
     esac
     cd - > /dev/null

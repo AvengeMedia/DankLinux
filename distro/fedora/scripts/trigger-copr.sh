@@ -17,20 +17,46 @@ fi
 
 trigger_build() {
     local package_name="$1"
+    local spec_file="$2"
+    
+    # If REBUILD_RELEASE is set, temporarily modify the Release field in spec
+    if [[ -n "${REBUILD_RELEASE:-}" ]]; then
+        echo "🔄 Manually setting Release to: $REBUILD_RELEASE"
+        # Create backup
+        cp "$spec_file" "${spec_file}.bak"
+        # Update Release field
+        sed -i "s/^Release:.*/Release:        ${REBUILD_RELEASE}%{?dist}/" "$spec_file"
+    fi
+    
     echo "📦 Building $package_name..."
     
     if copr-cli build-package "$COPR_OWNER/$COPR_PROJECT" \
         --name "$package_name" \
         --timeout 7200 \
         --nowait; then
+        
+        if [[ -n "${REBUILD_RELEASE:-}" ]] && [[ -f "${spec_file}.bak" ]]; then
+            mv "${spec_file}.bak" "$spec_file"
+        fi
         return 0
     else
         echo "   ❌ Build trigger failed" >&2
+        if [[ -n "${REBUILD_RELEASE:-}" ]] && [[ -f "${spec_file}.bak" ]]; then
+            mv "${spec_file}.bak" "$spec_file"
+        fi
         return 1
     fi
 }
 
 echo "🔍 Checking for changed spec files..."
+
+# If MANUAL_PACKAGE is set, only build that package
+if [[ -n "${MANUAL_PACKAGE:-}" ]]; then
+    echo "📦 Manual package specified: $MANUAL_PACKAGE"
+    FORCE_PACKAGE="$MANUAL_PACKAGE"
+else
+    FORCE_PACKAGE=""
+fi
 
 if [[ -n "$GITHUB_ACTIONS" ]]; then
     CHANGED_FILES=$(git diff HEAD~1 --name-only 2>/dev/null || echo "")
@@ -114,44 +140,44 @@ fi
 # Trigger builds
 BUILDS_TRIGGERED=0
 
-if [[ "$BUILD_QUICKSHELL" == true ]]; then
-    trigger_build "quickshell" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+if [[ "$BUILD_QUICKSHELL" == true ]] || [[ "$FORCE_PACKAGE" == "quickshell" ]]; then
+    trigger_build "quickshell" "quickshell/quickshell.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
-if [[ "$BUILD_QUICKSHELL_GIT" == true ]]; then
-    trigger_build "quickshell-git" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+if [[ "$BUILD_QUICKSHELL_GIT" == true ]] || [[ "$FORCE_PACKAGE" == "quickshell-git" ]]; then
+    trigger_build "quickshell-git" "quickshell/quickshell-git.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
-if [[ "$BUILD_DGOP" == true ]]; then
-    trigger_build "dgop" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+if [[ "$BUILD_DGOP" == true ]] || [[ "$FORCE_PACKAGE" == "dgop" ]]; then
+    trigger_build "dgop" "dgop/dgop.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
-if [[ "$BUILD_CLIPHIST" == true ]]; then
-    trigger_build "cliphist" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+if [[ "$BUILD_CLIPHIST" == true ]] || [[ "$FORCE_PACKAGE" == "cliphist" ]]; then
+    trigger_build "cliphist" "cliphist/cliphist.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
-if [[ "$BUILD_MATUGEN" == true ]]; then
-    trigger_build "matugen" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+if [[ "$BUILD_MATUGEN" == true ]] || [[ "$FORCE_PACKAGE" == "matugen" ]]; then
+    trigger_build "matugen" "matugen/matugen.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
-if [[ "$BUILD_HYPRPICKER" == true ]]; then
-    trigger_build "hyprpicker" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+if [[ "$BUILD_HYPRPICKER" == true ]] || [[ "$FORCE_PACKAGE" == "hyprpicker" ]]; then
+    trigger_build "hyprpicker" "hyprpicker/hyprpicker.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
-if [[ "$BUILD_BREAKPAD" == true ]]; then
-    trigger_build "breakpad" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+if [[ "$BUILD_BREAKPAD" == true ]] || [[ "$FORCE_PACKAGE" == "breakpad" ]]; then
+    trigger_build "breakpad" "breakpad/breakpad.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
-if [[ "$BUILD_GHOSTTY" == true ]]; then
-    trigger_build "ghostty" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+if [[ "$BUILD_GHOSTTY" == true ]] || [[ "$FORCE_PACKAGE" == "ghostty" ]]; then
+    trigger_build "ghostty" "ghostty/ghostty.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
-if [[ "$BUILD_MATERIAL_SYMBOLS" == true ]]; then
-    trigger_build "material-symbols-fonts" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+if [[ "$BUILD_MATERIAL_SYMBOLS" == true ]] || [[ "$FORCE_PACKAGE" == "material-symbols-fonts" ]]; then
+    trigger_build "material-symbols-fonts" "fonts/material-symbols-fonts.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
-if [[ "$BUILD_DANKSEARCH" == true ]]; then
-    trigger_build "danksearch" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+if [[ "$BUILD_DANKSEARCH" == true ]] || [[ "$FORCE_PACKAGE" == "danksearch" ]]; then
+    trigger_build "danksearch" "danksearch/danksearch.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
 echo ""

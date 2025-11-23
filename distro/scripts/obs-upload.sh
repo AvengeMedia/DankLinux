@@ -248,7 +248,8 @@ if [[ "$SOURCE_FORMAT" == *"native"* ]]; then
                     
                     # Download and extract vendored dependencies into the source directory
                     echo "    Downloading vendored dependencies"
-                    if wget -q -O "$TEMP_DIR/vendor-archive" "$SOURCE_URL"; then
+                    if curl -L -f -s -o "$TEMP_DIR/vendor-archive" "$SOURCE_URL" 2>/dev/null || \
+                       wget -q -O "$TEMP_DIR/vendor-archive" "$SOURCE_URL" 2>/dev/null; then
                         cd "$SOURCE_DIR"
                         if [[ "$SOURCE_URL" == *.tar.xz ]]; then
                             tar -xJf "$TEMP_DIR/vendor-archive"
@@ -311,7 +312,9 @@ CARGO_CONFIG_EOF
                     cd "$REPO_ROOT"
                 else
                     # Normal download and extract
-                    if wget -q -O "$TEMP_DIR/source-archive" "$SOURCE_URL"; then
+                    # Try curl first (with redirect following), fallback to wget
+                    if curl -L -f -s -o "$TEMP_DIR/source-archive" "$SOURCE_URL" 2>/dev/null || \
+                       wget -q -O "$TEMP_DIR/source-archive" "$SOURCE_URL" 2>/dev/null; then
                         # Extract source (auto-detect compression)
                         cd "$TEMP_DIR"
                         if [[ "$SOURCE_URL" == *.tar.xz ]]; then
@@ -599,7 +602,11 @@ CARGO_CONFIG_EOF
             OLD_VERSION=$(grep "^Version:" "$WORK_DIR/.osc/$PACKAGE.spec" | awk '{print $2}' | head -1)
             OLD_RELEASE=$(grep "^Release:" "$WORK_DIR/.osc/$PACKAGE.spec" | sed 's/^Release:[[:space:]]*//' | sed 's/%{?dist}//' | head -1)
 
-            if [[ "$NEW_VERSION" == "$OLD_VERSION" ]]; then
+            # Check if manual rebuild release number is specified
+            if [[ -n "${REBUILD_RELEASE:-}" ]]; then
+                echo "  🔄 Using manual rebuild release number: $REBUILD_RELEASE"
+                sed -i "s/^Release:[[:space:]]*${NEW_RELEASE}%{?dist}/Release:        ${REBUILD_RELEASE}%{?dist}/" "$WORK_DIR/$PACKAGE.spec"
+            elif [[ "$NEW_VERSION" == "$OLD_VERSION" ]]; then
                 # Same version - increment release number
                 # Extract numeric part (e.g., "1" from "1" or "12" from "12.1")
                 if [[ "$OLD_RELEASE" =~ ^([0-9]+) ]]; then
@@ -783,7 +790,11 @@ EOF
             OLD_VERSION=$(grep "^Version:" "$WORK_DIR/.osc/$PACKAGE.spec" | awk '{print $2}' | head -1)
             OLD_RELEASE=$(grep "^Release:" "$WORK_DIR/.osc/$PACKAGE.spec" | sed 's/^Release:[[:space:]]*//' | sed 's/%{?dist}//' | head -1)
 
-            if [[ "$NEW_VERSION" == "$OLD_VERSION" ]]; then
+            # Check if manual rebuild release number is specified
+            if [[ -n "${REBUILD_RELEASE:-}" ]]; then
+                echo "  🔄 Using manual rebuild release number: $REBUILD_RELEASE"
+                sed -i "s/^Release:[[:space:]]*${NEW_RELEASE}%{?dist}/Release:        ${REBUILD_RELEASE}%{?dist}/" "$WORK_DIR/$PACKAGE.spec"
+            elif [[ "$NEW_VERSION" == "$OLD_VERSION" ]]; then
                 # Same version - increment release number
                 # Extract numeric part (e.g., "1" from "1" or "12" from "12.1")
                 if [[ "$OLD_RELEASE" =~ ^([0-9]+) ]]; then
