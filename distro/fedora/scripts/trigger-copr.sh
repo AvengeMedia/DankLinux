@@ -19,32 +19,50 @@ trigger_build() {
     local package_name="$1"
     local spec_file="$2"
     
-    # If REBUILD_RELEASE is set, temporarily modify the Release field in spec
-    if [[ -n "${REBUILD_RELEASE:-}" ]]; then
-        echo "🔄 Manually setting Release to: $REBUILD_RELEASE"
-        # Create backup
-        cp "$spec_file" "${spec_file}.bak"
-        # Update Release field
-        sed -i "s/^Release:.*/Release:        ${REBUILD_RELEASE}%{?dist}/" "$spec_file"
-    fi
-    
     echo "📦 Building $package_name..."
     
-    if copr-cli build-package "$COPR_OWNER/$COPR_PROJECT" \
-        --name "$package_name" \
-        --timeout 7200 \
-        --nowait; then
+    # If REBUILD_RELEASE is set, build SRPM locally with custom release number
+    if [[ -n "${REBUILD_RELEASE:-}" ]]; then
+        echo "🔄 Building SRPM locally with Release: $REBUILD_RELEASE"
         
-        if [[ -n "${REBUILD_RELEASE:-}" ]] && [[ -f "${spec_file}.bak" ]]; then
-            mv "${spec_file}.bak" "$spec_file"
+        # Setup rpmbuild directory
+        mkdir -p ~/rpmbuild/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+        
+        # Copy spec file and modify Release field
+        cp "$spec_file" ~/rpmbuild/SPECS/
+        SPEC_NAME=$(basename "$spec_file")
+        sed -i "s/^Release:.*/Release:        ${REBUILD_RELEASE}%{?dist}/" ~/rpmbuild/SPECS/"$SPEC_NAME"
+        
+        # Build SRPM
+        cd ~/rpmbuild/SPECS
+        if rpmbuild -bs "$SPEC_NAME" 2>&1; then
+            SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm | tail -n 1)
+            echo "✅ SRPM built: $(basename $SRPM)"
+            
+            # Upload SRPM to COPR
+            if copr-cli build "$COPR_OWNER/$COPR_PROJECT" "$SRPM" --timeout 7200 --nowait; then
+                rm -f "$SRPM"
+                return 0
+            else
+                echo "   ❌ SRPM upload failed" >&2
+                rm -f "$SRPM"
+                return 1
+            fi
+        else
+            echo "   ❌ SRPM build failed" >&2
+            return 1
         fi
-        return 0
     else
-        echo "   ❌ Build trigger failed" >&2
-        if [[ -n "${REBUILD_RELEASE:-}" ]] && [[ -f "${spec_file}.bak" ]]; then
-            mv "${spec_file}.bak" "$spec_file"
+        # Normal build-package (from git)
+        if copr-cli build-package "$COPR_OWNER/$COPR_PROJECT" \
+            --name "$package_name" \
+            --timeout 7200 \
+            --nowait; then
+            return 0
+        else
+            echo "   ❌ Build trigger failed" >&2
+            return 1
         fi
-        return 1
     fi
 }
 
