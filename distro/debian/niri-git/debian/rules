@@ -1,0 +1,60 @@
+#!/usr/bin/make -f
+
+export CARGO_HOME = $(CURDIR)/.cargo
+NCPU := $(shell nproc)
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	if [ -f vendor.tar.gz ]; then \
+		tar -xzf vendor.tar.gz; \
+	elif [ -f vendor.tar ]; then \
+		tar -xf vendor.tar; \
+	fi
+
+	if [ ! -f .cargo/config.toml ] && [ -d vendor ]; then \
+		mkdir -p .cargo; \
+		if command -v cargo >/dev/null 2>&1; then \
+			cargo vendor --versioned-dirs 2>&1 | awk '/^\[source\./ { printing=1 } printing { print }' > .cargo/config.toml; \
+			if [ ! -s .cargo/config.toml ]; then \
+				echo '[source.crates-io]' > .cargo/config.toml; \
+				echo 'replace-with = "vendored-sources"' >> .cargo/config.toml; \
+				echo '' >> .cargo/config.toml; \
+				echo '[source.vendored-sources]' >> .cargo/config.toml; \
+				echo 'directory = "vendor"' >> .cargo/config.toml; \
+			fi; \
+		else \
+			echo '[source.crates-io]' > .cargo/config.toml; \
+			echo 'replace-with = "vendored-sources"' >> .cargo/config.toml; \
+			echo '' >> .cargo/config.toml; \
+			echo '[source.vendored-sources]' >> .cargo/config.toml; \
+			echo 'directory = "vendor"' >> .cargo/config.toml; \
+		fi; \
+	fi
+
+	cargo build --offline --release --features default -j$(NCPU)
+
+	for shell in bash fish zsh; do \
+		./target/release/niri completions $$shell > $$shell-completions; \
+	done
+
+override_dh_auto_install:
+	install -Dm755 target/release/niri debian/niri-git/usr/bin/niri
+	install -Dm755 resources/niri-session debian/niri-git/usr/bin/niri-session
+	install -Dm644 resources/niri.service debian/niri-git/usr/lib/systemd/user/niri.service
+	install -Dm644 resources/niri-shutdown.target debian/niri-git/usr/lib/systemd/user/niri-shutdown.target
+	install -Dm644 resources/niri.desktop debian/niri-git/usr/share/wayland-sessions/niri.desktop
+	install -Dm644 resources/niri-portals.conf debian/niri-git/usr/share/xdg-desktop-portal/niri-portals.conf
+	install -Dm644 resources/default-config.kdl debian/niri-git/usr/share/doc/niri-git/default-config.kdl
+	install -Dm644 README.md debian/niri-git/usr/share/doc/niri-git/README.md
+	install -Dm644 bash-completions debian/niri-git/usr/share/bash-completion/completions/niri
+	install -Dm644 fish-completions debian/niri-git/usr/share/fish/vendor_completions.d/niri.fish
+	install -Dm644 zsh-completions debian/niri-git/usr/share/zsh/site-functions/_niri
+
+override_dh_auto_clean:
+	cargo clean 2>/dev/null || true
+	dh_auto_clean
+
+override_dh_clean:
+	dh_clean -XCargo.toml.orig -X.orig

@@ -1,0 +1,6 @@
+danksearch (0.0.7) nightly; urgency=medium
+
+  * Fast file search utility for DMS
+  * Add dsearch symlink for compatibility
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Fri, 22 Nov 2025 22:00:00 -0500

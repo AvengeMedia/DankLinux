@@ -1,0 +1,85 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+
+# Rust build environment - use local directories (Launchpad build is sandboxed)
+export CARGO_HOME = $(CURDIR)/.cargo
+
+# Number of parallel jobs
+NCPU := $(shell nproc)
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	# Git source is already included in source package (cloned by build-source.sh)
+	# Launchpad build environment has no internet access
+	test -d niri || (echo "ERROR: niri source directory not found!" && exit 1)
+
+	# Fix vendor checksums: preserve package hash, clear file-level checksums
+	# This allows Cargo to work even if .orig/.rej files are present or removed
+	for checksum in niri/vendor/*/.cargo-checksum.json; do \
+		if [ -f "$$checksum" ]; then \
+			pkg=$$(cat "$$checksum" | grep -o '"package":"[^"]*"' | cut -d'"' -f4); \
+			echo "{\"files\":{},\"package\":\"$$pkg\"}" > "$$checksum"; \
+		fi; \
+	done
+
+	# Build with cargo using vendored dependencies (no internet access on Launchpad)
+	cd niri && \
+		cargo build --offline --release --features default -j$(NCPU)
+
+	# Generate shell completions
+	cd niri && \
+		for shell in bash fish zsh; do \
+			./target/release/niri completions $$shell > $$shell-completions; \
+		done
+
+override_dh_auto_install:
+	# Install binary
+	install -vDm755 niri/target/release/niri \
+		debian/niri-git/usr/bin/niri
+
+	# Install niri-session
+	install -vDm755 niri/resources/niri-session \
+		debian/niri-git/usr/bin/niri-session
+
+	# Install systemd service files
+	install -vDm644 niri/resources/niri.service \
+		debian/niri-git/usr/lib/systemd/user/niri.service
+	install -vDm644 niri/resources/niri-shutdown.target \
+		debian/niri-git/usr/lib/systemd/user/niri-shutdown.target
+
+	# Install desktop session file
+	install -vDm644 niri/resources/niri.desktop \
+		debian/niri-git/usr/share/wayland-sessions/niri.desktop
+
+	# Install portal configuration
+	install -vDm644 niri/resources/niri-portals.conf \
+		debian/niri-git/usr/share/xdg-desktop-portal/niri-portals.conf
+
+	# Install documentation
+	install -vDm644 niri/resources/default-config.kdl \
+		debian/niri-git/usr/share/doc/niri-git/default-config.kdl
+	install -vDm644 niri/README.md \
+		debian/niri-git/usr/share/doc/niri-git/README.md
+
+	# Install shell completions
+	install -vDm644 niri/bash-completions \
+		debian/niri-git/usr/share/bash-completion/completions/niri
+	install -vDm644 niri/fish-completions \
+		debian/niri-git/usr/share/fish/vendor_completions.d/niri.fish
+	install -vDm644 niri/zsh-completions \
+		debian/niri-git/usr/share/zsh/site-functions/_niri
+
+override_dh_auto_clean:
+	# Don't delete niri directory - it's part of the source package (native format)
+	# Clean up cargo cache and build artifacts
+	rm -rf .cargo
+	if [ -d niri ]; then cd niri && cargo clean 2>/dev/null || true; fi
+	dh_auto_clean
+
+# Prevent dh_clean from removing .orig files in vendor directories
+# This is critical for Rust packages with vendored dependencies
+override_dh_clean:
+	dh_clean -XCargo.toml.orig -X.orig

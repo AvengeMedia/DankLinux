@@ -1,0 +1,215 @@
+name: Auto-update Packages
+
+on:
+  schedule:
+    # Run every 6 hours (at 00:00, 06:00, 12:00, and 18:00 UTC)
+    - cron: '0 */6 * * *'
+
+  workflow_dispatch:
+    inputs:
+      trigger_builds:
+        description: 'Trigger COPR builds'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - 'auto'
+          - 'force'
+          - 'false'
+
+  push:
+    branches:
+      - master
+    paths:
+      - '.github/workflows/run-copr.yml'
+      - 'distro/fedora/scripts/update-packages.sh'
+      - 'distro/fedora/scripts/fetch-version.sh'
+      - 'distro/fedora/scripts/trigger-copr.sh'
+
+jobs:
+  update-packages:
+    name: Check for package updates
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    outputs:
+      has_changes: ${{ steps.update.outputs.has_changes }}
+      spec_changes: ${{ steps.check_push.outputs.spec_changes }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl git
+
+      - name: Run update script
+        id: update
+        run: |
+          chmod +x distro/fedora/scripts/*.sh
+          cd distro/fedora
+          ../../distro/fedora/scripts/update-packages.sh | tee update-log.txt
+
+          # Check if there are any changes - use git diff --exit-code for reliability
+          if git diff --exit-code >/dev/null 2>&1; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "📋 No updates found"
+          else
+            CHANGES=$(git diff --name-only | wc -l)
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "📋 Updates detected! ($CHANGES files changed)"
+            echo "Changed files:"
+            git diff --name-only | sed 's/^/  - /'
+          fi
+
+      - name: Check for spec changes in push
+        id: check_push
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            # Check if any spec files were changed in the push itself
+            SPEC_CHANGES=$(git diff HEAD~1 --name-only | grep '\.spec$' || echo "")
+            if [[ -n "$SPEC_CHANGES" ]]; then
+              echo "spec_changes=true" >> $GITHUB_OUTPUT
+              echo "📋 Spec files modified in push:"
+              echo "$SPEC_CHANGES" | sed 's/^/  - /'
+            else
+              echo "spec_changes=false" >> $GITHUB_OUTPUT
+              echo "📋 No spec files modified in push"
+            fi
+          else
+            echo "spec_changes=false" >> $GITHUB_OUTPUT
+            echo "📋 Not a push event, skipping spec change check"
+          fi
+
+      - name: Debug outputs
+        run: |
+          echo "=== DEBUG OUTPUTS ==="
+          echo "has_changes: ${{ steps.update.outputs.has_changes }}"
+          echo "spec_changes: ${{ steps.check_push.outputs.spec_changes }}"
+          echo "trigger_builds: ${{ github.event.inputs.trigger_builds }}"
+          echo "event_name: ${{ github.event_name }}"
+          echo ""
+          echo "Trigger logic:"
+          echo "  - Force build if: trigger_builds == 'force'"
+          echo "  - Auto build if: trigger_builds != 'false' AND (has_changes OR spec_changes OR schedule OR push)"
+          echo "===================="
+
+      - name: Commit and push changes
+        if: steps.update.outputs.has_changes == 'true'
+        run: |
+          # Get list of changed spec files for commit message
+          CHANGED_SPECS=$(git diff --name-only | grep '\.spec$' | xargs basename -a | tr '\n' ', ' | sed 's/,$//')
+
+          git add -A
+          git commit -m "Auto-update packages: $CHANGED_SPECS
+
+          🤖 Automated update by GitHub Actions
+
+          Updated packages:
+          $(git diff HEAD~1 --name-only | grep '\.spec$' | sed 's/^/  - /')
+
+          Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          git push
+
+      - name: Create update summary
+        if: steps.update.outputs.has_changes == 'true'
+        run: |
+          echo "## 📦 Package Updates" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The following packages were updated:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Parse update log for changes
+          if grep -q "Update available" update-log.txt; then
+            grep "Update available" update-log.txt | sed 's/^/- /' >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Changed Files" >> $GITHUB_STEP_SUMMARY
+          git diff HEAD~1 --name-only | grep '\.spec$' | sed 's/^/- `/' | sed 's/$/`/' >> $GITHUB_STEP_SUMMARY
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 [View commit](https://github.com/${{ github.repository }}/commit/$(git rev-parse HEAD))" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload update log
+        if: steps.update.outputs.has_changes == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: update-log-${{ github.run_number }}
+          path: update-log.txt
+          retention-days: 30
+
+  trigger-copr-builds:
+    name: Trigger COPR builds
+    needs: update-packages
+    runs-on: ubuntu-latest
+    if: |
+      github.event.inputs.trigger_builds == 'force' ||
+      (
+        github.event.inputs.trigger_builds != 'false' &&
+        (
+          needs.update-packages.outputs.has_changes == 'true' ||
+          needs.update-packages.outputs.spec_changes == 'true' ||
+          github.event_name == 'schedule' ||
+          github.event_name == 'push'
+        )
+      )
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Install COPR CLI
+        run: |
+          sudo dnf install -y copr-cli || sudo apt-get install -y copr-cli || {
+            echo "⚠️ Could not install copr-cli via package manager"
+            echo "Installing via pip..."
+            pip install copr-cli
+          }
+
+      - name: Configure COPR
+        env:
+          COPR_CONFIG: ${{ secrets.COPR_CONFIG }}
+        run: |
+          if [[ -z "$COPR_CONFIG" ]]; then
+            echo "❌ COPR_CONFIG secret not set"
+            echo "Please add your COPR configuration as a repository secret named COPR_CONFIG"
+            exit 1
+          fi
+
+          mkdir -p ~/.config
+          echo "$COPR_CONFIG" > ~/.config/copr
+          chmod 600 ~/.config/copr
+
+      - name: Trigger builds
+        run: |
+          chmod +x distro/fedora/scripts/trigger-copr.sh
+          cd distro/fedora
+          ./scripts/trigger-copr.sh
+
+      - name: Build summary
+        run: |
+          echo "## 🚀 COPR Builds Triggered" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Builds have been triggered for updated packages." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 [View builds](https://copr.fedorainfracloud.org/coprs/avengemedia/danklinux/builds/)" >> $GITHUB_STEP_SUMMARY
+
+    outputs:
+      has_changes: ${{ needs.update-packages.outputs.has_changes }}

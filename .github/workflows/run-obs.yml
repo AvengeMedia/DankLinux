@@ -1,0 +1,152 @@
+name: Update OBS Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package to upload (cliphist, matugen, niri, niri-git, quickshell-git, danksearch, dgop, or all)'
+        required: false
+        default: 'auto'
+      force_upload:
+        description: 'Force upload without version check'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
+
+jobs:
+  check-updates:
+    name: Check for package updates
+    runs-on: ubuntu-latest
+    
+    outputs:
+      has_updates: ${{ steps.check.outputs.has_updates }}
+      updated_packages: ${{ steps.check.outputs.updated_packages }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl
+      
+      - name: Check for updates
+        id: check
+        run: |
+          chmod +x distro/fedora/scripts/*.sh
+          
+          # Run update script in check-only mode (don't commit)
+          cd distro/fedora
+          ../../distro/fedora/scripts/update-packages.sh | tee /tmp/update-log.txt
+          
+          # Check if there are changes
+          if git diff --exit-code >/dev/null 2>&1; then
+            echo "has_updates=false" >> $GITHUB_OUTPUT
+            echo "updated_packages=" >> $GITHUB_OUTPUT
+            echo "📋 No updates found"
+          else
+            echo "has_updates=true" >> $GITHUB_OUTPUT
+            
+            # Get list of updated packages from spec file changes
+            UPDATED=$(git diff --name-only | grep '\.spec$' | xargs -I{} basename {} .spec | tr '\n' ',' | sed 's/,$//')
+            echo "updated_packages=$UPDATED" >> $GITHUB_OUTPUT
+            echo "📋 Updates found: $UPDATED"
+            
+            # Reset changes (don't commit for OBS, just upload)
+            git checkout .
+          fi
+
+  upload-obs:
+    name: Upload to OBS
+    needs: check-updates
+    runs-on: ubuntu-latest
+    if: |
+      github.event.inputs.force_upload == 'true' ||
+      needs.check-updates.outputs.has_updates == 'true' ||
+      github.event.inputs.package != 'auto'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Determine packages to upload
+        id: packages
+        run: |
+          if [[ "${{ github.event.inputs.force_upload }}" == "true" ]]; then
+            PKG="${{ github.event.inputs.package }}"
+            if [[ "$PKG" == "auto" ]]; then
+              echo "packages=all" >> $GITHUB_OUTPUT
+            else
+              echo "packages=$PKG" >> $GITHUB_OUTPUT
+            fi
+            echo "🚀 Force upload: $PKG"
+          elif [[ -n "${{ github.event.inputs.package }}" && "${{ github.event.inputs.package }}" != "auto" ]]; then
+            echo "packages=${{ github.event.inputs.package }}" >> $GITHUB_OUTPUT
+            echo "📦 Manual selection: ${{ github.event.inputs.package }}"
+          elif [[ "${{ needs.check-updates.outputs.has_updates }}" == "true" ]]; then
+            # Upload only updated packages
+            UPDATED="${{ needs.check-updates.outputs.updated_packages }}"
+            if [[ -n "$UPDATED" ]]; then
+              # Convert comma-separated to space-separated for obs-upload.sh
+              PACKAGES=$(echo "$UPDATED" | tr ',' ' ')
+              echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
+              echo "✨ Uploading updated packages: $PACKAGES"
+            else
+              echo "packages=all" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "packages=all" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Install OSC
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y osc
+          
+          mkdir -p ~/.config/osc
+          cat > ~/.config/osc/oscrc << EOF
+          [general]
+          apiurl = https://api.opensuse.org
+          
+          [https://api.opensuse.org]
+          user = ${{ secrets.OBS_USERNAME }}
+          pass = ${{ secrets.OBS_PASSWORD }}
+          EOF
+          chmod 600 ~/.config/osc/oscrc
+      
+      - name: Upload to OBS
+        run: |
+          PACKAGES="${{ steps.packages.outputs.packages }}"
+          
+          if [[ "${{ needs.check-updates.outputs.has_updates }}" == "true" ]]; then
+            MESSAGE="Auto-update: $PACKAGES (new versions detected)"
+          else
+            MESSAGE="Manual upload from GitHub Actions"
+          fi
+          
+          bash distro/scripts/obs-upload.sh "$PACKAGES" "$MESSAGE"
+      
+      - name: Summary
+        run: |
+          echo "### OBS Package Upload Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.check-updates.outputs.has_updates }}" == "true" ]]; then
+            echo "- **Updated Packages**: ${{ needs.check-updates.outputs.updated_packages }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Uploaded Packages**: ${{ steps.packages.outputs.packages }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "- **OBS Project**: https://build.opensuse.org/project/show/home:AvengeMedia:danklinux" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Builds will appear on OBS once processing completes." >> $GITHUB_STEP_SUMMARY

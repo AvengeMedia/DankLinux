@@ -1,0 +1,21 @@
+Source: matugen
+Section: graphics
+Priority: optional
+Maintainer: Avenge Media <AvengeMedia.US@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               cargo [arm64],
+               pkg-config [arm64],
+               libx11-dev [arm64]
+Standards-Version: 4.6.2
+Homepage: https://github.com/InioX/matugen
+Vcs-Browser: https://github.com/InioX/matugen
+Vcs-Git: https://github.com/InioX/matugen.git
+
+Package: matugen
+Architecture: amd64 arm64
+Depends: ${misc:Depends},
+         libx11-6
+Description: Material You color generation tool
+ matugen is a Material You color palette generator that generates color
+ schemes from images and applies them to various applications and desktop
+ environments.

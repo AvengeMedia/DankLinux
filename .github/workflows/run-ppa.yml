@@ -1,0 +1,161 @@
+name: Update PPA Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package to upload (cliphist, matugen, niri, niri-git, quickshell-git, danksearch, dgop, or all)'
+        required: false
+        default: 'auto'
+      force_upload:
+        description: 'Force upload without version check'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
+
+jobs:
+  check-updates:
+    name: Check for package updates
+    runs-on: ubuntu-latest
+    
+    outputs:
+      has_updates: ${{ steps.check.outputs.has_updates }}
+      updated_packages: ${{ steps.check.outputs.updated_packages }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl
+      
+      - name: Check for updates
+        id: check
+        run: |
+          chmod +x distro/fedora/scripts/*.sh
+          
+          # Run update script in check-only mode (don't commit)
+          cd distro/fedora
+          ../../distro/fedora/scripts/update-packages.sh | tee /tmp/update-log.txt
+          
+          # Check if there are changes
+          if git diff --exit-code >/dev/null 2>&1; then
+            echo "has_updates=false" >> $GITHUB_OUTPUT
+            echo "updated_packages=" >> $GITHUB_OUTPUT
+            echo "📋 No updates found"
+          else
+            echo "has_updates=true" >> $GITHUB_OUTPUT
+            
+            # Get list of updated packages from spec file changes
+            UPDATED=$(git diff --name-only | grep '\.spec$' | xargs -I{} basename {} .spec | tr '\n' ',' | sed 's/,$//')
+            echo "updated_packages=$UPDATED" >> $GITHUB_OUTPUT
+            echo "📋 Updates found: $UPDATED"
+            
+            # Reset changes (don't commit for PPA, just upload)
+            git checkout .
+          fi
+
+  upload-ppa:
+    name: Upload to PPA
+    needs: check-updates
+    runs-on: ubuntu-latest
+    if: |
+      github.event.inputs.force_upload == 'true' ||
+      needs.check-updates.outputs.has_updates == 'true' ||
+      github.event.inputs.package != 'auto'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            debhelper \
+            devscripts \
+            dput \
+            lftp \
+            build-essential \
+            fakeroot \
+            dpkg-dev
+      
+      - name: Configure GPG
+        env:
+          GPG_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          echo "$GPG_KEY" | gpg --import
+          GPG_KEY_ID=$(gpg --list-secret-keys --keyid-format LONG | grep sec | awk '{print $2}' | cut -d'/' -f2)
+          echo "DEBSIGN_KEYID=$GPG_KEY_ID" >> $GITHUB_ENV
+      
+      - name: Determine packages to upload
+        id: packages
+        run: |
+          if [[ "${{ github.event.inputs.force_upload }}" == "true" ]]; then
+            PKG="${{ github.event.inputs.package }}"
+            if [[ "$PKG" == "auto" ]]; then
+              PACKAGES="cliphist matugen niri niri-git quickshell-git danksearch dgop"
+            else
+              PACKAGES="$PKG"
+            fi
+            echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
+            echo "🚀 Force upload: $PACKAGES"
+          elif [[ -n "${{ github.event.inputs.package }}" && "${{ github.event.inputs.package }}" != "auto" ]]; then
+            PACKAGES="${{ github.event.inputs.package }}"
+            echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
+            echo "📦 Manual selection: $PACKAGES"
+          elif [[ "${{ needs.check-updates.outputs.has_updates }}" == "true" ]]; then
+            # Upload only updated packages
+            UPDATED="${{ needs.check-updates.outputs.updated_packages }}"
+            if [[ -n "$UPDATED" ]]; then
+              # Convert comma-separated to space-separated
+              PACKAGES=$(echo "$UPDATED" | tr ',' ' ')
+              echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
+              echo "✨ Uploading updated packages: $PACKAGES"
+            else
+              PACKAGES="cliphist matugen niri niri-git quickshell-git danksearch dgop"
+              echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
+            fi
+          else
+            PACKAGES="cliphist matugen niri niri-git quickshell-git danksearch dgop"
+            echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Upload to PPA
+        run: |
+          PACKAGES="${{ steps.packages.outputs.packages }}"
+          
+          cd distro/ubuntu/ppa
+          
+          for pkg in $PACKAGES; do
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Uploading $pkg to PPA..."
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            bash create-and-upload.sh "../$pkg" danklinux questing || echo "⚠️ Failed to upload $pkg"
+          done
+      
+      - name: Summary
+        run: |
+          echo "### PPA Package Upload Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.check-updates.outputs.has_updates }}" == "true" ]]; then
+            echo "- **Updated Packages**: ${{ needs.check-updates.outputs.updated_packages }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Uploaded Packages**: ${{ steps.packages.outputs.packages }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "- **PPA**: https://launchpad.net/~avengemedia/+archive/ubuntu/danklinux/+packages" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Builds will appear once Launchpad processes the uploads." >> $GITHUB_STEP_SUMMARY

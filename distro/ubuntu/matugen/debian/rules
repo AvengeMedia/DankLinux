@@ -1,0 +1,54 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+
+# Rust build environment for arm64
+export CARGO_HOME = $(CURDIR)/.cargo
+
+# Extract version from debian/changelog
+DEB_VERSION := $(shell dpkg-parsechangelog -S Version)
+# Get upstream version (strip ppaN suffix for native packages)
+UPSTREAM_VERSION := $(shell echo $(DEB_VERSION) | sed 's/ppa[0-9]*$$//')
+
+# Get architecture
+DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
+
+%:
+	dh $@
+
+override_dh_auto_build:
+ifeq ($(DEB_HOST_ARCH),amd64)
+	# Binary tarball is already included in source package (downloaded by build-source.sh)
+	# Launchpad build environment has no internet access
+	test -f matugen-amd64.tar.gz || (echo "ERROR: matugen-amd64.tar.gz not found!" && exit 1)
+	tar -xzf matugen-amd64.tar.gz
+else ifeq ($(DEB_HOST_ARCH),arm64)
+	# Source tarball is already included in source package (downloaded by build-source.sh)
+	# Launchpad build environment has no internet access
+	test -f matugen-source.tar.gz || (echo "ERROR: matugen-source.tar.gz not found!" && exit 1)
+	tar -xzf matugen-source.tar.gz
+	cd matugen-$(UPSTREAM_VERSION) && cargo build --release
+endif
+
+override_dh_auto_install:
+ifeq ($(DEB_HOST_ARCH),amd64)
+	# Install binary from tarball (look for common extraction patterns)
+	if [ -f matugen ]; then \
+		install -Dm755 matugen debian/matugen/usr/bin/matugen; \
+	elif [ -f matugen-*/matugen ]; then \
+		install -Dm755 matugen-*/matugen debian/matugen/usr/bin/matugen; \
+	else \
+		echo "Error: Cannot find matugen binary" && exit 1; \
+	fi
+else ifeq ($(DEB_HOST_ARCH),arm64)
+	# Install binary built from source
+	install -Dm755 matugen-$(UPSTREAM_VERSION)/target/release/matugen \
+		debian/matugen/usr/bin/matugen
+endif
+
+override_dh_auto_clean:
+	# Don't delete tarballs - they're part of the source package (native format)
+	# Clean up extracted directories and cargo cache
+	rm -rf matugen-$(UPSTREAM_VERSION)
+	rm -rf .cargo
+	dh_auto_clean

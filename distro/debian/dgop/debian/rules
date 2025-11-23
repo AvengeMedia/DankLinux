@@ -1,0 +1,31 @@
+#!/usr/bin/make -f
+
+DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
+
+ifeq ($(DEB_HOST_ARCH),amd64)
+    BINARY_FILE := dgop-linux-amd64.gz
+else ifeq ($(DEB_HOST_ARCH),arm64)
+    BINARY_FILE := dgop-linux-arm64.gz
+else
+    $(error Unsupported architecture: $(DEB_HOST_ARCH))
+endif
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	if [ -f $(BINARY_FILE) ]; then \
+		gunzip -c $(BINARY_FILE) > dgop; \
+	elif [ -f ../SOURCES/$(BINARY_FILE) ]; then \
+		gunzip -c ../SOURCES/$(BINARY_FILE) > dgop; \
+	else \
+		echo "ERROR: $(BINARY_FILE) not found!" && exit 1; \
+	fi; \
+	chmod +x dgop
+
+override_dh_auto_install:
+	install -Dm755 dgop debian/dgop/usr/bin/dgop
+
+override_dh_auto_clean:
+	rm -f dgop
+	dh_auto_clean

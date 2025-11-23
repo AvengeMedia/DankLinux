@@ -1,0 +1,12 @@
+<services>
+  <service name="download_url">
+    <param name="protocol">https</param>
+    <param name="host">github.com</param>
+    <param name="path">/AvengeMedia/dgop/releases/download/v0.1.11/dgop-linux-amd64.gz</param>
+  </service>
+  <service name="download_url">
+    <param name="protocol">https</param>
+    <param name="host">github.com</param>
+    <param name="path">/AvengeMedia/dgop/releases/download/v0.1.11/dgop-linux-arm64.gz</param>
+  </service>
+</services>

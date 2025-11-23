@@ -1,0 +1,47 @@
+#!/usr/bin/make -f
+
+export CARGO_HOME = $(CURDIR)/.cargo
+NCPU := $(shell nproc)
+DEB_VERSION := $(shell dpkg-parsechangelog -S Version)
+UPSTREAM_VERSION := $(shell echo $(DEB_VERSION) | sed 's/-[^-]*$$//')
+BASE_VERSION := $(shell echo $(UPSTREAM_VERSION) | sed 's/ppa[0-9]*$$//')
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	sed -i 's/< 0\.3\.0/< 0.4.0/g' vendor/libdisplay-info-sys-*/build.rs vendor/libdisplay-info-sys-*/Cargo.toml 2>/dev/null || true
+	for f in vendor/libdisplay-info-sys-*/.cargo-checksum.json; do \
+		[ -f "$$f" ] && echo '{"files":{}}' > "$$f"; \
+	done
+	sed -i '/name = "libdisplay-info-sys"/,/^$$/{/^checksum/d}' Cargo.lock 2>/dev/null || true
+
+	if [ ! -f .cargo/config.toml ] && [ -d vendor ]; then \
+		echo "Error: .cargo/config.toml missing but vendor directory exists"; \
+		exit 1; \
+	fi
+	cargo build --offline --release --features default -j$(NCPU)
+
+	for shell in bash fish zsh; do \
+		./target/release/niri completions $$shell > $$shell-completions; \
+	done
+
+override_dh_auto_install:
+	install -Dm755 target/release/niri debian/niri/usr/bin/niri
+	install -Dm755 resources/niri-session debian/niri/usr/bin/niri-session
+	install -Dm644 resources/niri.service debian/niri/usr/lib/systemd/user/niri.service
+	install -Dm644 resources/niri-shutdown.target debian/niri/usr/lib/systemd/user/niri-shutdown.target
+	install -Dm644 resources/niri.desktop debian/niri/usr/share/wayland-sessions/niri.desktop
+	install -Dm644 resources/niri-portals.conf debian/niri/usr/share/xdg-desktop-portal/niri-portals.conf
+	install -Dm644 resources/default-config.kdl debian/niri/usr/share/doc/niri/default-config.kdl
+	install -Dm644 README.md debian/niri/usr/share/doc/niri/README.md
+	install -Dm644 bash-completions debian/niri/usr/share/bash-completion/completions/niri
+	install -Dm644 fish-completions debian/niri/usr/share/fish/vendor_completions.d/niri.fish
+	install -Dm644 zsh-completions debian/niri/usr/share/zsh/site-functions/_niri
+
+override_dh_auto_clean:
+	cargo clean 2>/dev/null || true
+	dh_auto_clean
+
+override_dh_clean:
+	dh_clean -XCargo.toml.orig -X.orig

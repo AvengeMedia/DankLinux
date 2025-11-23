@@ -1,0 +1,52 @@
+Source: niri-git
+Section: x11
+Priority: optional
+Maintainer: Avenge Media <AvengeMedia.US@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               cargo (>= 1.80.1),
+               libudev-dev,
+               libwayland-dev,
+               libseat-dev,
+               libglib2.0-dev,
+               libclang-dev,
+               libpipewire-0.3-dev,
+               libcairo2-dev,
+               libpango1.0-dev,
+               libdisplay-info-dev,
+               libinput-dev,
+               libgbm-dev,
+               libxkbcommon-dev
+Standards-Version: 4.6.2
+Homepage: https://github.com/YaLTeR/niri
+Vcs-Browser: https://github.com/YaLTeR/niri
+Vcs-Git: https://github.com/YaLTeR/niri.git
+
+Package: niri-git
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         libdisplay-info2,
+         libseat1
+Recommends: fuzzel,
+            xdg-desktop-portal-gtk,
+            xdg-desktop-portal-gnome,
+            gnome-keyring,
+            policykit-1-gnome
+Conflicts: niri
+Provides: niri
+Description: Scrollable-tiling Wayland compositor (git development version)
+ niri is a scrollable-tiling Wayland compositor built from the git master
+ branch. It provides a unique scrollable tiling layout that allows for
+ infinite workspace scrolling.
+ .
+ Features include:
+  - Scrollable tiling layout
+  - Smooth animations
+  - Dynamic workspaces
+  - Built-in screen recording support
+  - Full Wayland protocol support
+  - Systemd integration
+  - XDG desktop portal support
+ .
+ This is the development version built from git master with the latest
+ features. For a stable release, use the 'niri' package instead.

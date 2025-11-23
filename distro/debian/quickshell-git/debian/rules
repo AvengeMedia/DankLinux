@@ -1,0 +1,49 @@
+#!/usr/bin/make -f
+
+GIT_DATE := $(shell date +%Y%m%d)
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	SOURCE_DIR="quickshell-source"; \
+	if [ ! -d "quickshell-source" ]; then \
+		if [ -f "CMakeLists.txt" ] && [ -d "src" ]; then \
+			SOURCE_DIR="."; \
+		elif [ -f "../SOURCES/quickshell-source.tar.gz" ]; then \
+			tar -xzf ../SOURCES/quickshell-source.tar.gz; \
+		elif [ -f "quickshell-source.tar.gz" ]; then \
+			tar -xzf quickshell-source.tar.gz; \
+		else \
+			echo "Error: quickshell-source directory not found!"; \
+			ls -la; \
+			exit 1; \
+		fi; \
+	fi && \
+	if [ -f "$$SOURCE_DIR/src/wayland/CMakeLists.txt" ]; then \
+		if ! pkg-config --atleast-version=1.41 wayland-protocols 2>/dev/null; then \
+			WL_VERSION=$$(pkg-config --modversion wayland-protocols 2>/dev/null || echo "unknown"); \
+			sed -i 's/wayland-protocols>=1\.41/wayland-protocols>=1.38/g' $$SOURCE_DIR/src/wayland/CMakeLists.txt; \
+			echo "Patched wayland-protocols requirement (system has $$WL_VERSION)"; \
+		fi; \
+	fi && \
+	cmake -GNinja \
+		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		-DCRASH_REPORTER=off \
+		-DCMAKE_CXX_STANDARD=20 \
+		-DCMAKE_INSTALL_PREFIX=/usr \
+		-S $$SOURCE_DIR \
+		-B build
+
+override_dh_auto_build:
+	cmake --build build
+
+override_dh_auto_install:
+	DESTDIR=$(CURDIR)/debian/quickshell-git cmake --install build
+
+override_dh_auto_clean:
+	rm -rf build
+	dh_auto_clean
+
+override_dh_shlibdeps:
+	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info

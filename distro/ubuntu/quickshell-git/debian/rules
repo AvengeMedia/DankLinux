@@ -1,0 +1,57 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+
+# Get git commit date for version (will be set in changelog)
+GIT_DATE := $(shell date +%Y%m%d)
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	# Source is included in source package (cloned by build-source.sh)
+	# This will be available on Launchpad build daemons
+	if [ ! -d "quickshell-source" ]; then \
+		echo "Error: quickshell-source directory not found!"; \
+		echo "Source should be included in the source package."; \
+		exit 1; \
+	fi
+
+	# Patch wayland-protocols version requirement if needed
+	# Check available version and patch only if necessary
+	if [ -f "quickshell-source/src/wayland/CMakeLists.txt" ]; then \
+		if ! pkg-config --atleast-version=1.41 wayland-protocols 2>/dev/null; then \
+			WL_VERSION=$$(pkg-config --modversion wayland-protocols 2>/dev/null || echo "unknown"); \
+			sed -i 's/wayland-protocols>=1\.41/wayland-protocols>=1.38/g' quickshell-source/src/wayland/CMakeLists.txt; \
+			echo "Patched wayland-protocols requirement from 1.41 to 1.38 (system has $$WL_VERSION)"; \
+		else \
+			echo "wayland-protocols >= 1.41 available, no patch needed"; \
+		fi \
+	fi
+
+	# Configure with CMake (call cmake directly to ensure build directory is created)
+	# Using same flags as working pacstall build
+	cmake -GNinja \
+		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		-DCRASH_REPORTER=off \
+		-DCMAKE_CXX_STANDARD=20 \
+		-DCMAKE_INSTALL_PREFIX=/usr \
+		-S quickshell-source \
+		-B build
+
+override_dh_auto_build:
+	# Build with ninja
+	cmake --build build
+
+override_dh_auto_install:
+	# Install to debian/quickshell-git
+	DESTDIR=$(CURDIR)/debian/quickshell-git cmake --install build
+
+override_dh_auto_clean:
+	# Don't remove quickshell-source - it's part of the source package (native format)
+	rm -rf build
+	dh_auto_clean
+
+override_dh_shlibdeps:
+	# Skip shlib dependency detection errors (Qt6 private headers)
+	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info

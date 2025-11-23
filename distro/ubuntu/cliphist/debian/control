@@ -1,0 +1,27 @@
+Source: cliphist
+Maintainer: Avenge Media <AvengeMedia.US@gmail.com>
+Section: utils
+Priority: optional
+Build-Depends: debhelper-compat (= 13),
+               golang-go (>= 1.16)
+Standards-Version: 4.6.2
+Homepage: https://github.com/sentriz/cliphist
+Vcs-Browser: https://github.com/sentriz/cliphist
+Vcs-Git: https://github.com/sentriz/cliphist.git
+
+Package: cliphist
+Architecture: any
+Depends: ${misc:Depends},
+         wl-clipboard,
+         xdg-utils
+Description: Wayland clipboard manager with text and image support
+ cliphist is a clipboard manager for Wayland that stores both text and
+ image data. It integrates with wl-clipboard to provide clipboard history
+ that persists across sessions.
+ .
+ Features include:
+  - Store text and image clipboard data
+  - Persistent clipboard history
+  - Integration with rofi, dmenu, or other launchers
+  - Lightweight and fast
+  - Perfect for Wayland compositors

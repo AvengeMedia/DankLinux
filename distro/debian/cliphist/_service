@@ -1,0 +1,9 @@
+<services>
+  <!-- Download release tarball directly -->
+  <service name="download_url">
+    <param name="protocol">https</param>
+    <param name="host">github.com</param>
+    <param name="path">/sentriz/cliphist/archive/refs/tags/v0.7.0.tar.gz</param>
+    <param name="filename">cliphist.tar.gz</param>
+  </service>
+</services>

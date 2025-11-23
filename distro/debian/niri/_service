@@ -1,0 +1,9 @@
+<services>
+  <!-- Download release with vendored dependencies from GitHub -->
+  <service name="download_url">
+    <param name="protocol">https</param>
+    <param name="host">github.com</param>
+    <param name="path">/YaLTeR/niri/releases/download/v25.08/niri-25.08-vendored-dependencies.tar.xz</param>
+    <param name="filename">niri.tar.xz</param>
+  </service>
+</services>

@@ -1,0 +1,49 @@
+#!/usr/bin/make -f
+
+export CARGO_HOME = $(CURDIR)/.cargo
+
+DEB_VERSION := $(shell dpkg-parsechangelog -S Version)
+UPSTREAM_VERSION := $(shell echo $(DEB_VERSION) | sed 's/ppa[0-9]*$$//')
+DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
+
+%:
+	dh $@
+
+override_dh_auto_build:
+ifeq ($(DEB_HOST_ARCH),amd64)
+	if [ -f matugen-amd64.tar.gz ]; then \
+		tar -xzf matugen-amd64.tar.gz; \
+	elif [ -f ../SOURCES/matugen-amd64.tar.gz ]; then \
+		tar -xzf ../SOURCES/matugen-amd64.tar.gz; \
+	else \
+		echo "ERROR: matugen-amd64.tar.gz not found!" && exit 1; \
+	fi
+else ifeq ($(DEB_HOST_ARCH),arm64)
+	if [ -f matugen-source.tar.gz ]; then \
+		tar -xzf matugen-source.tar.gz; \
+	elif [ -f ../SOURCES/matugen-source.tar.gz ]; then \
+		tar -xzf ../SOURCES/matugen-source.tar.gz; \
+	else \
+		echo "ERROR: matugen-source.tar.gz not found!" && exit 1; \
+	fi; \
+	cd matugen-$(UPSTREAM_VERSION) && cargo build --release
+endif
+
+override_dh_auto_install:
+ifeq ($(DEB_HOST_ARCH),amd64)
+	if [ -f matugen ]; then \
+		install -Dm755 matugen debian/matugen/usr/bin/matugen; \
+	elif [ -f matugen-*/matugen ]; then \
+		install -Dm755 matugen-*/matugen debian/matugen/usr/bin/matugen; \
+	else \
+		echo "Error: Cannot find matugen binary" && exit 1; \
+	fi
+else ifeq ($(DEB_HOST_ARCH),arm64)
+	install -Dm755 matugen-$(UPSTREAM_VERSION)/target/release/matugen \
+		debian/matugen/usr/bin/matugen
+endif
+
+override_dh_auto_clean:
+	rm -rf matugen-$(UPSTREAM_VERSION)
+	rm -rf .cargo
+	dh_auto_clean

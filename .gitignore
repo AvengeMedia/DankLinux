@@ -1,0 +1,81 @@
+# Build artifacts and temporary files
+*.rpm
+*.deb
+*.tar.gz
+*.tar.xz
+*.tar.bz2
+*.zip
+
+# Debian/Ubuntu packaging artifacts
+distro/ubuntu/**/*.dsc
+distro/ubuntu/**/*.changes
+distro/ubuntu/**/*.buildinfo
+distro/ubuntu/**/*.build
+distro/ubuntu/**/*_source.tar.xz
+distro/ubuntu/**/*_source.tar.gz
+distro/ubuntu/**/*.upload
+distro/ubuntu/**/*.deb
+distro/debian/**/*.dsc
+distro/debian/**/*.changes
+distro/debian/**/*.buildinfo
+distro/debian/**/*.build
+
+# RPM build artifacts
+distro/fedora/**/*.src.rpm
+distro/opensuse/**/*.src.rpm
+
+# Downloaded source files
+**/download/
+**/sources/
+**/*-source/
+**/*-download/
+**/*-source.tar.*
+
+# Extracted source trees (should be downloaded/extracted during build)
+distro/ubuntu/niri-git/niri/
+distro/ubuntu/niri/niri/
+distro/ubuntu/quickshell-git/quickshell/
+distro/ubuntu/cliphist/cliphist/
+distro/ubuntu/matugen/matugen/
+
+# User-specific config files
+distro/ubuntu/.dput.cf
+~/.config/osc/
+~/.config/copr/
+
+# Build directories
+build/
+rpmbuild/
+BUILD/
+BUILDROOT/
+RPMS/
+SRPMS/
+SOURCES/
+SPECS/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git and VCS
+*.orig
+*.rej
+.git/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp

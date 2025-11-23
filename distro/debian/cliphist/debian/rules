@@ -1,0 +1,22 @@
+#!/usr/bin/make -f
+
+export GOCACHE = $(CURDIR)/.cache/go-build
+export GOPATH = $(CURDIR)/.go
+export HOME = $(CURDIR)
+
+DEB_VERSION := $(shell dpkg-parsechangelog -S Version)
+UPSTREAM_VERSION := $(shell echo $(DEB_VERSION) | sed 's/ppa[0-9]*$$//')
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	go build -mod=vendor -ldflags="-s -w" -o cliphist
+
+override_dh_auto_install:
+	install -Dm755 cliphist debian/cliphist/usr/bin/cliphist
+
+override_dh_auto_clean:
+	rm -f cliphist
+	rm -rf .cache .go
+	dh_auto_clean
