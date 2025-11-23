@@ -20,10 +20,6 @@ on:
         description: 'Package to rebuild (leave empty to auto-detect changes)'
         required: false
         default: ''
-      rebuild_release:
-        description: 'Release number for manual rebuild (e.g., 2, 3, 4)'
-        required: false
-        default: ''
 
   push:
     branches:
@@ -205,7 +201,6 @@ jobs:
 
       - name: Trigger builds
         env:
-          REBUILD_RELEASE: ${{ github.event.inputs.rebuild_release }}
           MANUAL_PACKAGE: ${{ github.event.inputs.package }}
         run: |
           chmod +x distro/fedora/scripts/trigger-copr.sh
