@@ -710,6 +710,9 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
     if [[ -n "${REBUILD_RELEASE:-}" ]]; then
         IS_MANUAL=true
         echo "==> Manual rebuild detected (REBUILD_RELEASE=$REBUILD_RELEASE)"
+    elif [[ -n "${FORCE_REBUILD:-}" ]] && [[ "${FORCE_REBUILD}" == "true" ]]; then
+        IS_MANUAL=true
+        echo "==> Manual workflow trigger detected (FORCE_REBUILD=true)"
     elif [[ -z "${GITHUB_ACTIONS:-}" ]] && [[ -z "${CI:-}" ]]; then
         IS_MANUAL=true
         echo "==> Local/manual run detected (not in CI)"

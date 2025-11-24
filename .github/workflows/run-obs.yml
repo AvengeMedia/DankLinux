@@ -129,6 +129,9 @@ jobs:
           chmod 600 ~/.config/osc/oscrc
       
       - name: Upload to OBS
+        env:
+          FORCE_REBUILD: ${{ github.event_name == 'workflow_dispatch' && 'true' || '' }}
+          REBUILD_RELEASE: ${{ github.event.inputs.rebuild_release }}
         run: |
           PACKAGES="${{ steps.packages.outputs.packages }}"
           
