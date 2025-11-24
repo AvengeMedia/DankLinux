@@ -18,6 +18,10 @@
 
 ## Available Packages
 
+### Desktop Environment
+- **dms** - DankMaterialShell desktop environment (stable release)
+- **dms-git** - Latest development version of DMS with cutting-edge features
+
 ### Core Compositor
 - **niri** - Scrollable-tiling Wayland compositor with smooth animations (stable release)
 - **niri-git** - Latest development version of niri with cutting-edge features
@@ -31,11 +35,61 @@
 
 ## Installation
 
-> **Note**: DMS desktop environment packages (`dms` and `dms-git`) are available in separate OBS repositories. See [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell) for installation instructions.
+### DMS Desktop Environment
+
+DMS packages are available in separate OBS repositories.
+
+> **Required**: DMS depends on packages from the danklinux repository (`quickshell-git`, `matugen`, `cliphist`, `danksearch`, `dgop`). Install the [dependencies](#dependencies-danklinux-repository) first, then install DMS. Niri is optional but recommended as the default compositor.
+
+<details>
+<summary><b>Debian 13 / Testing</b></summary>
+
+```bash
+# 1. First add danklinux repository for dependencies (see below)
+
+# 2. Add DMS stable repository
+curl -fsSL https://download.opensuse.org/repositories/home:AvengeMedia:dms/Debian_13/Release.key | \
+  sudo gpg --dearmor -o /etc/apt/keyrings/dms.gpg
+echo "deb [signed-by=/etc/apt/keyrings/dms.gpg] https://download.opensuse.org/repositories/home:/AvengeMedia:/dms/Debian_13/ /" | \
+  sudo tee /etc/apt/sources.list.d/dms.list
+sudo apt update && sudo apt install dms
+
+# Or for nightly builds (dms-git)
+curl -fsSL https://download.opensuse.org/repositories/home:AvengeMedia:dms-git/Debian_13/Release.key | \
+  sudo gpg --dearmor -o /etc/apt/keyrings/dms-git.gpg
+echo "deb [signed-by=/etc/apt/keyrings/dms-git.gpg] https://download.opensuse.org/repositories/home:/AvengeMedia:/dms-git/Debian_13/ /" | \
+  sudo tee /etc/apt/sources.list.d/dms-git.list
+sudo apt update && sudo apt install dms-git
+```
+
+</details>
+
+<details>
+<summary><b>OpenSUSE Tumbleweed</b></summary>
+
+```bash
+# 1. First add danklinux repository for dependencies (see below)
+
+# 2. Add DMS stable repository
+sudo zypper addrepo https://download.opensuse.org/repositories/home:AvengeMedia:dms/openSUSE_Tumbleweed/home:AvengeMedia:dms.repo
+sudo zypper refresh && sudo zypper install dms
+
+# Or for nightly builds (dms-git)
+sudo zypper addrepo https://download.opensuse.org/repositories/home:AvengeMedia:dms-git/openSUSE_Tumbleweed/home:AvengeMedia:dms-git.repo
+sudo zypper refresh && sudo zypper install dms-git
+```
+
+</details>
+
+> See [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell) for full documentation and configuration.
+
+---
+
+### Dependencies (danklinux repository)
+
+These packages are **required** for full DMS functionality:
 
 ### Debian 13 (Trixie) / Testing
-
-#### Quick Install (Individual Packages)
 
 ```bash
 # Add Debian 13 Trixie Repository 
@@ -95,8 +149,8 @@ All packages support:
 
 ## Package Variants
 
-- **Stable packages** (`niri`, `matugen`, `cliphist`) - Tagged releases
-- **Git packages** (`niri-git`, `quickshell-git`) - Latest development code, updated daily
+- **Stable packages** (`dms`, `niri`, `matugen`, `cliphist`) - Tagged releases
+- **Git packages** (`dms-git`, `niri-git`, `quickshell-git`) - Latest development code, updated daily
 
 ## Getting Started
 
@@ -106,6 +160,7 @@ All packages support:
 
 ## Upstream Projects
 
+- [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell) - DMS desktop environment
 - [Niri](https://github.com/YaLTeR/niri) - Scrollable-tiling Wayland compositor  
 - [Quickshell](https://github.com/outfoxxed/quickshell) - QtQuick desktop shell toolkit  
 - [Matugen](https://github.com/InioX/matugen) - Material You color generator  
@@ -134,7 +189,9 @@ sudo zypper refresh && sudo zypper clean  # OpenSUSE
 
 ## Build Status
 
-- **OBS**: [home:AvengeMedia:danklinux](https://build.opensuse.org/project/show/home:AvengeMedia:danklinux)
+- **DMS Stable**: [home:AvengeMedia:dms](https://build.opensuse.org/project/show/home:AvengeMedia:dms)
+- **DMS Nightly**: [home:AvengeMedia:dms-git](https://build.opensuse.org/project/show/home:AvengeMedia:dms-git)
+- **Dependencies**: [home:AvengeMedia:danklinux](https://build.opensuse.org/project/show/home:AvengeMedia:danklinux)
 - **Launchpad**: [ppa:avengemedia/danklinux](https://launchpad.net/~avengemedia/+archive/ubuntu/danklinux)
 
 ## Contributing
