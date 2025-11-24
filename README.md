@@ -19,15 +19,13 @@
 ## Available Packages
 
 ### Desktop Environment
-- **dms** - DankMaterialShell desktop environment (stable release)
-- **dms-git** - Latest development version of DMS with cutting-edge features
+- **DMS** - DankMaterialShell desktop environment
 
 ### Core Compositor
-- **niri** - Scrollable-tiling Wayland compositor with smooth animations (stable release)
-- **niri-git** - Latest development version of niri with cutting-edge features
+- **niri** - Scrollable-tiling Wayland compositor with smooth animations 
 
 ### Shell & Utilities
-- **quickshell-git** - QtQuick-based Wayland desktop shell framework
+- **quickshell** - QtQuick-based Wayland desktop shell framework
 - **matugen** - Material Design 3 color palette generator for themes
 - **cliphist** - Wayland clipboard manager with history support
 - **danksearch** - Fast application launcher and file search tool
@@ -100,7 +98,7 @@ sudo dnf install dms
 
 # Or for nightly builds (dms-git)
 sudo dnf copr enable avengemedia/dms-git
-sudo dnf install dms-git
+sudo dnf install dms
 ```
 
 </details>
@@ -216,26 +214,6 @@ All packages support:
 - [Cliphist](https://github.com/sentriz/cliphist) - Wayland clipboard manager  
 - [Danksearch](https://github.com/AvengeMedia/danksearch) - Application launcher  
 - [Dgop](https://github.com/AvengeMedia/dgop) - Package manager integration
-
-## Troubleshooting
-
-**Verify installation:**
-```bash
-# Check packages
-dpkg -l | grep -E "(niri|quickshell|matugen|cliphist)"  # Debian/Ubuntu
-rpm -qa | grep -E "(niri|quickshell|matugen|cliphist)"  # Fedora/OpenSUSE
-
-# Verify versions
-niri --version
-quickshell --version
-```
-
-**Repository issues:**
-```bash
-sudo apt update --fix-missing              # Debian/Ubuntu
-sudo dnf clean all && sudo dnf makecache   # Fedora
-sudo zypper refresh && sudo zypper clean   # OpenSUSE
-```
 
 ## Build Status
 
