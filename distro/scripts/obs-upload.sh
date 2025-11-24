@@ -11,6 +11,33 @@
 
 set -e
 
+# Download all files from _service download_url entries into a directory
+download_service_files() {
+    local service_file="$1"
+    local target_dir="$2"
+    
+    # Extract all url/filename pairs from download_url services
+    local urls=$(grep -A2 '<service name="download_url">' "$service_file" | grep 'param name="url"' | sed 's/.*<param name="url">\(.*\)<\/param>.*/\1/')
+    local filenames=$(grep -A2 '<service name="download_url">' "$service_file" | grep 'param name="filename"' | sed 's/.*<param name="filename">\(.*\)<\/param>.*/\1/')
+    
+    local url_arr=($urls)
+    local file_arr=($filenames)
+    
+    for i in "${!url_arr[@]}"; do
+        local url="${url_arr[$i]}"
+        local filename="${file_arr[$i]:-$(basename "$url")}"
+        echo "    Downloading: $filename"
+        if curl -L -f -s -o "$target_dir/$filename" "$url" 2>/dev/null || \
+           wget -q -O "$target_dir/$filename" "$url" 2>/dev/null; then
+            :
+        else
+            echo "Error: Failed to download $url"
+            return 1
+        fi
+    done
+    return 0
+}
+
 UPLOAD_DEBIAN=true
 UPLOAD_OPENSUSE=true
 PACKAGE=""
@@ -171,10 +198,10 @@ if [[ "$SOURCE_FORMAT" == *"native"* ]]; then
     
     if [[ -f "distro/debian/$PACKAGE/_service" ]]; then
         if grep -q "download_url" "distro/debian/$PACKAGE/_service"; then
-            # For matugen, we need the SECOND download_url (source tarball), not the first (binary)
+            # For matugen, skip SOURCE_DIR creation - it uses pre-downloaded tarballs
             if [[ "$PACKAGE" == "matugen" ]]; then
-                SERVICE_BLOCK=$(awk '/<service name="download_url">/,/<\/service>/' "distro/debian/$PACKAGE/_service" | tail -n +5 | head -4)
-                SOURCE_URL=$(echo "$SERVICE_BLOCK" | grep 'url' | sed 's/^[[:space:]]*//; s/[^>]*>//; s/<.*//')
+                echo "    matugen uses pre-downloaded tarballs, skipping source extraction"
+                SOURCE_DIR=""
             else
                 SERVICE_BLOCK=$(awk '/<service name="download_url">/,/<\/service>/' "distro/debian/$PACKAGE/_service" | head -10)
                 URL_PROTOCOL=$(echo "$SERVICE_BLOCK" | grep "protocol" | sed 's/.*<param name="protocol">\(.*\)<\/param>.*/\1/' | head -1)
@@ -529,36 +556,47 @@ CARGO_CONFIG_EOF
     fi
     
     if [[ "$UPLOAD_DEBIAN" == true ]] && [[ -d "distro/debian/$PACKAGE/debian" ]]; then
-        echo "    Adding debian/ directory to source"
-        
-        if [[ ! -d "$SOURCE_DIR" ]]; then
-            echo "Error: Source directory does not exist: $SOURCE_DIR"
-            ls -la "$SOURCE_DIR" 2>/dev/null || echo "  Path does not exist at all"
-            exit 1
+        if [[ "$PACKAGE" == "matugen" ]]; then
+            echo "    Creating matugen combined tarball"
+            PKG_DIR="$TEMP_DIR/matugen-package"
+            mkdir -p "$PKG_DIR"
+            download_service_files "distro/debian/$PACKAGE/_service" "$PKG_DIR" || exit 1
+            cp -r "distro/debian/$PACKAGE/debian" "$PKG_DIR/"
+            cd "$TEMP_DIR"
+            tar --sort=name --mtime='2000-01-01 00:00:00' --owner=0 --group=0 -czf "$WORK_DIR/$COMBINED_TARBALL" "matugen-package"
+            cd "$REPO_ROOT"
+        else
+            echo "    Adding debian/ directory to source"
+            
+            if [[ ! -d "$SOURCE_DIR" ]]; then
+                echo "Error: Source directory does not exist: $SOURCE_DIR"
+                ls -la "$SOURCE_DIR" 2>/dev/null || echo "  Path does not exist at all"
+                exit 1
+            fi
+            
+            cp -r "distro/debian/$PACKAGE/debian" "$SOURCE_DIR/" || {
+                echo "Error: Failed to copy debian/ directory"
+                exit 1
+            }
+            
+            if [[ -f "distro/debian/$PACKAGE/debian/source/format" ]]; then
+                mkdir -p "$SOURCE_DIR/debian/source"
+                cp "distro/debian/$PACKAGE/debian/source/format" "$SOURCE_DIR/debian/source/format"
+            fi
+            
+            if [[ ! -f "$SOURCE_DIR/debian/changelog" ]]; then
+                echo "Error: debian/changelog not found after copying debian/ directory"
+                echo "  Expected at: $SOURCE_DIR/debian/changelog"
+                ls -la "$SOURCE_DIR/" 2>/dev/null | head -10
+                ls -la "$SOURCE_DIR/debian/" 2>/dev/null | head -10
+                exit 1
+            fi
+            
+            cd "$TEMP_DIR"
+            DIR_NAME=$(basename "$SOURCE_DIR")
+            tar --sort=name --mtime='2000-01-01 00:00:00' --owner=0 --group=0 -czf "$WORK_DIR/$COMBINED_TARBALL" "$DIR_NAME"
+            cd "$REPO_ROOT"
         fi
-        
-        cp -r "distro/debian/$PACKAGE/debian" "$SOURCE_DIR/" || {
-            echo "Error: Failed to copy debian/ directory"
-            exit 1
-        }
-        
-        if [[ -f "distro/debian/$PACKAGE/debian/source/format" ]]; then
-            mkdir -p "$SOURCE_DIR/debian/source"
-            cp "distro/debian/$PACKAGE/debian/source/format" "$SOURCE_DIR/debian/source/format"
-        fi
-        
-        if [[ ! -f "$SOURCE_DIR/debian/changelog" ]]; then
-            echo "Error: debian/changelog not found after copying debian/ directory"
-            echo "  Expected at: $SOURCE_DIR/debian/changelog"
-            ls -la "$SOURCE_DIR/" 2>/dev/null | head -10
-            ls -la "$SOURCE_DIR/debian/" 2>/dev/null | head -10
-            exit 1
-        fi
-        
-        cd "$TEMP_DIR"
-        DIR_NAME=$(basename "$SOURCE_DIR")
-        tar --sort=name --mtime='2000-01-01 00:00:00' --owner=0 --group=0 -czf "$WORK_DIR/$COMBINED_TARBALL" "$DIR_NAME"
-        cd "$REPO_ROOT"
         
         TARBALL_MD5=$(md5sum "$WORK_DIR/$COMBINED_TARBALL" | cut -d' ' -f1)
         TARBALL_SIZE=$(stat -c%s "$WORK_DIR/$COMBINED_TARBALL")
@@ -750,17 +788,6 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
             echo "  Warning: Could not parse version format, appending ppa1: $CHANGELOG_VERSION -> $NEW_VERSION"
         fi
         
-        if [[ ! -d "$SOURCE_DIR" ]] || [[ ! -d "$SOURCE_DIR/debian" ]]; then
-            echo "  Error: Source directory with debian/ not found for version increment"
-            exit 1
-        fi
-        
-        SOURCE_CHANGELOG="$SOURCE_DIR/debian/changelog"
-        if [[ ! -f "$SOURCE_CHANGELOG" ]]; then
-            echo "  Error: Changelog not found in source directory: $SOURCE_CHANGELOG"
-            exit 1
-        fi
-        
         REPO_CHANGELOG="$REPO_ROOT/distro/debian/$PACKAGE/debian/changelog"
         TEMP_CHANGELOG=$(mktemp)
         {
@@ -777,8 +804,6 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
                 fi
             fi
         } > "$TEMP_CHANGELOG"
-        cp "$TEMP_CHANGELOG" "$SOURCE_CHANGELOG"
-        rm -f "$TEMP_CHANGELOG"
         
         CHANGELOG_VERSION="$NEW_VERSION"
         COMBINED_TARBALL="${PACKAGE}_${CHANGELOG_VERSION}.tar.gz"
@@ -791,28 +816,48 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
         done
         
         echo "  Recreating tarball with new version: $COMBINED_TARBALL"
-        if [[ -d "$SOURCE_DIR" ]] && [[ -d "$SOURCE_DIR/debian" ]]; then
+        if [[ "$PACKAGE" == "matugen" ]]; then
+            # Matugen: recreate tarball with updated changelog
+            PKG_DIR="$TEMP_DIR/matugen-package-$$"
+            mkdir -p "$PKG_DIR"
+            download_service_files "$REPO_ROOT/distro/debian/$PACKAGE/_service" "$PKG_DIR" || exit 1
+            cp -r "$REPO_ROOT/distro/debian/$PACKAGE/debian" "$PKG_DIR/"
+            cp "$TEMP_CHANGELOG" "$PKG_DIR/debian/changelog"
+            cd "$TEMP_DIR"
+            tar --sort=name --mtime='2000-01-01 00:00:00' --owner=0 --group=0 -czf "$WORK_DIR/$COMBINED_TARBALL" "matugen-package-$$"
+            rm -rf "matugen-package-$$"
+            cd "$WORK_DIR"
+        elif [[ -d "$SOURCE_DIR" ]] && [[ -d "$SOURCE_DIR/debian" ]]; then
+            SOURCE_CHANGELOG="$SOURCE_DIR/debian/changelog"
+            cp "$TEMP_CHANGELOG" "$SOURCE_CHANGELOG"
             cd "$TEMP_DIR"
             DIR_NAME=$(basename "$SOURCE_DIR")
             tar --sort=name --mtime='2000-01-01 00:00:00' --owner=0 --group=0 -czf "$WORK_DIR/$COMBINED_TARBALL" "$DIR_NAME"
             cd "$WORK_DIR"
-            
-            TARBALL_MD5=$(md5sum "$WORK_DIR/$COMBINED_TARBALL" | cut -d' ' -f1)
-            TARBALL_SIZE=$(stat -c%s "$WORK_DIR/$COMBINED_TARBALL")
-            
-            BUILD_DEPS="debhelper-compat (= 13)"
-            if [[ -f "$REPO_ROOT/distro/debian/$PACKAGE/debian/control" ]]; then
-                CONTROL_DEPS=$(sed -n '/^Build-Depends:/,/^[A-Z]/p' "$REPO_ROOT/distro/debian/$PACKAGE/debian/control" | \
-                    sed '/^Build-Depends:/s/^Build-Depends: *//' | \
-                    sed '/^[A-Z]/d' | \
-                    tr '\n' ' ' | \
-                    sed 's/^[[:space:]]*//;s/[[:space:]]*$//;s/[[:space:]]\+/ /g')
-                if [[ -n "$CONTROL_DEPS" && "$CONTROL_DEPS" != "" ]]; then
-                    BUILD_DEPS="$CONTROL_DEPS"
-                fi
+        else
+            echo "  Error: Source directory with debian/ not found for version increment"
+            rm -f "$TEMP_CHANGELOG"
+            exit 1
+        fi
+        
+        rm -f "$TEMP_CHANGELOG"
+        
+        TARBALL_MD5=$(md5sum "$WORK_DIR/$COMBINED_TARBALL" | cut -d' ' -f1)
+        TARBALL_SIZE=$(stat -c%s "$WORK_DIR/$COMBINED_TARBALL")
+        
+        BUILD_DEPS="debhelper-compat (= 13)"
+        if [[ -f "$REPO_ROOT/distro/debian/$PACKAGE/debian/control" ]]; then
+            CONTROL_DEPS=$(sed -n '/^Build-Depends:/,/^[A-Z]/p' "$REPO_ROOT/distro/debian/$PACKAGE/debian/control" | \
+                sed '/^Build-Depends:/s/^Build-Depends: *//' | \
+                sed '/^[A-Z]/d' | \
+                tr '\n' ' ' | \
+                sed 's/^[[:space:]]*//;s/[[:space:]]*$//;s/[[:space:]]\+/ /g')
+            if [[ -n "$CONTROL_DEPS" && "$CONTROL_DEPS" != "" ]]; then
+                BUILD_DEPS="$CONTROL_DEPS"
             fi
-            
-            cat > "$WORK_DIR/$PACKAGE.dsc" << EOF
+        fi
+        
+        cat > "$WORK_DIR/$PACKAGE.dsc" << EOF
 Format: 3.0 (native)
 Source: $PACKAGE
 Binary: $PACKAGE
@@ -823,11 +868,7 @@ Build-Depends: $BUILD_DEPS
 Files:
  $TARBALL_MD5 $TARBALL_SIZE $COMBINED_TARBALL
 EOF
-            echo "  - Updated changelog and recreated tarball with version $NEW_VERSION"
-        else
-            echo "  Error: Source directory not found, cannot recreate tarball"
-            exit 1
-        fi
+        echo "  - Updated changelog and recreated tarball with version $NEW_VERSION"
     fi
 fi
 
