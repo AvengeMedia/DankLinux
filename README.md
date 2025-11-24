@@ -5,7 +5,7 @@
     <img src="assets/danklogo.svg" alt="DankLinux" width="200">
   </a>
 
-  ### DMS Wayland desktop environment packages built for Debian, Ubuntu, and OpenSUSE
+  ### DMS Wayland desktop environment packages built for Debian, Ubuntu, Fedora, and OpenSUSE
 
   Built with [Quickshell](https://quickshell.org/) and [Go](https://go.dev/)
 
@@ -35,9 +35,11 @@
 
 ## Installation
 
+> **📖 Full installation guide**: [danklinux.com/docs/dankmaterialshell/installation](https://danklinux.com/docs/dankmaterialshell/installation)
+
 ### DMS Desktop Environment
 
-DMS packages are available in separate OBS repositories.
+DMS packages are available via OBS (Debian/OpenSUSE), Launchpad PPA (Ubuntu), and Fedora COPR.
 
 > **Required**: DMS depends on packages from the danklinux repository (`quickshell-git`, `matugen`, `cliphist`, `danksearch`, `dgop`). Install the [dependencies](#dependencies-danklinux-repository) first, then install DMS. Niri is optional but recommended as the default compositor.
 
@@ -60,6 +62,45 @@ curl -fsSL https://download.opensuse.org/repositories/home:AvengeMedia:dms-git/D
 echo "deb [signed-by=/etc/apt/keyrings/dms-git.gpg] https://download.opensuse.org/repositories/home:/AvengeMedia:/dms-git/Debian_13/ /" | \
   sudo tee /etc/apt/sources.list.d/dms-git.list
 sudo apt update && sudo apt install dms-git
+```
+
+</details>
+
+<details>
+<summary><b>Ubuntu 25.10+ (Launchpad PPA)</b></summary>
+
+```bash
+# 1. Add danklinux PPA for dependencies
+sudo add-apt-repository ppa:avengemedia/danklinux
+sudo apt update
+
+# 2. Add DMS stable PPA
+sudo add-apt-repository ppa:avengemedia/dms
+sudo apt update && sudo apt install dms
+
+# Or for nightly builds (dms-git)
+sudo add-apt-repository ppa:avengemedia/dms-git
+sudo apt update && sudo apt install dms-git
+```
+
+> **Note**: Ubuntu 25.04 and older are not supported (require Qt 6.6+)
+
+</details>
+
+<details>
+<summary><b>Fedora 41+ (COPR)</b></summary>
+
+```bash
+# 1. Add danklinux COPR for dependencies
+sudo dnf copr enable avengemedia/danklinux
+
+# 2. Add DMS stable COPR
+sudo dnf copr enable avengemedia/dms
+sudo dnf install dms
+
+# Or for nightly builds (dms-git)
+sudo dnf copr enable avengemedia/dms-git
+sudo dnf install dms-git
 ```
 
 </details>
@@ -119,7 +160,7 @@ sudo apt update && sudo apt install niri quickshell-git matugen cliphist danksea
 
 ---
 
-### Ubuntu 25.10+ (Questing and newer)
+### Ubuntu 25.10+ (Launchpad PPA)
 
 > **Note**: Ubuntu 25.04 and older are not supported (require Qt 6.6+)
 
@@ -127,7 +168,15 @@ sudo apt update && sudo apt install niri quickshell-git matugen cliphist danksea
 # Add PPA and install packages
 sudo add-apt-repository ppa:avengemedia/danklinux
 sudo apt update
-sudo apt install niri quickshell-git matugen cliphist
+sudo apt install niri quickshell-git matugen cliphist danksearch dgop
+```
+
+### Fedora 41+ (COPR)
+
+```bash
+# Add COPR and install packages
+sudo dnf copr enable avengemedia/danklinux
+sudo dnf install quickshell-git matugen cliphist danksearch dgop ghostty dms-greeter
 ```
 
 ### OpenSUSE Tumbleweed
@@ -174,7 +223,7 @@ All packages support:
 ```bash
 # Check packages
 dpkg -l | grep -E "(niri|quickshell|matugen|cliphist)"  # Debian/Ubuntu
-rpm -qa | grep -E "(niri|quickshell|matugen|cliphist)"  # OpenSUSE
+rpm -qa | grep -E "(niri|quickshell|matugen|cliphist)"  # Fedora/OpenSUSE
 
 # Verify versions
 niri --version
@@ -183,16 +232,27 @@ quickshell --version
 
 **Repository issues:**
 ```bash
-sudo apt update --fix-missing          # Debian/Ubuntu
-sudo zypper refresh && sudo zypper clean  # OpenSUSE
+sudo apt update --fix-missing              # Debian/Ubuntu
+sudo dnf clean all && sudo dnf makecache   # Fedora
+sudo zypper refresh && sudo zypper clean   # OpenSUSE
 ```
 
 ## Build Status
 
+### Open Build Service (Debian/OpenSUSE)
 - **DMS Stable**: [home:AvengeMedia:dms](https://build.opensuse.org/project/show/home:AvengeMedia:dms)
 - **DMS Nightly**: [home:AvengeMedia:dms-git](https://build.opensuse.org/project/show/home:AvengeMedia:dms-git)
 - **Dependencies**: [home:AvengeMedia:danklinux](https://build.opensuse.org/project/show/home:AvengeMedia:danklinux)
-- **Launchpad**: [ppa:avengemedia/danklinux](https://launchpad.net/~avengemedia/+archive/ubuntu/danklinux)
+
+### Launchpad PPA (Ubuntu)
+- **DMS Stable**: [ppa:avengemedia/dms](https://launchpad.net/~avengemedia/+archive/ubuntu/dms)
+- **DMS Nightly**: [ppa:avengemedia/dms-git](https://launchpad.net/~avengemedia/+archive/ubuntu/dms-git)
+- **Dependencies**: [ppa:avengemedia/danklinux](https://launchpad.net/~avengemedia/+archive/ubuntu/danklinux)
+
+### Fedora COPR
+- **DMS Stable**: [avengemedia/dms](https://copr.fedorainfracloud.org/coprs/avengemedia/dms/)
+- **DMS Nightly**: [avengemedia/dms-git](https://copr.fedorainfracloud.org/coprs/avengemedia/dms-git/)
+- **Dependencies**: [avengemedia/danklinux](https://copr.fedorainfracloud.org/coprs/avengemedia/danklinux/)
 
 ## Contributing
 
