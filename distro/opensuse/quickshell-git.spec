@@ -1,5 +1,5 @@
 Name:           quickshell-git
-Version:        0.2.1+git
+Version:        0.2.1+git709.e9bad676
 Release:        1%{?dist}
 Summary:        Flexible toolkit for creating desktop shells using QtQuick (git)
 
@@ -95,5 +95,7 @@ chrpath -d %{buildroot}%{_bindir}/quickshell 2>/dev/null || true
 %{_datadir}/icons/hicolor/scalable/apps/org.quickshell.svg
 
 %changelog
+* Tue Nov 25 2025 Avenge Media <AvengeMedia.US@gmail.com> - 0.2.1+git709.e9bad676-1
+- Git snapshot (commit 709: e9bad676)
 * Wed Nov 20 2025 Avenge Media <AvengeMedia.US@gmail.com> - 0.2.1+git-1
 - Initial OBS package (nightly builds)

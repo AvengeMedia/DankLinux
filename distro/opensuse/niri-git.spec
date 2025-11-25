@@ -1,5 +1,5 @@
 Name:           niri-git
-Version:        25.08+git
+Version:        25.08+git2557.54c7fdcd
 Release:        1%{?dist}
 Epoch:          1
 Summary:        Scrollable-tiling Wayland compositor (nightly)
@@ -89,5 +89,7 @@ install -Dm644 zsh-completions %{buildroot}%{_datadir}/zsh/site-functions/_niri
 %{_datadir}/zsh/site-functions/_niri
 
 %changelog
+* Tue Nov 25 2025 Avenge Media <AvengeMedia.US@gmail.com> - 25.08+git2557.54c7fdcd-1
+- Git snapshot (commit 2557: 54c7fdcd)
 * Wed Nov 20 2025 Avenge Media <AvengeMedia.US@gmail.com> - 25.08+git-1
 - Initial OBS package (nightly builds)

@@ -1,3 +1,9 @@
+niri-git (25.08+git2557.54c7fdcdppa1) unstable; urgency=medium
+
+  * Git snapshot (commit 2557: 54c7fdcd)
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Tue, 25 Nov 2025 14:35:04 +0000
+
 niri-git (25.08+git2522.6ca21e7bppa1) questing; urgency=medium
 
   * Git snapshot (commit 2522: 6ca21e7b)
