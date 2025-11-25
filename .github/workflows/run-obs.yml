@@ -116,15 +116,13 @@ jobs:
           [ -n "$CHANGED_SUSE" ] && [ -n "$CHANGED" ] && CHANGED="$CHANGED | "
           [ -n "$CHANGED_SUSE" ] && CHANGED="${CHANGED}OpenSUSE: $CHANGED_SUSE"
           
+          # Build package list for commit message
+          PKGS=$(echo "$CHANGED_DEB,$CHANGED_SUSE" | tr ',' '\n' | grep -v '^$' | sort -u | tr '\n' ',' | sed 's/,$//')
+          
           git add distro/debian/ distro/opensuse/
-          git commit -m "Auto-update OBS packages: $CHANGED
+          git commit -m "ci: Auto-update OBS packages [$PKGS]
 
-          🤖 Automated update by GitHub Actions
-
-          Updated packages:
-          $(git diff HEAD~1 --name-only distro/debian/ distro/opensuse/ | sed 's/^/  - /')
-
-          Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          🤖 Automated by GitHub Actions"
           
           git push
 

@@ -115,14 +115,9 @@ jobs:
           CHANGED_SPECS=$(git diff --name-only | grep '\.spec$' | xargs basename -a | tr '\n' ', ' | sed 's/,$//')
 
           git add -A
-          git commit -m "Auto-update packages: $CHANGED_SPECS
+          git commit -m "ci: Auto-update Copr specs [$CHANGED_SPECS]
 
-          🤖 Automated update by GitHub Actions
-
-          Updated packages:
-          $(git diff HEAD~1 --name-only | grep '\.spec$' | sed 's/^/  - /')
-
-          Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          🤖 Automated by GitHub Actions"
 
           git push
 

@@ -167,14 +167,9 @@ jobs:
             echo "📋 Committing changelog updates for: $CHANGED"
             
             git add distro/ubuntu/
-            git commit -m "Auto-update PPA changelogs: $CHANGED
+            git commit -m "ci: Auto-update PPA packages [$CHANGED]
 
-          🤖 Automated update by GitHub Actions
-
-          Updated packages:
-          $(git diff HEAD~1 --name-only distro/ubuntu/ | grep 'debian/changelog' | sed 's/^/  - /')
-
-          Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            🤖 Automated by GitHub Actions"
             
             git push
           fi
