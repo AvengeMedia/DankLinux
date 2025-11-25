@@ -27,11 +27,12 @@ Depends: ${shlibs:Depends},
          ${misc:Depends},
          libdisplay-info2,
          libseat1
-Recommends: fuzzel,
-            xdg-desktop-portal-gtk,
-            xdg-desktop-portal-gnome,
+Recommends: alacritty,
+            fuzzel,
             gnome-keyring,
-            policykit-1-gnome
+            policykit-1-gnome,
+            xdg-desktop-portal-gnome,
+            xdg-desktop-portal-gtk
 Conflicts: niri
 Provides: niri
 Description: Scrollable-tiling Wayland compositor (git development version)

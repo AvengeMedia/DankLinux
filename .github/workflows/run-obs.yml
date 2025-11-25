@@ -129,13 +129,13 @@ jobs:
         run: |
           PACKAGES="${{ steps.packages.outputs.packages }}"
           
-          if [[ "${{ needs.check-updates.outputs.has_updates }}" == "true" ]]; then
-            MESSAGE="Auto-update: $PACKAGES (new versions detected)"
-          else
-            MESSAGE="Manual upload from GitHub Actions"
-          fi
-          
-          bash distro/scripts/obs-upload.sh "$PACKAGES" "$MESSAGE"
+          # Loop through each package
+          for pkg in $PACKAGES; do
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Uploading $pkg to OBS..."
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            bash distro/scripts/obs-upload.sh "$pkg" "Auto-update: $pkg" || echo "⚠️ Failed to upload $pkg"
+          done
       
       - name: Summary
         run: |
