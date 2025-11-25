@@ -40,32 +40,28 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq curl
+          sudo apt-get install -y jq curl git
       
       - name: Check for updates
         id: check
         run: |
-          chmod +x distro/fedora/scripts/*.sh
+          chmod +x distro/ubuntu/ppa/*.sh
           
-          # Run update script in check-only mode (don't commit)
-          cd distro/fedora
-          ../../distro/fedora/scripts/update-packages.sh | tee /tmp/update-log.txt
+          # Run PPA-specific update check script
+          # Script outputs space-separated list of packages needing updates to stdout
+          # Detailed logging goes to stderr
+          UPDATED=$(distro/ubuntu/ppa/check-updates.sh 2>&1 | tee /dev/stderr | tail -1)
           
-          # Check if there are changes
-          if git diff --exit-code >/dev/null 2>&1; then
+          if [ -n "$UPDATED" ] && [ "$UPDATED" != " " ]; then
+            echo "has_updates=true" >> $GITHUB_OUTPUT
+            # Convert space-separated to comma-separated for consistency
+            UPDATED_CSV=$(echo "$UPDATED" | tr ' ' ',')
+            echo "updated_packages=$UPDATED_CSV" >> $GITHUB_OUTPUT
+            echo "📋 Updates found: $UPDATED"
+          else
             echo "has_updates=false" >> $GITHUB_OUTPUT
             echo "updated_packages=" >> $GITHUB_OUTPUT
             echo "📋 No updates found"
-          else
-            echo "has_updates=true" >> $GITHUB_OUTPUT
-            
-            # Get list of updated packages from spec file changes
-            UPDATED=$(git diff --name-only | grep '\.spec$' | xargs -I{} basename {} .spec | tr '\n' ',' | sed 's/,$//')
-            echo "updated_packages=$UPDATED" >> $GITHUB_OUTPUT
-            echo "📋 Updates found: $UPDATED"
-            
-            # Reset changes (don't commit for PPA, just upload)
-            git checkout .
           fi
 
   upload-ppa:
