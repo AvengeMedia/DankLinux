@@ -1,0 +1,17 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: xwayland-satellite
+Upstream-Contact: Shawn Wallace
+Source: https://github.com/Supreeeme/xwayland-satellite
+
+Files: *
+Copyright: 2024-2025 Shawn Wallace
+License: MPL-2.0
+
+License: MPL-2.0
+ This Source Code Form is subject to the terms of the Mozilla Public
+ License, v. 2.0. If a copy of the MPL was not distributed with this
+ file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ .
+ On Debian systems, the complete text of the Mozilla Public License
+ can be found in "/usr/share/common-licenses/MPL-2.0".
+

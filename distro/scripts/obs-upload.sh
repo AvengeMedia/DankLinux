@@ -65,7 +65,7 @@ done
 PROJECT="danklinux"
 OBS_BASE_PROJECT="home:AvengeMedia"
 OBS_BASE="$HOME/.cache/osc-checkouts"
-AVAILABLE_PACKAGES=(cliphist matugen niri niri-git quickshell-git danksearch dgop)
+AVAILABLE_PACKAGES=(cliphist matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git danksearch dgop)
 
 if [[ -z "$PACKAGE" ]]; then
     echo "Available packages:"
@@ -412,6 +412,25 @@ CARGO_CONFIG_EOF
         cd "$REPO_ROOT"
     fi
     
+    # Vendor Rust dependencies for Rust packages that need offline builds
+    if [[ "$PACKAGE" == "xwayland-satellite" || "$PACKAGE" == "xwayland-satellite-git" || "$PACKAGE" == "matugen" ]] && [[ -f "$SOURCE_DIR/Cargo.toml" ]] && [[ ! -d "$SOURCE_DIR/vendor" ]]; then
+        echo "    Vendoring Rust dependencies for $PACKAGE"
+        cd "$SOURCE_DIR"
+        if command -v cargo >/dev/null 2>&1; then
+            rm -rf vendor .cargo
+            mkdir -p .cargo
+            cargo vendor --versioned-dirs 2>&1 | awk '/^\[source\./ { printing=1 } printing { print }' > .cargo/config.toml || {
+                echo "Warning: cargo vendor failed, build may fail"
+            }
+            if [[ -d vendor ]]; then
+                echo "    Created vendor directory and .cargo/config.toml"
+            fi
+        else
+            echo "Warning: cargo not available, vendor directory not generated"
+        fi
+        cd "$REPO_ROOT"
+    fi
+    
     # Create OpenSUSE-compatible source tarballs BEFORE adding debian/ directory
     # (OpenSUSE doesn't need debian/ directory)
     if [[ "$PACKAGE" != "matugen" ]]; then
@@ -475,8 +494,37 @@ CARGO_CONFIG_EOF
                     tar --sort=name --mtime='2000-01-01 00:00:00' -czf "$WORK_DIR/$SOURCE0" quickshell-source
                     rm -rf quickshell-source
                     ;;
+                quickshell)
+                    echo "    Creating $SOURCE0 (directory: quickshell-source)"
+                    TARBALL_WORK=".quickshell-source-work-$$"
+                    cp -r "$ORIGINAL_SOURCE_DIR" "$TARBALL_WORK"
+                    mv "$TARBALL_WORK" quickshell-source
+                    tar --sort=name --mtime='2000-01-01 00:00:00' -czf "$WORK_DIR/$SOURCE0" quickshell-source
+                    rm -rf quickshell-source
+                    echo "    Created $SOURCE0 ($(stat -c%s "$WORK_DIR/$SOURCE0" 2>/dev/null || echo 0) bytes)"
+                    ;;
+                xwayland-satellite|xwayland-satellite-git)
+                    echo "    Creating $SOURCE0 (directory: xwayland-satellite-source)"
+                    TARBALL_WORK=".xwayland-satellite-source-work-$$"
+                    cp -r "$ORIGINAL_SOURCE_DIR" "$TARBALL_WORK"
+                    mv "$TARBALL_WORK" xwayland-satellite-source
+                    # Vendor Rust dependencies for offline build
+                    if [ -f "xwayland-satellite-source/Cargo.toml" ]; then
+                        echo "    Vendoring Rust dependencies..."
+                        cd xwayland-satellite-source
+                        if command -v cargo >/dev/null 2>&1; then
+                            rm -rf vendor .cargo
+                            mkdir -p .cargo
+                            cargo vendor --versioned-dirs 2>&1 | awk '/^\[source\./ { printing=1 } printing { print }' > .cargo/config.toml || true
+                        fi
+                        cd "$OBS_TARBALL_DIR"
+                    fi
+                    tar --sort=name --mtime='2000-01-01 00:00:00' -czf "$WORK_DIR/$SOURCE0" xwayland-satellite-source
+                    rm -rf xwayland-satellite-source
+                    echo "    Created $SOURCE0 ($(stat -c%s "$WORK_DIR/$SOURCE0" 2>/dev/null || echo 0) bytes)"
+                    ;;
                 matugen)
-                    # matugen spec has two sources: Source0 (binary) and Source1 (source)
+                    # matugen spec has two sources: Source0 (binary) and Source1 (source with vendored deps)
                     echo "    Creating matugen tarballs from _service URLs"
                     BINARY_URL=$(awk '/<service name="download_url">/,/<\/service>/' "$REPO_ROOT/distro/debian/$PACKAGE/_service" | head -4 | grep 'param name="url"' | sed 's/.*<param name="url">\(.*\)<\/param>/\1/')
                     echo "    Downloading binary from: $BINARY_URL"
@@ -490,10 +538,37 @@ CARGO_CONFIG_EOF
                     if [[ -n "$SOURCE1" ]]; then
                         SOURCE_TARBALL_URL=$(awk '/<service name="download_url">/,/<\/service>/' "$REPO_ROOT/distro/debian/$PACKAGE/_service" | tail -n +5 | head -4 | grep 'param name="url"' | sed 's/.*<param name="url">\(.*\)<\/param>/\1/')
                         echo "    Downloading source from: $SOURCE_TARBALL_URL"
-                        wget -q -O "$WORK_DIR/$SOURCE1" "$SOURCE_TARBALL_URL" || {
+                        MATUGEN_TEMP="$OBS_TARBALL_DIR/matugen-source-temp"
+                        mkdir -p "$MATUGEN_TEMP"
+                        wget -q -O "$MATUGEN_TEMP/matugen-source.tar.gz" "$SOURCE_TARBALL_URL" || {
                             echo "    Error: Failed to download source tarball"
                             exit 1
                         }
+                        # Extract, vendor dependencies, and repackage
+                        cd "$MATUGEN_TEMP"
+                        tar -xzf matugen-source.tar.gz
+                        MATUGEN_SRC_DIR=$(ls -d matugen-* 2>/dev/null | head -1)
+                        if [[ -n "$MATUGEN_SRC_DIR" && -f "$MATUGEN_SRC_DIR/Cargo.toml" ]]; then
+                            echo "    Vendoring Rust dependencies for aarch64 builds..."
+                            cd "$MATUGEN_SRC_DIR"
+                            if command -v cargo >/dev/null 2>&1; then
+                                rm -rf vendor .cargo
+                                mkdir -p .cargo
+                                cargo vendor --versioned-dirs 2>&1 | awk '/^\[source\./ { printing=1 } printing { print }' > .cargo/config.toml || true
+                                if [[ -d vendor ]]; then
+                                    echo "    Vendored $(ls vendor | wc -l) crates"
+                                fi
+                            fi
+                            cd "$MATUGEN_TEMP"
+                            # Rename to matugen-source for spec %setup
+                            mv "$MATUGEN_SRC_DIR" matugen-source
+                            tar --sort=name --mtime='2000-01-01 00:00:00' -czf "$WORK_DIR/$SOURCE1" matugen-source
+                        else
+                            echo "    Warning: Could not find matugen source directory, using original tarball"
+                            cp matugen-source.tar.gz "$WORK_DIR/$SOURCE1"
+                        fi
+                        cd "$OBS_TARBALL_DIR"
+                        rm -rf "$MATUGEN_TEMP"
                         echo "    Created $SOURCE1 ($(stat -c%s "$WORK_DIR/$SOURCE1" 2>/dev/null || echo 0) bytes)"
                     fi
                     ;;
@@ -557,13 +632,40 @@ CARGO_CONFIG_EOF
     
     if [[ "$UPLOAD_DEBIAN" == true ]] && [[ -d "distro/debian/$PACKAGE/debian" ]]; then
         if [[ "$PACKAGE" == "matugen" ]]; then
-            echo "    Creating matugen combined tarball"
-            PKG_DIR="$TEMP_DIR/matugen-package"
+            echo "    Creating matugen combined tarball with vendored dependencies"
+            # For native format, directory must be named <package>-<version>
+            PKG_DIR_NAME="matugen-${CHANGELOG_VERSION}"
+            PKG_DIR="$TEMP_DIR/$PKG_DIR_NAME"
             mkdir -p "$PKG_DIR"
             download_service_files "distro/debian/$PACKAGE/_service" "$PKG_DIR" || exit 1
-            cp -r "distro/debian/$PACKAGE/debian" "$PKG_DIR/"
+            
+            # Extract source, vendor dependencies, and repackage for aarch64 builds
+            if [[ -f "$PKG_DIR/matugen-source.tar.gz" ]]; then
+                echo "    Vendoring Rust dependencies for aarch64 builds..."
+                cd "$PKG_DIR"
+                tar -xzf matugen-source.tar.gz
+                rm matugen-source.tar.gz
+                MATUGEN_SRC_DIR=$(ls -d matugen-* 2>/dev/null | grep -v "\.tar\.gz" | head -1)
+                if [[ -n "$MATUGEN_SRC_DIR" && -f "$MATUGEN_SRC_DIR/Cargo.toml" ]]; then
+                    cd "$MATUGEN_SRC_DIR"
+                    if command -v cargo >/dev/null 2>&1; then
+                        rm -rf vendor .cargo
+                        mkdir -p .cargo
+                        cargo vendor --versioned-dirs 2>&1 | awk '/^\[source\./ { printing=1 } printing { print }' > .cargo/config.toml || true
+                        if [[ -d vendor ]]; then
+                            echo "    Vendored $(ls vendor | wc -l) crates"
+                        fi
+                    fi
+                    cd "$PKG_DIR"
+                    # Rename to matugen-source for debian/rules
+                    mv "$MATUGEN_SRC_DIR" matugen-source
+                fi
+                cd "$TEMP_DIR"
+            fi
+            
+            cp -r "$REPO_ROOT/distro/debian/$PACKAGE/debian" "$PKG_DIR/"
             cd "$TEMP_DIR"
-            tar --sort=name --mtime='2000-01-01 00:00:00' --owner=0 --group=0 -czf "$WORK_DIR/$COMBINED_TARBALL" "matugen-package"
+            tar --sort=name --mtime='2000-01-01 00:00:00' --owner=0 --group=0 -czf "$WORK_DIR/$COMBINED_TARBALL" "$PKG_DIR_NAME"
             cd "$REPO_ROOT"
         else
             echo "    Adding debian/ directory to source"
@@ -593,6 +695,14 @@ CARGO_CONFIG_EOF
             fi
             
             cd "$TEMP_DIR"
+            # For native format, directory name must be <package>-<version>
+            EXPECTED_DIR_NAME="${PACKAGE}-${CHANGELOG_VERSION}"
+            CURRENT_DIR_NAME=$(basename "$SOURCE_DIR")
+            if [[ "$CURRENT_DIR_NAME" != "$EXPECTED_DIR_NAME" ]]; then
+                echo "    Renaming $CURRENT_DIR_NAME to $EXPECTED_DIR_NAME for native format"
+                mv "$SOURCE_DIR" "$TEMP_DIR/$EXPECTED_DIR_NAME"
+                SOURCE_DIR="$TEMP_DIR/$EXPECTED_DIR_NAME"
+            fi
             DIR_NAME=$(basename "$SOURCE_DIR")
             tar --sort=name --mtime='2000-01-01 00:00:00' --owner=0 --group=0 -czf "$WORK_DIR/$COMBINED_TARBALL" "$DIR_NAME"
             cd "$REPO_ROOT"
@@ -779,6 +889,12 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
                 NEW_VERSION="${BASE_VERSION}+git${GIT_NUM}${GIT_HASH}ppa1"
                 echo "  Adding PPA number: $CHANGELOG_VERSION -> $NEW_VERSION"
             fi
+        elif [[ "$CHANGELOG_VERSION" =~ ^([0-9.]+)\+gitppa([0-9]+)$ ]]; then
+            BASE_VERSION="${BASH_REMATCH[1]}"
+            PPA_NUM="${BASH_REMATCH[2]}"
+            NEW_PPA_NUM=$((PPA_NUM + 1))
+            NEW_VERSION="${BASE_VERSION}+gitppa${NEW_PPA_NUM}"
+            echo "  Incrementing PPA number: $CHANGELOG_VERSION -> $NEW_VERSION"
         elif [[ "$CHANGELOG_VERSION" =~ ^([0-9.]+)(-([0-9]+))?$ ]]; then
             BASE_VERSION="${BASH_REMATCH[1]}"
             NEW_VERSION="${BASE_VERSION}ppa1"
@@ -817,15 +933,41 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
         
         echo "  Recreating tarball with new version: $COMBINED_TARBALL"
         if [[ "$PACKAGE" == "matugen" ]]; then
-            # Matugen: recreate tarball with updated changelog
-            PKG_DIR="$TEMP_DIR/matugen-package-$$"
+            # Matugen: recreate tarball with updated changelog and vendored dependencies
+            PKG_DIR_NAME="matugen-${NEW_VERSION}"
+            PKG_DIR="$TEMP_DIR/$PKG_DIR_NAME"
             mkdir -p "$PKG_DIR"
             download_service_files "$REPO_ROOT/distro/debian/$PACKAGE/_service" "$PKG_DIR" || exit 1
+            
+            # Extract source, vendor dependencies, and repackage for aarch64 builds
+            if [[ -f "$PKG_DIR/matugen-source.tar.gz" ]]; then
+                echo "    Vendoring Rust dependencies for aarch64 builds..."
+                cd "$PKG_DIR"
+                tar -xzf matugen-source.tar.gz
+                rm matugen-source.tar.gz
+                MATUGEN_SRC_DIR=$(ls -d matugen-* 2>/dev/null | grep -v "\.tar\.gz" | head -1)
+                if [[ -n "$MATUGEN_SRC_DIR" && -f "$MATUGEN_SRC_DIR/Cargo.toml" ]]; then
+                    cd "$MATUGEN_SRC_DIR"
+                    if command -v cargo >/dev/null 2>&1; then
+                        rm -rf vendor .cargo
+                        mkdir -p .cargo
+                        cargo vendor --versioned-dirs 2>&1 | awk '/^\[source\./ { printing=1 } printing { print }' > .cargo/config.toml || true
+                        if [[ -d vendor ]]; then
+                            echo "    Vendored $(ls vendor | wc -l) crates"
+                        fi
+                    fi
+                    cd "$PKG_DIR"
+                    # Rename to matugen-source for debian/rules
+                    mv "$MATUGEN_SRC_DIR" matugen-source
+                fi
+                cd "$TEMP_DIR"
+            fi
+            
             cp -r "$REPO_ROOT/distro/debian/$PACKAGE/debian" "$PKG_DIR/"
             cp "$TEMP_CHANGELOG" "$PKG_DIR/debian/changelog"
             cd "$TEMP_DIR"
-            tar --sort=name --mtime='2000-01-01 00:00:00' --owner=0 --group=0 -czf "$WORK_DIR/$COMBINED_TARBALL" "matugen-package-$$"
-            rm -rf "matugen-package-$$"
+            tar --sort=name --mtime='2000-01-01 00:00:00' --owner=0 --group=0 -czf "$WORK_DIR/$COMBINED_TARBALL" "$PKG_DIR_NAME"
+            rm -rf "$PKG_DIR_NAME"
             cd "$WORK_DIR"
         elif [[ -d "$SOURCE_DIR" ]] && [[ -d "$SOURCE_DIR/debian" ]]; then
             SOURCE_CHANGELOG="$SOURCE_DIR/debian/changelog"

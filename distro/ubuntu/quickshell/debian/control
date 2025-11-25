@@ -1,0 +1,60 @@
+Source: quickshell
+Section: x11
+Priority: optional
+Maintainer: Avenge Media <AvengeMedia.US@gmail.com>
+# Requires Qt 6.6+ (Ubuntu 25.10 Questing or newer only - no non-LTS releases)
+Build-Depends: debhelper-compat (= 13),
+               cmake,
+               ninja-build,
+               pkg-config,
+               git,
+               qt6-base-dev,
+               qt6-base-private-dev,
+               qt6-declarative-dev,
+               qt6-declarative-private-dev,
+               qt6-wayland-dev,
+               qt6-wayland-private-dev,
+               qt6-wayland,
+               qt6-tools-dev,
+               libqt6svg6-dev,
+               qt6-shadertools-dev,
+               libcli11-dev,
+               wayland-protocols,
+               libwayland-dev,
+               libpam0g-dev,
+               libpipewire-0.3-dev,
+               libdrm-dev,
+               libgbm-dev,
+               libegl1-mesa-dev,
+               libpolkit-agent-1-dev,
+               libjemalloc-dev
+Standards-Version: 4.6.2
+Homepage: https://github.com/quickshell-mirror/quickshell
+Vcs-Browser: https://github.com/quickshell-mirror/quickshell
+Vcs-Git: https://github.com/quickshell-mirror/quickshell.git
+
+Package: quickshell
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         qt6-wayland,
+         libqt6svg6,
+         libpipewire-0.3-0,
+         libjemalloc2
+Conflicts: quickshell-git
+Replaces: quickshell-git
+Description: Flexible toolkit for creating desktop shells using QtQuick
+ Quickshell is a flexible toolkit for creating desktop shells using QtQuick.
+ This stable version is built from official releases and includes full feature
+ set including wayland, layer-shell, session-lock, toplevel-management,
+ screencopy, pipewire, tray, mpris, and compositor support.
+ .
+ Features:
+  - QtQuick/QML-based declarative shell development
+  - Wayland layer-shell protocol support
+  - Session lock and toplevel management
+  - Screen capture and PipeWire integration
+  - System tray and MPRIS media control
+  - Compositor integration
+  - Built with C++20 and Qt6
+

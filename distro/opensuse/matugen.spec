@@ -24,21 +24,36 @@ environments.
 
 %prep
 %ifarch x86_64
-%setup -q -c -T
+# x86_64: use pre-built binary from Source0
+%setup -q -c -T -n matugen-%{version}
 tar -xzf %{SOURCE0}
-%else
-%setup -q -n matugen-%{version}
+%endif
+%ifarch aarch64
+# aarch64: build from source with vendored deps (Source1)
+# Source1 extracts to matugen-source/
+%setup -q -T -b 1 -n matugen-source
 %endif
 
 %build
 %ifarch x86_64
+# Pre-built binary, nothing to build
 true
-%else
-cargo build --release
+%endif
+%ifarch aarch64
+# Build from source with vendored deps
+# Fix vendor checksums for offline build
+for checksum in vendor/*/.cargo-checksum.json; do
+    if [ -f "$checksum" ]; then
+        pkg=$(cat "$checksum" | grep -o '"package":"[^"]*"' | cut -d'"' -f4)
+        echo "{\"files\":{},\"package\":\"$pkg\"}" > "$checksum"
+    fi
+done
+cargo build --offline --release
 %endif
 
 %install
 %ifarch x86_64
+# Install pre-built binary
 if [ -f matugen ]; then
     install -Dm755 matugen %{buildroot}%{_bindir}/matugen
 elif [ -f matugen-*/matugen ]; then
@@ -47,7 +62,9 @@ else
     echo "Error: Cannot find matugen binary"
     exit 1
 fi
-%else
+%endif
+%ifarch aarch64
+# Install built binary
 install -Dm755 target/release/matugen %{buildroot}%{_bindir}/matugen
 %endif
 
@@ -55,5 +72,7 @@ install -Dm755 target/release/matugen %{buildroot}%{_bindir}/matugen
 %{_bindir}/matugen
 
 %changelog
+* Tue Nov 25 2025 Avenge Media <AvengeMedia.US@gmail.com> - 3.0.0-2
+- Enable aarch64 builds with vendored Rust dependencies
 * Wed Nov 20 2025 Avenge Media <AvengeMedia.US@gmail.com> - 3.0.0-1
 - Initial OBS package

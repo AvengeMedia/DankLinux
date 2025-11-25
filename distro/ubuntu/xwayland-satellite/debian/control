@@ -1,0 +1,36 @@
+Source: xwayland-satellite
+Section: x11
+Priority: optional
+Maintainer: Avenge Media <AvengeMedia.US@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               cargo,
+               rustc (>= 1.83),
+               pkg-config,
+               libwayland-dev,
+               libxcb1-dev,
+               libxcb-composite0-dev,
+               libxcb-randr0-dev,
+               libxcb-res0-dev,
+               libxcb-cursor-dev,
+               libclang-dev
+Standards-Version: 4.6.2
+Homepage: https://github.com/Supreeeme/xwayland-satellite
+Vcs-Browser: https://github.com/Supreeeme/xwayland-satellite
+Vcs-Git: https://github.com/Supreeeme/xwayland-satellite.git
+
+Package: xwayland-satellite
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends}
+Conflicts: xwayland-satellite-git
+Description: Rootless Xwayland integration for Wayland compositors
+ xwayland-satellite grants rootless Xwayland integration to any Wayland
+ compositor implementing xdg_wm_base and viewporter. This is particularly
+ useful for compositors that do not want to implement support for rootless
+ Xwayland themselves, such as niri.
+ .
+ Features:
+  - Rootless Xwayland support without compositor modification
+  - Compatible with any Wayland compositor implementing xdg_wm_base
+  - listenfd support for compositor integration
+

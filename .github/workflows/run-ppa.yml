@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       package:
-        description: 'Package to upload (cliphist, matugen, niri, niri-git, quickshell-git, danksearch, dgop, or all)'
+        description: 'Package to upload (cliphist, matugen, niri, niri-git, quickshell, quickshell-git, xwayland-satellite, xwayland-satellite-git, danksearch, dgop, or all)'
         required: false
         default: 'auto'
       force_upload:
@@ -112,7 +112,7 @@ jobs:
           if [[ "${{ github.event.inputs.force_upload }}" == "true" ]]; then
             PKG="${{ github.event.inputs.package }}"
             if [[ "$PKG" == "auto" ]]; then
-              PACKAGES="cliphist matugen niri niri-git quickshell-git danksearch dgop"
+              PACKAGES="cliphist matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git danksearch dgop"
             else
               PACKAGES="$PKG"
             fi
@@ -131,11 +131,11 @@ jobs:
               echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
               echo "✨ Uploading updated packages: $PACKAGES"
             else
-              PACKAGES="cliphist matugen niri niri-git quickshell-git danksearch dgop"
+              PACKAGES="cliphist matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git danksearch dgop"
               echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
             fi
           else
-            PACKAGES="cliphist matugen niri niri-git quickshell-git danksearch dgop"
+            PACKAGES="cliphist matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git danksearch dgop"
             echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
           fi
       

@@ -26,6 +26,7 @@ BuildRequires:  pkgconfig(xkbcommon)
 BuildRequires:  pango-devel
 BuildRequires:  pipewire-devel
 BuildRequires:  libdisplay-info-devel
+Requires:       xwayland-satellite-git
 Recommends:     fuzzel
 Recommends:     xdg-desktop-portal-gtk
 Recommends:     xdg-desktop-portal-gnome

@@ -1,0 +1,10 @@
+<services>
+  <!-- Download release tarball from GitHub -->
+  <service name="download_url">
+    <param name="protocol">https</param>
+    <param name="host">github.com</param>
+    <param name="path">/Supreeeme/xwayland-satellite/archive/refs/tags/v0.7.tar.gz</param>
+    <param name="filename">xwayland-satellite-source.tar.gz</param>
+  </service>
+</services>
+

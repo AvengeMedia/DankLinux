@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       package:
-        description: 'Package to upload (cliphist, matugen, niri, niri-git, quickshell-git, danksearch, dgop, or all)'
+        description: 'Package to upload (cliphist, matugen, niri, niri-git, quickshell, quickshell-git, xwayland-satellite, xwayland-satellite-git, danksearch, dgop, or all)'
         required: false
         default: 'auto'
       force_upload:

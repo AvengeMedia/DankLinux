@@ -26,7 +26,8 @@ Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          libdisplay-info2,
-         libseat1
+         libseat1,
+         xwayland-satellite-git
 Recommends: alacritty,
             fuzzel,
             gnome-keyring,

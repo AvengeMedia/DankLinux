@@ -1,0 +1,60 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+
+DEB_VERSION := $(shell dpkg-parsechangelog -S Version)
+# Examples: 0.2.1ppa1 -> 0.2.1
+BASE_VERSION := $(shell echo $(DEB_VERSION) | sed 's/ppa[0-9]*$$//')
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	# Source is included in source package (downloaded by ppa-build.sh)
+	# This will be available on Launchpad build daemons
+	if [ ! -d "quickshell-$(BASE_VERSION)" ]; then \
+		echo "Error: quickshell-$(BASE_VERSION) directory not found!"; \
+		echo "Source should be included in the source package."; \
+		ls -la; \
+		exit 1; \
+	fi
+
+	# Patch wayland-protocols version requirement if needed
+	# Check available version and patch only if necessary
+	if [ -f "quickshell-$(BASE_VERSION)/src/wayland/CMakeLists.txt" ]; then \
+		if ! pkg-config --atleast-version=1.41 wayland-protocols 2>/dev/null; then \
+			WL_VERSION=$$(pkg-config --modversion wayland-protocols 2>/dev/null || echo "unknown"); \
+			sed -i 's/wayland-protocols>=1\.41/wayland-protocols>=1.38/g' quickshell-$(BASE_VERSION)/src/wayland/CMakeLists.txt; \
+			echo "Patched wayland-protocols requirement from 1.41 to 1.38 (system has $$WL_VERSION)"; \
+		else \
+			echo "wayland-protocols >= 1.41 available, no patch needed"; \
+		fi \
+	fi
+
+	# Configure with CMake (call cmake directly to ensure build directory is created)
+	# Using same flags as working pacstall build
+	cmake -GNinja \
+		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		-DCRASH_REPORTER=off \
+		-DCMAKE_CXX_STANDARD=20 \
+		-DCMAKE_INSTALL_PREFIX=/usr \
+		-S quickshell-$(BASE_VERSION) \
+		-B build
+
+override_dh_auto_build:
+	# Build with ninja
+	cmake --build build
+
+override_dh_auto_install:
+	# Install to debian/quickshell
+	DESTDIR=$(CURDIR)/debian/quickshell cmake --install build
+
+override_dh_auto_clean:
+	# Don't remove quickshell-$(BASE_VERSION) - it's part of the source package (native format)
+	rm -rf build
+	dh_auto_clean
+
+override_dh_shlibdeps:
+	# Skip shlib dependency detection errors (Qt6 private headers)
+	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
+

@@ -1,0 +1,51 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+
+# Extract version from debian/changelog
+DEB_VERSION := $(shell dpkg-parsechangelog -S Version)
+# Get upstream version (strip ppa suffix)
+BASE_VERSION := $(shell echo $(DEB_VERSION) | sed 's/ppa[0-9]*$$//')
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	# Source is included in source package (downloaded by ppa-build.sh)
+	if [ ! -d "xwayland-satellite-$(BASE_VERSION)" ]; then \
+		echo "Error: xwayland-satellite-$(BASE_VERSION) directory not found!"; \
+		echo "Source should be included in the source package."; \
+		ls -la; \
+		exit 1; \
+	fi
+	# Ensure .cargo/config.toml exists for vendored dependencies
+	if [ ! -f "xwayland-satellite-$(BASE_VERSION)/.cargo/config.toml" ]; then \
+		echo "Creating .cargo/config.toml for vendored sources"; \
+		mkdir -p "xwayland-satellite-$(BASE_VERSION)/.cargo"; \
+		echo '[source.crates-io]' > "xwayland-satellite-$(BASE_VERSION)/.cargo/config.toml"; \
+		echo 'replace-with = "vendored-sources"' >> "xwayland-satellite-$(BASE_VERSION)/.cargo/config.toml"; \
+		echo '' >> "xwayland-satellite-$(BASE_VERSION)/.cargo/config.toml"; \
+		echo '[source.vendored-sources]' >> "xwayland-satellite-$(BASE_VERSION)/.cargo/config.toml"; \
+		echo 'directory = "vendor"' >> "xwayland-satellite-$(BASE_VERSION)/.cargo/config.toml"; \
+	fi
+
+override_dh_auto_build:
+	cd xwayland-satellite-$(BASE_VERSION) && \
+	for checksum in vendor/*/.cargo-checksum.json; do \
+		if [ -f "$$checksum" ]; then \
+			pkg=$$(cat "$$checksum" | grep -o '"package":"[^"]*"' | cut -d'"' -f4); \
+			echo "{\"files\":{},\"package\":\"$$pkg\"}" > "$$checksum"; \
+		fi; \
+	done && \
+	cargo build --offline --release
+
+override_dh_auto_install:
+	install -Dm755 xwayland-satellite-$(BASE_VERSION)/target/release/xwayland-satellite \
+		$(CURDIR)/debian/xwayland-satellite/usr/bin/xwayland-satellite
+
+override_dh_auto_clean:
+	# Don't remove .cargo - it contains config.toml needed for vendor
+	if [ -d xwayland-satellite-$(BASE_VERSION) ]; then \
+		cd xwayland-satellite-$(BASE_VERSION) && cargo clean 2>/dev/null || true; \
+	fi
+	dh_auto_clean

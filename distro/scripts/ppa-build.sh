@@ -203,6 +203,17 @@ case "$PACKAGE_NAME" in
     niri)
         GIT_REPO="YaLTeR/niri"
         ;;
+    quickshell)
+        GIT_REPO="quickshell-mirror/quickshell"
+        ;;
+    xwayland-satellite)
+        GIT_REPO="Supreeeme/xwayland-satellite"
+        ;;
+    xwayland-satellite-git)
+        IS_GIT_PACKAGE=true
+        GIT_REPO="Supreeeme/xwayland-satellite"
+        SOURCE_DIR="xwayland-satellite-source"
+        ;;
     cliphist)
         GIT_REPO="sentriz/cliphist"
         ;;
@@ -332,6 +343,11 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
             PPA_NUM=$REBUILD_RELEASE
             info "🔄 Using manual rebuild release number: ppa$PPA_NUM"
         elif [[ "$CURRENT_VERSION" =~ ^${ESCAPED_BASE}ppa([0-9]+)$ ]]; then
+            # In CI, don't auto-increment - skip if same version (no new commits)
+            if [ -n "${GITHUB_ACTIONS:-}" ] || [ -n "${CI:-}" ]; then
+                info "Same commit detected in CI (current: $CURRENT_VERSION), skipping build"
+                exit 0
+            fi
             PPA_NUM=$((BASH_REMATCH[1] + 1))
             info "Detected rebuild of same commit (current: $CURRENT_VERSION), incrementing PPA number to $PPA_NUM"
         else
@@ -374,7 +390,7 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
         rm -rf "$TEMP_CLONE"
 
         # Vendor Rust dependencies for packages that need it
-        if [ "$PACKAGE_NAME" = "niri-git" ] || [ "$PACKAGE_NAME" = "quickshell-git" ]; then
+        if [ "$PACKAGE_NAME" = "niri-git" ] || [ "$PACKAGE_NAME" = "quickshell-git" ] || [ "$PACKAGE_NAME" = "xwayland-satellite-git" ]; then
             if [ -f "$SOURCE_DIR/Cargo.toml" ]; then
                 info "Vendoring Rust dependencies (Launchpad has no internet access)..."
                 cd "$SOURCE_DIR"
@@ -466,6 +482,11 @@ elif [ -n "$GIT_REPO" ]; then
                 PPA_NUM=$REBUILD_RELEASE
                 info "🔄 Using manual rebuild release number: ppa$PPA_NUM"
             elif [[ "$CURRENT_VERSION" =~ ^${LATEST_TAG}ppa([0-9]+)$ ]]; then
+                # In CI, don't auto-increment - skip if same version
+                if [ -n "${GITHUB_ACTIONS:-}" ] || [ -n "${CI:-}" ]; then
+                    info "Same version detected in CI (current: $CURRENT_VERSION), skipping build"
+                    exit 0
+                fi
                 PPA_NUM=$((BASH_REMATCH[1] + 1))
                 info "Detected rebuild of same version (current: $CURRENT_VERSION), incrementing PPA number to $PPA_NUM"
             else
@@ -483,6 +504,11 @@ elif [ -n "$GIT_REPO" ]; then
                 # Check if we're rebuilding the same version (increment PPA number if so)
                 ESCAPED_BASE=$(echo "$BASE_VERSION" | sed 's/\./\\./g' | sed 's/-/\\-/g')
                 if [[ "$CURRENT_VERSION" =~ ^${ESCAPED_BASE}ppa([0-9]+)$ ]]; then
+                    # In CI, don't auto-increment - skip if same version
+                    if [ -n "${GITHUB_ACTIONS:-}" ] || [ -n "${CI:-}" ]; then
+                        info "Same version detected in CI (current: $CURRENT_VERSION), skipping build"
+                        exit 0
+                    fi
                     PPA_NUM=$((BASH_REMATCH[1] + 1))
                     info "Detected rebuild of same version (current: $CURRENT_VERSION), incrementing PPA number to $PPA_NUM"
                 else
@@ -688,6 +714,77 @@ case "$PACKAGE_NAME" in
             info "Vendored source already exists"
         fi
         ;;
+    quickshell)
+        info "Preparing quickshell source..."
+        # Get version from changelog (remove ppa suffix for both quilt and native formats)
+        # Native: 0.2.1ppa1 -> 0.2.1, Quilt: 0.2.1-1ppa1 -> 0.2.1
+        VERSION=$(dpkg-parsechangelog -S Version | sed 's/-[^-]*$//' | sed 's/ppa[0-9]*$//')
+
+        # Download source tarball (Launchpad has no internet access)
+        if [ ! -d "quickshell-${VERSION}" ]; then
+            info "Downloading quickshell source tarball v${VERSION}..."
+            if wget -O quickshell-download.tar.gz "https://github.com/quickshell-mirror/quickshell/archive/refs/tags/v${VERSION}.tar.gz"; then
+                info "Extracting source..."
+                rm -rf "quickshell-${VERSION}"
+                tar -xzf quickshell-download.tar.gz
+                rm -f quickshell-download.tar.gz
+                success "Source prepared for packaging"
+            else
+                error "Failed to download quickshell source"
+                exit 1
+            fi
+        else
+            info "Source already exists"
+        fi
+        ;;
+    xwayland-satellite)
+        info "Preparing xwayland-satellite source with vendored dependencies..."
+        # Get version from changelog (remove ppa suffix for both quilt and native formats)
+        VERSION=$(dpkg-parsechangelog -S Version | sed 's/-[^-]*$//' | sed 's/ppa[0-9]*$//')
+
+        # Download and vendor Rust dependencies (Launchpad has no internet access)
+        if [ ! -d "xwayland-satellite-${VERSION}/vendor" ]; then
+            info "Downloading xwayland-satellite source tarball v${VERSION}..."
+            if wget -O xwayland-satellite-download.tar.gz "https://github.com/Supreeeme/xwayland-satellite/archive/refs/tags/v${VERSION}.tar.gz"; then
+                info "Extracting and vendoring Rust dependencies..."
+                rm -rf "xwayland-satellite-${VERSION}"
+                tar -xzf xwayland-satellite-download.tar.gz
+                rm -f xwayland-satellite-download.tar.gz
+
+                cd "xwayland-satellite-${VERSION}"
+                if [ -f Cargo.toml ]; then
+                    rm -rf vendor .cargo
+                    find . -type f -name "*.orig" -exec rm -f {} + || true
+
+                    mkdir -p .cargo
+                    cargo vendor 2>&1 | awk '
+                        /^\[source\.crates-io\]/ { printing=1 }
+                        printing { print }
+                        /^directory = "vendor"$/ { exit }
+                    ' > .cargo/config.toml
+
+                    if [ ! -d "vendor" ]; then
+                        error "Failed to vendor dependencies"
+                        exit 1
+                    fi
+
+                    find vendor -type f -name "*.orig" -exec rm -fv {} + || true
+                    find vendor -type f -name "*.rej" -exec rm -fv {} + || true
+
+                    success "Rust dependencies vendored"
+                else
+                    error "Cargo.toml not found in xwayland-satellite-${VERSION}"
+                    exit 1
+                fi
+                cd ..
+            else
+                error "Failed to download xwayland-satellite source"
+                exit 1
+            fi
+        else
+            info "Vendored source already exists"
+        fi
+        ;;
 esac
 
 cd - > /dev/null
@@ -710,6 +807,18 @@ if command -v rmadison >/dev/null 2>&1; then
             quickshell-git)
                 rm -rf quickshell-source
                 success "Cleaned up quickshell-source/ directory"
+                ;;
+            quickshell)
+                rm -rf quickshell-*
+                success "Cleaned up quickshell-*/ directory"
+                ;;
+            xwayland-satellite-git)
+                rm -rf xwayland-satellite-source
+                success "Cleaned up xwayland-satellite-source/ directory"
+                ;;
+            xwayland-satellite)
+                rm -rf xwayland-satellite-*
+                success "Cleaned up xwayland-satellite-*/ directory"
                 ;;
             cliphist)
                 rm -rf cliphist-*
@@ -765,6 +874,18 @@ if yes | DEBIAN_FRONTEND=noninteractive debuild -S $DEBUILD_SOURCE_FLAG -d; then
         niri)
             info "Cleaning up extracted source directory..."
             rm -rf niri-[0-9]*.[0-9]*.[0-9]*
+            ;;
+        quickshell)
+            info "Cleaning up extracted source directory..."
+            rm -rf quickshell-[0-9]*.[0-9]*.[0-9]*
+            ;;
+        xwayland-satellite-git)
+            info "Cleaning up extracted source directory..."
+            rm -rf xwayland-satellite-source
+            ;;
+        xwayland-satellite)
+            info "Cleaning up extracted source directory..."
+            rm -rf xwayland-satellite-[0-9]*.[0-9]*.[0-9]*
             ;;
         cliphist)
             info "Cleaning up extracted source directory..."

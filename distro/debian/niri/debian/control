@@ -27,7 +27,8 @@ Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          libdisplay-info2,
-         libseat1
+         libseat1,
+         xwayland-satellite
 Recommends: fuzzel,
             xdg-desktop-portal-gtk,
             xdg-desktop-portal-gnome,

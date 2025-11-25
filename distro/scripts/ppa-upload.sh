@@ -246,6 +246,18 @@ if [ "$KEEP_BUILDS" = "false" ]; then
                 REMOVED=$((REMOVED + 1))
             fi
             ;;
+        quickshell)
+            # Remove downloaded source directory
+            VERSION=$(dpkg-parsechangelog -S Version -l "$PACKAGE_DIR/debian/changelog" | sed 's/-[^-]*$//' | sed 's/ppa[0-9]*$//' 2>/dev/null)
+            if [ -n "$VERSION" ] && [ -d "$PACKAGE_DIR/quickshell-${VERSION}" ]; then
+                rm -rf "$PACKAGE_DIR/quickshell-${VERSION}"
+                REMOVED=$((REMOVED + 1))
+            fi
+            if [ -f "$PACKAGE_DIR/quickshell-download.tar.gz" ]; then
+                rm -f "$PACKAGE_DIR/quickshell-download.tar.gz"
+                REMOVED=$((REMOVED + 1))
+            fi
+            ;;
         niri-git)
             # Remove git source directory
             if [ -d "$PACKAGE_DIR/niri-source" ]; then
@@ -262,6 +274,25 @@ if [ "$KEEP_BUILDS" = "false" ]; then
             fi
             if [ -f "$PACKAGE_DIR/niri-download.tar.gz" ]; then
                 rm -f "$PACKAGE_DIR/niri-download.tar.gz"
+                REMOVED=$((REMOVED + 1))
+            fi
+            ;;
+        xwayland-satellite-git)
+            # Remove git source directory
+            if [ -d "$PACKAGE_DIR/xwayland-satellite-source" ]; then
+                rm -rf "$PACKAGE_DIR/xwayland-satellite-source"
+                REMOVED=$((REMOVED + 1))
+            fi
+            ;;
+        xwayland-satellite)
+            # Remove downloaded source directory and tarball
+            VERSION=$(dpkg-parsechangelog -S Version -l "$PACKAGE_DIR/debian/changelog" | sed 's/-[^-]*$//' | sed 's/ppa[0-9]*$//' 2>/dev/null)
+            if [ -n "$VERSION" ] && [ -d "$PACKAGE_DIR/xwayland-satellite-${VERSION}" ]; then
+                rm -rf "$PACKAGE_DIR/xwayland-satellite-${VERSION}"
+                REMOVED=$((REMOVED + 1))
+            fi
+            if [ -f "$PACKAGE_DIR/xwayland-satellite-download.tar.gz" ]; then
+                rm -f "$PACKAGE_DIR/xwayland-satellite-download.tar.gz"
                 REMOVED=$((REMOVED + 1))
             fi
             ;;
