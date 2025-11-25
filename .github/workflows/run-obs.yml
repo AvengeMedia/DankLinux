@@ -27,6 +27,9 @@ jobs:
     name: Check for package updates
     runs-on: ubuntu-latest
     
+    permissions:
+      contents: write
+    
     outputs:
       has_updates: ${{ steps.check.outputs.has_updates }}
       updated_packages: ${{ steps.check.outputs.updated_packages }}
@@ -37,30 +40,93 @@ jobs:
         with:
           fetch-depth: 0
       
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y jq curl git
       
+      - name: Update package versions
+        id: update
+        run: |
+          chmod +x distro/scripts/*.sh
+          
+          # Update debian/changelog files with latest upstream versions
+          echo "📦 Updating Debian changelogs..."
+          distro/scripts/debian-update.sh --update distro/debian
+          
+          # Update OpenSUSE spec files with latest upstream versions
+          echo ""
+          echo "📦 Updating OpenSUSE specs..."
+          distro/scripts/opensuse-update.sh --update
+      
       - name: Check for updates
         id: check
         run: |
-          chmod +x distro/ubuntu/ppa/*.sh
+          # Check if there are any changes in debian or opensuse directories
+          DEBIAN_CHANGED=false
+          OPENSUSE_CHANGED=false
           
-          # Run update check script (shared with PPA workflow)
-          # Script outputs space-separated list of packages needing updates to stdout
-          UPDATED=$(distro/ubuntu/ppa/check-updates.sh 2>&1 | tee /dev/stderr | tail -1)
+          if ! git diff --exit-code distro/debian/ >/dev/null 2>&1; then
+            DEBIAN_CHANGED=true
+          fi
           
-          if [ -n "$UPDATED" ] && [ "$UPDATED" != " " ]; then
+          if ! git diff --exit-code distro/opensuse/ >/dev/null 2>&1; then
+            OPENSUSE_CHANGED=true
+          fi
+          
+          if [ "$DEBIAN_CHANGED" = true ] || [ "$OPENSUSE_CHANGED" = true ]; then
             echo "has_updates=true" >> $GITHUB_OUTPUT
-            UPDATED_CSV=$(echo "$UPDATED" | tr ' ' ',')
-            echo "updated_packages=$UPDATED_CSV" >> $GITHUB_OUTPUT
-            echo "📋 Updates found: $UPDATED"
+            
+            # Get list of changed packages from both directories
+            UPDATED_DEB=""
+            UPDATED_SUSE=""
+            
+            if [ "$DEBIAN_CHANGED" = true ]; then
+              UPDATED_DEB=$(git diff --name-only distro/debian/ | grep 'debian/changelog' | xargs dirname | xargs -I{} basename {} | tr '\n' ',' | sed 's/,$//')
+            fi
+            
+            if [ "$OPENSUSE_CHANGED" = true ]; then
+              UPDATED_SUSE=$(git diff --name-only distro/opensuse/ | sed 's/\.spec$//' | xargs -I{} basename {} | tr '\n' ',' | sed 's/,$//')
+            fi
+            
+            # Combine and deduplicate
+            ALL_UPDATED=$(echo "$UPDATED_DEB,$UPDATED_SUSE" | tr ',' '\n' | grep -v '^$' | sort -u | tr '\n' ',' | sed 's/,$//')
+            echo "updated_packages=$ALL_UPDATED" >> $GITHUB_OUTPUT
+            echo "📋 Updates found: $ALL_UPDATED"
           else
             echo "has_updates=false" >> $GITHUB_OUTPUT
             echo "updated_packages=" >> $GITHUB_OUTPUT
             echo "📋 No updates found"
           fi
+      
+      - name: Commit version updates
+        if: steps.check.outputs.has_updates == 'true'
+        run: |
+          # Get changed packages for commit message
+          CHANGED_DEB=$(git diff --name-only distro/debian/ 2>/dev/null | grep 'debian/changelog' | xargs dirname 2>/dev/null | xargs -I{} basename {} 2>/dev/null | tr '\n' ', ' | sed 's/, $//' || echo "")
+          CHANGED_SUSE=$(git diff --name-only distro/opensuse/ 2>/dev/null | sed 's/\.spec$//' | xargs -I{} basename {} 2>/dev/null | tr '\n' ', ' | sed 's/, $//' || echo "")
+          
+          CHANGED=""
+          [ -n "$CHANGED_DEB" ] && CHANGED="Debian: $CHANGED_DEB"
+          [ -n "$CHANGED_SUSE" ] && [ -n "$CHANGED" ] && CHANGED="$CHANGED | "
+          [ -n "$CHANGED_SUSE" ] && CHANGED="${CHANGED}OpenSUSE: $CHANGED_SUSE"
+          
+          git add distro/debian/ distro/opensuse/
+          git commit -m "Auto-update OBS packages: $CHANGED
+
+          🤖 Automated update by GitHub Actions
+
+          Updated packages:
+          $(git diff HEAD~1 --name-only distro/debian/ distro/opensuse/ | sed 's/^/  - /')
+
+          Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          
+          git push
 
   upload-obs:
     name: Upload to OBS
@@ -75,6 +141,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: master
           fetch-depth: 0
       
       - name: Determine packages to upload

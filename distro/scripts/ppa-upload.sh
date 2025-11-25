@@ -53,8 +53,8 @@ PPA_NAME="${ARGS[1]}"
 UBUNTU_SERIES="${ARGS[2]:-questing}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-BUILD_SCRIPT="$SCRIPT_DIR/create-source.sh"
-UPLOAD_SCRIPT="$SCRIPT_DIR/upload-ppa.sh"
+BUILD_SCRIPT="$SCRIPT_DIR/ppa-build.sh"
+UPLOAD_SCRIPT="$SCRIPT_DIR/ppa-dput.sh"
 
 # Validate scripts exist
 if [ ! -f "$BUILD_SCRIPT" ]; then

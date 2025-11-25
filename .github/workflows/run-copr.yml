@@ -26,9 +26,9 @@ on:
       - master
     paths:
       - '.github/workflows/run-copr.yml'
-      - 'distro/fedora/scripts/update-packages.sh'
-      - 'distro/fedora/scripts/fetch-version.sh'
-      - 'distro/fedora/scripts/trigger-copr.sh'
+      - 'distro/scripts/copr-update.sh'
+      - 'distro/scripts/fetch-version.sh'
+      - 'distro/scripts/copr-trigger.sh'
 
 jobs:
   update-packages:
@@ -61,9 +61,8 @@ jobs:
       - name: Run update script
         id: update
         run: |
-          chmod +x distro/fedora/scripts/*.sh
-          cd distro/fedora
-          ../../distro/fedora/scripts/update-packages.sh | tee update-log.txt
+          chmod +x distro/scripts/*.sh
+          distro/scripts/copr-update.sh | tee update-log.txt
 
           # Check if there are any changes - use git diff --exit-code for reliability
           if git diff --exit-code >/dev/null 2>&1; then
@@ -203,9 +202,8 @@ jobs:
         env:
           MANUAL_PACKAGE: ${{ github.event.inputs.package }}
         run: |
-          chmod +x distro/fedora/scripts/trigger-copr.sh
-          cd distro/fedora
-          ./scripts/trigger-copr.sh
+          chmod +x distro/scripts/*.sh
+          distro/scripts/copr-trigger.sh
 
       - name: Build summary
         run: |

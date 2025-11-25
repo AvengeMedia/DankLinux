@@ -60,44 +60,44 @@ BUILD_GHOSTTY=false
 BUILD_MATERIAL_SYMBOLS=false
 BUILD_DANKSEARCH=false
 
-# Check which specs changed
-if echo "$CHANGED_FILES" | grep -q "quickshell/quickshell.spec"; then
+# Check which specs changed (paths relative to repo root)
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/quickshell/quickshell.spec"; then
     BUILD_QUICKSHELL=true
 fi
 
-if echo "$CHANGED_FILES" | grep -q "quickshell/quickshell-git.spec"; then
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/quickshell/quickshell-git.spec"; then
     BUILD_QUICKSHELL_GIT=true
 fi
 
-if echo "$CHANGED_FILES" | grep -q "dgop/dgop.spec"; then
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/dgop/dgop.spec"; then
     BUILD_DGOP=true
 fi
 
-if echo "$CHANGED_FILES" | grep -q "cliphist/cliphist.spec"; then
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/cliphist/cliphist.spec"; then
     BUILD_CLIPHIST=true
 fi
 
-if echo "$CHANGED_FILES" | grep -q "matugen/matugen.spec"; then
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/matugen/matugen.spec"; then
     BUILD_MATUGEN=true
 fi
 
-if echo "$CHANGED_FILES" | grep -q "hyprpicker/hyprpicker.spec"; then
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/hyprpicker/hyprpicker.spec"; then
     BUILD_HYPRPICKER=true
 fi
 
-if echo "$CHANGED_FILES" | grep -q "breakpad/breakpad.spec"; then
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/breakpad/breakpad.spec"; then
     BUILD_BREAKPAD=true
 fi
 
-if echo "$CHANGED_FILES" | grep -q "ghostty/ghostty.spec"; then
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/ghostty/ghostty.spec"; then
     BUILD_GHOSTTY=true
 fi
 
-if echo "$CHANGED_FILES" | grep -q "fonts/material-symbols-fonts.spec"; then
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/fonts/material-symbols-fonts.spec"; then
     BUILD_MATERIAL_SYMBOLS=true
 fi
 
-if echo "$CHANGED_FILES" | grep -q "danksearch/danksearch.spec"; then
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/danksearch/danksearch.spec"; then
     BUILD_DANKSEARCH=true
 fi
 
@@ -109,59 +109,59 @@ if [[ -z "$CHANGED_FILES" ]]; then
     echo "ℹ️  No git history found, checking for uncommitted changes..."
     UNCOMMITTED=$(git diff --name-only 2>/dev/null || echo "")
 
-    echo "$UNCOMMITTED" | grep -q "quickshell/quickshell.spec" && BUILD_QUICKSHELL=true
-    echo "$UNCOMMITTED" | grep -q "quickshell/quickshell-git.spec" && BUILD_QUICKSHELL_GIT=true
-    echo "$UNCOMMITTED" | grep -q "dgop/dgop.spec" && BUILD_DGOP=true
-    echo "$UNCOMMITTED" | grep -q "cliphist/cliphist.spec" && BUILD_CLIPHIST=true
-    echo "$UNCOMMITTED" | grep -q "matugen/matugen.spec" && BUILD_MATUGEN=true
-    echo "$UNCOMMITTED" | grep -q "hyprpicker/hyprpicker.spec" && BUILD_HYPRPICKER=true
-    echo "$UNCOMMITTED" | grep -q "breakpad/breakpad.spec" && BUILD_BREAKPAD=true
-    echo "$UNCOMMITTED" | grep -q "ghostty/ghostty.spec" && BUILD_GHOSTTY=true
-    echo "$UNCOMMITTED" | grep -q "fonts/material-symbols-fonts.spec" && BUILD_MATERIAL_SYMBOLS=true
-    echo "$UNCOMMITTED" | grep -q "danksearch/danksearch.spec" && BUILD_DANKSEARCH=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/quickshell/quickshell.spec" && BUILD_QUICKSHELL=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/quickshell/quickshell-git.spec" && BUILD_QUICKSHELL_GIT=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/dgop/dgop.spec" && BUILD_DGOP=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/cliphist/cliphist.spec" && BUILD_CLIPHIST=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/matugen/matugen.spec" && BUILD_MATUGEN=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/hyprpicker/hyprpicker.spec" && BUILD_HYPRPICKER=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/breakpad/breakpad.spec" && BUILD_BREAKPAD=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/ghostty/ghostty.spec" && BUILD_GHOSTTY=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/fonts/material-symbols-fonts.spec" && BUILD_MATERIAL_SYMBOLS=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/danksearch/danksearch.spec" && BUILD_DANKSEARCH=true
 fi
 
 # Trigger builds
 BUILDS_TRIGGERED=0
 
 if [[ "$BUILD_QUICKSHELL" == true ]] || [[ "$FORCE_PACKAGE" == "quickshell" ]]; then
-    trigger_build "quickshell" "quickshell/quickshell.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+    trigger_build "quickshell" "distro/fedora/quickshell/quickshell.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
 if [[ "$BUILD_QUICKSHELL_GIT" == true ]] || [[ "$FORCE_PACKAGE" == "quickshell-git" ]]; then
-    trigger_build "quickshell-git" "quickshell/quickshell-git.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+    trigger_build "quickshell-git" "distro/fedora/quickshell/quickshell-git.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
 if [[ "$BUILD_DGOP" == true ]] || [[ "$FORCE_PACKAGE" == "dgop" ]]; then
-    trigger_build "dgop" "dgop/dgop.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+    trigger_build "dgop" "distro/fedora/dgop/dgop.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
 if [[ "$BUILD_CLIPHIST" == true ]] || [[ "$FORCE_PACKAGE" == "cliphist" ]]; then
-    trigger_build "cliphist" "cliphist/cliphist.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+    trigger_build "cliphist" "distro/fedora/cliphist/cliphist.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
 if [[ "$BUILD_MATUGEN" == true ]] || [[ "$FORCE_PACKAGE" == "matugen" ]]; then
-    trigger_build "matugen" "matugen/matugen.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+    trigger_build "matugen" "distro/fedora/matugen/matugen.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
 if [[ "$BUILD_HYPRPICKER" == true ]] || [[ "$FORCE_PACKAGE" == "hyprpicker" ]]; then
-    trigger_build "hyprpicker" "hyprpicker/hyprpicker.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+    trigger_build "hyprpicker" "distro/fedora/hyprpicker/hyprpicker.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
 if [[ "$BUILD_BREAKPAD" == true ]] || [[ "$FORCE_PACKAGE" == "breakpad" ]]; then
-    trigger_build "breakpad" "breakpad/breakpad.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+    trigger_build "breakpad" "distro/fedora/breakpad/breakpad.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
 if [[ "$BUILD_GHOSTTY" == true ]] || [[ "$FORCE_PACKAGE" == "ghostty" ]]; then
-    trigger_build "ghostty" "ghostty/ghostty.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+    trigger_build "ghostty" "distro/fedora/ghostty/ghostty.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
 if [[ "$BUILD_MATERIAL_SYMBOLS" == true ]] || [[ "$FORCE_PACKAGE" == "material-symbols-fonts" ]]; then
-    trigger_build "material-symbols-fonts" "fonts/material-symbols-fonts.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+    trigger_build "material-symbols-fonts" "distro/fedora/fonts/material-symbols-fonts.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
 if [[ "$BUILD_DANKSEARCH" == true ]] || [[ "$FORCE_PACKAGE" == "danksearch" ]]; then
-    trigger_build "danksearch" "danksearch/danksearch.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+    trigger_build "danksearch" "distro/fedora/danksearch/danksearch.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
 echo ""

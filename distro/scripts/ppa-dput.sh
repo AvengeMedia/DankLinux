@@ -1,5 +1,5 @@
 #!/bin/bash
-# Generic PPA uploader for danklinux packages
+# Ubuntu PPA uploader for danklinux packages
 # Usage: ./upload-ppa.sh <changes-file> <ppa-name>
 #
 # Example:

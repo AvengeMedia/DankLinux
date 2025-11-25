@@ -27,6 +27,9 @@ jobs:
     name: Check for package updates
     runs-on: ubuntu-latest
     
+    permissions:
+      contents: write
+    
     outputs:
       has_updates: ${{ steps.check.outputs.has_updates }}
       updated_packages: ${{ steps.check.outputs.updated_packages }}
@@ -45,12 +48,10 @@ jobs:
       - name: Check for updates
         id: check
         run: |
-          chmod +x distro/ubuntu/ppa/*.sh
+          chmod +x distro/scripts/*.sh
           
-          # Run PPA-specific update check script
-          # Script outputs space-separated list of packages needing updates to stdout
-          # Detailed logging goes to stderr
-          UPDATED=$(distro/ubuntu/ppa/check-updates.sh 2>&1 | tee /dev/stderr | tail -1)
+          # Check for updates (PPA uses distro/ubuntu by default)
+          UPDATED=$(distro/scripts/debian-update.sh 2>&1 | tee /dev/stderr | tail -1)
           
           if [ -n "$UPDATED" ] && [ "$UPDATED" != " " ]; then
             echo "has_updates=true" >> $GITHUB_OUTPUT
@@ -68,6 +69,8 @@ jobs:
     name: Upload to PPA
     needs: check-updates
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     if: |
       github.event.inputs.force_upload == 'true' ||
       (needs.check-updates.outputs.has_updates == 'true' && needs.check-updates.outputs.updated_packages != '')
@@ -77,6 +80,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
       
       - name: Install build dependencies
         run: |
@@ -137,8 +145,6 @@ jobs:
         run: |
           PACKAGES="${{ steps.packages.outputs.packages }}"
           
-          cd distro/ubuntu/ppa
-          
           for pkg in $PACKAGES; do
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo "Uploading $pkg to PPA..."
@@ -146,8 +152,32 @@ jobs:
               echo "🔄 Using rebuild release number: ppa$REBUILD_RELEASE"
             fi
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            bash create-and-upload.sh "../$pkg" danklinux questing || echo "⚠️ Failed to upload $pkg"
+            bash distro/scripts/ppa-upload.sh "distro/ubuntu/$pkg" danklinux questing || echo "⚠️ Failed to upload $pkg"
           done
+      
+      - name: Commit changelog updates
+        run: |
+          # Check if there are any changelog changes to commit
+          if git diff --exit-code distro/ubuntu/ >/dev/null 2>&1; then
+            echo "📋 No changelog changes to commit"
+          else
+            # Get list of changed packages for commit message
+            CHANGED=$(git diff --name-only distro/ubuntu/ | grep 'debian/changelog' | xargs dirname | xargs -I{} basename {} | tr '\n' ', ' | sed 's/,$//')
+            
+            echo "📋 Committing changelog updates for: $CHANGED"
+            
+            git add distro/ubuntu/
+            git commit -m "Auto-update PPA changelogs: $CHANGED
+
+          🤖 Automated update by GitHub Actions
+
+          Updated packages:
+          $(git diff HEAD~1 --name-only distro/ubuntu/ | grep 'debian/changelog' | sed 's/^/  - /')
+
+          Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            
+            git push
+          fi
       
       - name: Summary
         run: |
