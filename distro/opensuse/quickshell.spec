@@ -33,7 +33,6 @@ BuildRequires:  polkit-devel
 BuildRequires:  jemalloc-devel
 BuildRequires:  chrpath
 Requires:       qt6-wayland
-Requires:       libQt6Svg6
 Requires:       jemalloc
 Conflicts:      quickshell-git
 
@@ -81,6 +80,10 @@ DESTDIR=%{buildroot} cmake --install .
 cd ..
 
 chrpath -d %{buildroot}%{_bindir}/quickshell 2>/dev/null || true
+
+%check
+
+desktop-file-validate %{buildroot}%{_datadir}/applications/org.quickshell.desktop || true
 
 %files
 %license LICENSE

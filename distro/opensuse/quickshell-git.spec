@@ -33,9 +33,8 @@ BuildRequires:  polkit-devel
 BuildRequires:  jemalloc-devel
 BuildRequires:  chrpath
 Requires:       qt6-wayland
-Requires:       libQt6Svg6
 Requires:       jemalloc
-Provides:       quickshell
+Provides:       quickshell = %{version}-%{release}
 Conflicts:      quickshell
 
 %description
@@ -83,6 +82,10 @@ cd ..
 
 chrpath -d %{buildroot}%{_bindir}/quickshell 2>/dev/null || true
 
+%check
+
+desktop-file-validate %{buildroot}%{_datadir}/applications/org.quickshell.desktop || true
+
 %files
 %license LICENSE
 %doc README.md
@@ -97,5 +100,5 @@ chrpath -d %{buildroot}%{_bindir}/quickshell 2>/dev/null || true
 %changelog
 * Tue Nov 25 2025 Avenge Media <AvengeMedia.US@gmail.com> - 0.2.1+git709.e9bad676-1
 - Git snapshot (commit 709: e9bad676)
-* Wed Nov 20 2025 Avenge Media <AvengeMedia.US@gmail.com> - 0.2.1+git-1
+* Wed Nov 25 2025 Avenge Media <AvengeMedia.US@gmail.com> - 0.2.1+git-1
 - Initial OBS package (nightly builds)
