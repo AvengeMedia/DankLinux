@@ -21,9 +21,9 @@
    ✓ Already up to date
 
 📦 Checking matugen...
-   Current: 3.0.0
+   Current: 3.1.0
    Latest:  3.1.0
-   ✨ Update available: 3.0.0 → 3.1.0
+   ✓ Already up to date
 
 📦 Checking hyprpicker...
    Current: 0.4.5
@@ -51,7 +51,4 @@
    Skipping automatic updates for font file
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Updated 1 package(s):
-   • matugen: 3.0.0 → 3.1.0
-
-📝 Changes staged for commit
+✓ All packages are up to date
