@@ -1,0 +1,57 @@
+🔍 Checking for package updates...
+
+📦 Checking quickshell (stable)...
+   Current: 0.2.1
+   Latest:  0.2.1
+   ✓ Already up to date
+
+📦 Checking quickshell-git (development)...
+   Current commit: e9bad67 (date: 20251125)
+   Latest commit:  e9bad67 (date: 20251125)
+   ✓ Already up to date
+
+📦 Checking dgop...
+   Current: 0.1.11
+   Latest:  0.1.11
+   ✓ Already up to date
+
+📦 Checking cliphist...
+   Current: 0.7.0
+   Latest:  0.7.0
+   ✓ Already up to date
+
+📦 Checking matugen...
+   Current: 3.0.0
+   Latest:  3.1.0
+   ✨ Update available: 3.0.0 → 3.1.0
+
+📦 Checking hyprpicker...
+   Current: 0.4.5
+   Latest:  0.4.5
+   ✓ Already up to date
+
+📦 Checking breakpad...
+   Current: 2024.02.16
+   ℹ️  Breakpad uses manual versioning (chromium snapshots)
+   Current version: 2024.02.16
+
+📦 Checking ghostty...
+   Current: 1.2.3
+   Latest:  1.2.3
+   ✓ Already up to date
+
+📦 Checking dms-greeter...
+   ℹ️  Builds directly from: https://github.com/AvengeMedia/DankMaterialShell
+   Not tracked in dms_copr repo - managed in separate DankMaterialShell repo
+   Skipping automatic updates (separate repository)
+
+📦 Checking material-symbols-fonts...
+   ℹ️  Font file from google/material-design-icons (no version tags)
+   Current: 1.0 (manually versioned)
+   Skipping automatic updates for font file
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Updated 1 package(s):
+   • matugen: 3.0.0 → 3.1.0
+
+📝 Changes staged for commit
