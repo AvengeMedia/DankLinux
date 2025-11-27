@@ -147,28 +147,29 @@ jobs:
         run: |
           if [[ "${{ github.event.inputs.force_upload }}" == "true" ]]; then
             PKG="${{ github.event.inputs.package }}"
-            if [[ "$PKG" == "auto" ]]; then
+            if [[ "$PKG" == "auto" || -z "$PKG" ]]; then
               echo "packages=all" >> $GITHUB_OUTPUT
+              echo "🚀 Force upload: all packages"
             else
               echo "packages=$PKG" >> $GITHUB_OUTPUT
+              echo "🚀 Force upload: $PKG"
             fi
-            echo "🚀 Force upload: $PKG"
           elif [[ -n "${{ github.event.inputs.package }}" && "${{ github.event.inputs.package }}" != "auto" ]]; then
             echo "packages=${{ github.event.inputs.package }}" >> $GITHUB_OUTPUT
             echo "📦 Manual selection: ${{ github.event.inputs.package }}"
           elif [[ "${{ needs.check-updates.outputs.has_updates }}" == "true" ]]; then
-            # Upload only updated packages
             UPDATED="${{ needs.check-updates.outputs.updated_packages }}"
             if [[ -n "$UPDATED" ]]; then
-              # Convert comma-separated to space-separated for obs-upload.sh
               PACKAGES=$(echo "$UPDATED" | tr ',' ' ')
               echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
               echo "✨ Uploading updated packages: $PACKAGES"
             else
-              echo "packages=all" >> $GITHUB_OUTPUT
+              echo "packages=" >> $GITHUB_OUTPUT
+              echo "ℹ️ Updates reported but no package list; skipping."
             fi
           else
-            echo "packages=all" >> $GITHUB_OUTPUT
+            echo "packages=" >> $GITHUB_OUTPUT
+            echo "ℹ️ No updates detected and no manual trigger; nothing to upload."
           fi
       
       - name: Install OSC
@@ -193,7 +194,12 @@ jobs:
           REBUILD_RELEASE: ${{ github.event.inputs.rebuild_release }}
         run: |
           PACKAGES="${{ steps.packages.outputs.packages }}"
-          
+
+          if [[ -z "$PACKAGES" ]]; then
+            echo "No packages selected for upload. Skipping." 
+            exit 0
+          fi
+
           # Loop through each package
           for pkg in $PACKAGES; do
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -207,10 +213,12 @@ jobs:
           echo "### OBS Package Upload Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          if [[ "${{ needs.check-updates.outputs.has_updates }}" == "true" ]]; then
+          if [[ -n "${{ steps.packages.outputs.packages }}" ]]; then
+            echo "- **Uploaded Packages**: ${{ steps.packages.outputs.packages }}" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ needs.check-updates.outputs.has_updates }}" == "true" ]]; then
             echo "- **Updated Packages**: ${{ needs.check-updates.outputs.updated_packages }}" >> $GITHUB_STEP_SUMMARY
           else
-            echo "- **Uploaded Packages**: ${{ steps.packages.outputs.packages }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Uploaded Packages**: none (no updates detected)" >> $GITHUB_STEP_SUMMARY
           fi
           
           echo "- **OBS Project**: https://build.opensuse.org/project/show/home:AvengeMedia:danklinux" >> $GITHUB_STEP_SUMMARY
