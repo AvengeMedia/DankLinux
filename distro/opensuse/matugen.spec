@@ -1,5 +1,5 @@
 Name:           matugen
-Version:        3.0.0
+Version:        3.1.0
 Release:        1%{?dist}
 Summary:        Material You color generation tool
 
@@ -72,6 +72,8 @@ install -Dm755 target/release/matugen %{buildroot}%{_bindir}/matugen
 %{_bindir}/matugen
 
 %changelog
+* Thu Nov 27 2025 Avenge Media <AvengeMedia.US@gmail.com> - 3.1.0-1
+- Update to upstream version 3.1.0
 * Tue Nov 25 2025 Avenge Media <AvengeMedia.US@gmail.com> - 3.0.0-2
 - Enable aarch64 builds with vendored Rust dependencies
 * Wed Nov 20 2025 Avenge Media <AvengeMedia.US@gmail.com> - 3.0.0-1

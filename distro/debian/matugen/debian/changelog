@@ -1,3 +1,9 @@
+matugen (3.1.0ppa1) unstable; urgency=medium
+
+  * Update to upstream version 3.1.0
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Thu, 27 Nov 2025 01:37:53 +0000
+
 matugen (3.0.0ppa4) unstable; urgency=medium
 
   * Rebuild to fix repository metadata issues
