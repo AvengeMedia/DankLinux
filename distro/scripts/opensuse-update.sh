@@ -46,16 +46,9 @@ PACKAGES=(
 get_latest_tag() {
     local repo="$1"
     local tag
-    tag=$(curl -sf "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null | \
-        jq -r '.tag_name // empty' 2>/dev/null || echo "")
+    # Use centralized fetch script with retry/token support
+    tag=$("$SCRIPT_DIR/fetch-version.sh" "$repo" "release")
     
-    if [ -n "$tag" ]; then
-        echo "${tag#v}"
-        return
-    fi
-    
-    tag=$(curl -sf "https://api.github.com/repos/$repo/tags" 2>/dev/null | \
-        jq -r '.[0].name // empty' 2>/dev/null || echo "")
     echo "${tag#v}"
 }
 

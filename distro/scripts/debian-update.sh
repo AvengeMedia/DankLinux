@@ -56,16 +56,9 @@ PACKAGES=(
 get_latest_tag() {
     local repo="$1"
     local tag
-    tag=$(curl -sf "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null | \
-        jq -r '.tag_name // empty' 2>/dev/null || echo "")
+    # Use centralized fetch script with retry/token support
+    tag=$("$SCRIPT_DIR/fetch-version.sh" "$repo" "release")
     
-    if [ -n "$tag" ]; then
-        echo "${tag#v}"
-        return
-    fi
-    
-    tag=$(curl -sf "https://api.github.com/repos/$repo/tags" 2>/dev/null | \
-        jq -r '.[0].name // empty' 2>/dev/null || echo "")
     echo "${tag#v}"
 }
 
@@ -122,6 +115,25 @@ extract_release_version() {
     echo "$1" | sed 's/ppa[0-9]*$//' | sed 's/-[0-9]*$//'
 }
 
+update_service_file() {
+    local package_dir="$1"
+    local new_version="$2"
+    local service_file="$package_dir/_service"
+    
+    [ ! -f "$service_file" ] && return
+    
+    sed -i "s|/releases/download/v[0-9.]\+/|/releases/download/v$new_version/|g" "$service_file"
+    sed -i "s|/releases/download/[0-9.]\+/|/releases/download/$new_version/|g" "$service_file"
+    
+    sed -i "s|/archive/refs/tags/v[0-9.]\+\.tar|/archive/refs/tags/v$new_version.tar|g" "$service_file"
+    sed -i "s|/archive/refs/tags/[0-9.]\+\.tar|/archive/refs/tags/$new_version.tar|g" "$service_file"
+    
+    sed -i "s|niri-[0-9.]\+-|niri-$new_version-|g" "$service_file"
+    sed -i "s|matugen-[0-9.]\+-|matugen-$new_version-|g" "$service_file"
+    
+    success "   Updated _service file to $new_version"
+}
+
 update_changelog() {
     local package_dir="$1"
     local new_version="$2"
@@ -145,6 +157,9 @@ update_changelog() {
     
     mv "$temp_changelog" "$changelog"
     success "   Updated changelog to $new_version"
+    
+    # Also update _service file if it exists
+    update_service_file "$package_dir" "${new_version%ppa*}"
 }
 
 if [ "$UPDATE_MODE" = true ]; then
