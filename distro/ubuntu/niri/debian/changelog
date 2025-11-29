@@ -1,5 +1,5 @@
-niri (25.08ppa5) questing; urgency=medium
+niri (25.11ppa1) questing; urgency=medium
 
-  * Rebuild for packaging fixes (ppa5)
+  * Upstream release 25.11
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Tue, 25 Nov 2025 19:42:37 +0000
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 29 Nov 2025 12:28:15 +0000
