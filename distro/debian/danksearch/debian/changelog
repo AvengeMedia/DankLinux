@@ -1,5 +1,6 @@
-danksearch (0.0.7) nightly; urgency=medium
+danksearch (0.0.7ppa1) nightly; urgency=medium
 
+  * Convert to native format for deterministic builds
   * Fast file search utility for DMS
   * Add dsearch symlink for compatibility
 

@@ -1,5 +1,6 @@
-dgop (0.1.11) nightly; urgency=medium
+dgop (0.1.11ppa1) nightly; urgency=medium
 
+  * Convert to native format for deterministic builds
   * Stateless CPU/GPU monitoring tool
   * Supports NVIDIA and AMD GPUs
 

@@ -179,6 +179,15 @@ echo "==> Preparing $PACKAGE for OBS upload"
 
 find "$WORK_DIR" -maxdepth 1 -type f \( -name "*.tar.gz" -o -name "*.tar.xz" -o -name "*.tar.bz2" -o -name "*.tar" -o -name "*.spec" -o -name "_service" -o -name "*.dsc" \) -delete 2>/dev/null || true
 
+# Remove debian.tar.gz from OSC tracking
+SOURCE_FORMAT_CHECK=$(cat "distro/debian/$PACKAGE/debian/source/format" 2>/dev/null || echo "")
+if [[ "$SOURCE_FORMAT_CHECK" == *"native"* ]] && [[ -f "$WORK_DIR/debian.tar.gz" ]]; then
+    echo "  - Removing old debian.tar.gz (converting from quilt to native format)"
+    cd "$WORK_DIR"
+    osc rm -f debian.tar.gz 2>/dev/null || rm -f debian.tar.gz
+    cd "$REPO_ROOT"
+fi
+
 CHANGELOG_VERSION=$(grep -m1 "^$PACKAGE" distro/debian/$PACKAGE/debian/changelog 2>/dev/null | sed 's/.*(\([^)]*\)).*/\1/' || echo "0.1.11-1")
 SOURCE_FORMAT=$(cat "distro/debian/$PACKAGE/debian/source/format" 2>/dev/null || echo "3.0 (quilt)")
 
@@ -202,6 +211,13 @@ if [[ "$SOURCE_FORMAT" == *"native"* ]]; then
             if [[ "$PACKAGE" == "matugen" ]]; then
                 echo "    matugen uses pre-downloaded tarballs, skipping source extraction"
                 SOURCE_DIR=""
+            # Binary-download packages (danksearch, dgop): download .gz binaries directly
+            elif [[ "$PACKAGE" == "danksearch" || "$PACKAGE" == "dgop" ]]; then
+                echo "    Binary-download package detected: $PACKAGE"
+                SOURCE_DIR="$TEMP_DIR/${PACKAGE}-${CHANGELOG_VERSION}"
+                mkdir -p "$SOURCE_DIR"
+                download_service_files "distro/debian/$PACKAGE/_service" "$SOURCE_DIR" || exit 1
+                echo "    Downloaded binaries to $SOURCE_DIR"
             else
                 SERVICE_BLOCK=$(awk '/<service name="download_url">/,/<\/service>/' "distro/debian/$PACKAGE/_service" | head -10)
                 URL_PROTOCOL=$(echo "$SERVICE_BLOCK" | grep "protocol" | sed 's/.*<param name="protocol">\(.*\)<\/param>.*/\1/' | head -1)
@@ -442,10 +458,17 @@ CARGO_CONFIG_EOF
         echo "  - Note: niri stable is Debian-only (openSUSE builds niri-git)"
         UPLOAD_OPENSUSE=false
     fi
-    
-    if [[ -f "distro/opensuse/$PACKAGE.spec" ]]; then
+
+    # Binary-download packages use direct URLs in spec files (No tar needed)
+    SKIP_OPENSUSE_TARBALL=false
+    if [[ "$PACKAGE" == "danksearch" || "$PACKAGE" == "dgop" ]]; then
+        SKIP_OPENSUSE_TARBALL=true
+        echo "  - Note: $PACKAGE uses direct binary URLs, skipping tarball creation for OpenSUSE"
+    fi
+
+    if [[ -f "distro/opensuse/$PACKAGE.spec" ]] && [[ "$SKIP_OPENSUSE_TARBALL" == false ]]; then
         echo "  - Creating OpenSUSE-compatible source tarballs"
-        
+
         SOURCE0=$(grep "^Source0:" "distro/opensuse/$PACKAGE.spec" | sed 's/^Source0:[[:space:]]*//' | head -1)
         
         if [[ -n "$SOURCE0" ]]; then
@@ -618,7 +641,36 @@ CARGO_CONFIG_EOF
     elif [[ "$UPLOAD_OPENSUSE" == true ]]; then
         echo "  - Warning: OpenSUSE spec file not found, skipping OpenSUSE upload"
     fi
-    
+
+    # Copy spec file for binary-download packages (OBS downloads binaries via Source URLs)
+    if [[ "$SKIP_OPENSUSE_TARBALL" == true ]] && [[ -f "distro/opensuse/$PACKAGE.spec" ]]; then
+        echo "  - Copying OpenSUSE spec file (no tarball needed, OBS downloads binaries directly)"
+        cp "distro/opensuse/$PACKAGE.spec" "$WORK_DIR/"
+
+        if [[ -f "$WORK_DIR/.osc/$PACKAGE.spec" ]]; then
+            NEW_VERSION=$(grep "^Version:" "$WORK_DIR/$PACKAGE.spec" | awk '{print $2}' | head -1)
+            NEW_RELEASE=$(grep "^Release:" "$WORK_DIR/$PACKAGE.spec" | sed 's/^Release:[[:space:]]*//' | sed 's/%{?dist}//' | head -1)
+            OLD_VERSION=$(grep "^Version:" "$WORK_DIR/.osc/$PACKAGE.spec" | awk '{print $2}' | head -1)
+            OLD_RELEASE=$(grep "^Release:" "$WORK_DIR/.osc/$PACKAGE.spec" | sed 's/^Release:[[:space:]]*//' | sed 's/%{?dist}//' | head -1)
+
+            if [[ -n "${REBUILD_RELEASE:-}" ]]; then
+                echo "  🔄 Using manual rebuild release number: $REBUILD_RELEASE"
+                sed -i "s/^Release:[[:space:]]*${NEW_RELEASE}%{?dist}/Release:        ${REBUILD_RELEASE}%{?dist}/" "$WORK_DIR/$PACKAGE.spec"
+            elif [[ "$NEW_VERSION" == "$OLD_VERSION" ]]; then
+                if [[ "$OLD_RELEASE" =~ ^([0-9]+) ]]; then
+                    BASE_RELEASE="${BASH_REMATCH[1]}"
+                    NEXT_RELEASE=$((BASE_RELEASE + 1))
+                    echo "  - Detected rebuild of same version $NEW_VERSION (release $OLD_RELEASE -> $NEXT_RELEASE)"
+                    sed -i "s/^Release:[[:space:]]*${NEW_RELEASE}%{?dist}/Release:        ${NEXT_RELEASE}%{?dist}/" "$WORK_DIR/$PACKAGE.spec"
+                fi
+            else
+                echo "  - New version detected: $OLD_VERSION -> $NEW_VERSION (keeping release $NEW_RELEASE)"
+            fi
+        else
+            echo "  - First upload to OBS (no previous spec found)"
+        fi
+    fi
+
     if [[ "$PACKAGE" != "matugen" ]]; then
         SOURCE_DIR="$ORIGINAL_SOURCE_DIR"
         
