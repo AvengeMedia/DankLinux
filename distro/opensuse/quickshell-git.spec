@@ -1,5 +1,5 @@
 Name:           quickshell-git
-Version:        0.2.1+git709.e9bad676
+Version:        0.2.1+git710.d24e8e97
 Release:        1%{?dist}
 Summary:        Flexible toolkit for creating desktop shells using QtQuick (git)
 
@@ -98,6 +98,8 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.quickshell.deskto
 %{_datadir}/icons/hicolor/scalable/apps/org.quickshell.svg
 
 %changelog
+* Sun Nov 30 2025 Avenge Media <AvengeMedia.US@gmail.com> - 0.2.1+git710.d24e8e97-1
+- Git snapshot (commit 710: d24e8e97)
 * Tue Nov 25 2025 Avenge Media <AvengeMedia.US@gmail.com> - 0.2.1+git709.e9bad676-1
 - Git snapshot (commit 709: e9bad676)
 * Wed Nov 25 2025 Avenge Media <AvengeMedia.US@gmail.com> - 0.2.1+git-1

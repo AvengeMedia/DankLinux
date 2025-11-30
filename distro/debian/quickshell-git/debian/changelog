@@ -1,3 +1,9 @@
+quickshell-git (0.2.1+git710.d24e8e97ppa1) unstable; urgency=medium
+
+  * Git snapshot (commit 710: d24e8e97)
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sun, 30 Nov 2025 06:30:42 +0000
+
 quickshell-git (0.2.1+git709.e9bad676ppa1) unstable; urgency=medium
 
   * Git snapshot (commit 709: e9bad676)
