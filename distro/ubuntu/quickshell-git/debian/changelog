@@ -1,8 +1,8 @@
-quickshell-git (0.2.1+git710.d24e8e9ppa1) questing; urgency=medium
+quickshell-git (0.2.1+git713.26531fcppa1) questing; urgency=medium
 
-  * Git snapshot (commit 710: d24e8e9)
+  * Git snapshot (commit 713: 26531fc)
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Sun, 30 Nov 2025 06:20:33 +0000
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Tue, 02 Dec 2025 12:34:25 +0000
 
 quickshell-git (0.2.1+git705.fdbb86appa4) noble; urgency=medium
 
