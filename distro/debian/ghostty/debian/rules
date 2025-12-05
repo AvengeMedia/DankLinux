@@ -1,0 +1,59 @@
+#!/usr/bin/make -f
+
+export HOME = $(CURDIR)
+DEB_VERSION := $(shell dpkg-parsechangelog -S Version)
+UPSTREAM_VERSION := $(shell echo $(DEB_VERSION) | sed 's/ppa[0-9]*$$//')
+ZIG_VERSION := 0.14.0
+DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
+
+# Map Debian architectures to Zig architectures
+ifeq ($(DEB_HOST_ARCH),amd64)
+    ZIG_ARCH := x86_64
+else ifeq ($(DEB_HOST_ARCH),arm64)
+    ZIG_ARCH := aarch64
+else
+    $(error Unsupported architecture: $(DEB_HOST_ARCH))
+endif
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	# Extract Zig toolchain (downloaded by OBS per-arch)
+	if [ ! -f zig/zig ]; then \
+		TARBALL="zig-linux-$(ZIG_ARCH)-$(ZIG_VERSION).tar.xz"; \
+		if [ ! -f "$$TARBALL" ]; then \
+			wget -q "https://ziglang.org/download/$(ZIG_VERSION)/$$TARBALL" || exit 1; \
+		fi; \
+		tar -xJf "$$TARBALL"; \
+		mv $$(find . -maxdepth 1 -type d -name "zig-linux-*" | head -1) zig; \
+	fi
+	# Rewrite theme URL to vendored tarball
+	test -f ghostty-themes.tgz || exit 1; \
+	sed -i "s#https://github.com/mbadolato[^\"]*ghostty-themes.tgz#file://$(CURDIR)/ghostty-themes.tgz#g" build.zig.zon build.zig.zon.json 2>/dev/null || true
+	dh_auto_configure
+
+override_dh_auto_build:
+	# Build with vendored Zig deps (offline)
+	ZIG_GLOBAL_CACHE_DIR=$(CURDIR)/zig-deps \
+	DESTDIR=$(CURDIR)/debian/ghostty \
+	./zig/zig build \
+		--prefix /usr \
+		--system $(CURDIR)/zig-deps/p \
+		-Dversion-string=$(UPSTREAM_VERSION) \
+		-Doptimize=ReleaseFast \
+		-Dcpu=baseline \
+		-Dpie=true
+
+override_dh_auto_install:
+	ZIG_GLOBAL_CACHE_DIR=$(CURDIR)/zig-deps \
+	DESTDIR=$(CURDIR)/debian/ghostty \
+	./zig/zig build install \
+		--prefix /usr \
+		--system $(CURDIR)/zig-deps/p \
+		-Doptimize=ReleaseFast \
+		-Dcpu=baseline
+
+override_dh_auto_clean:
+	rm -rf zig zig-cache zig-out .zig-cache
+	dh_auto_clean

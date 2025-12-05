@@ -11,8 +11,8 @@
 OBS_BASE_PROJECT="home:AvengeMedia:danklinux"
 OBS_BASE="$HOME/.cache/osc-checkouts"
 
-# Define packages
-ALL_PACKAGES=(cliphist niri niri-git quickshell-git)
+# Define packages (sync with obs-upload.sh)
+ALL_PACKAGES=(cliphist matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git danksearch dgop ghostty)
 
 # Define repositories and architectures to check
 REPOS=("Debian_13" "openSUSE_Tumbleweed" "16.0")

@@ -1,0 +1,30 @@
+#!/usr/bin/make -f
+
+export HOME = $(CURDIR)
+DEB_VERSION := $(shell dpkg-parsechangelog -S Version)
+UPSTREAM_VERSION := $(shell echo $(DEB_VERSION) | sed 's/ppa[0-9]*$$//')
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	# Build with vendored Zig deps (offline)
+	ZIG_GLOBAL_CACHE_DIR=$(CURDIR)/zig-deps DESTDIR=$(CURDIR)/debian/ghostty ./zig/zig build \
+		--prefix /usr \
+		--system $(CURDIR)/zig-deps/p \
+		-Dversion-string=$(UPSTREAM_VERSION) \
+		-Doptimize=ReleaseFast \
+		-Dcpu=baseline \
+		-Dpie=true
+
+override_dh_auto_install:
+	ZIG_GLOBAL_CACHE_DIR=$(CURDIR)/zig-deps \
+	DESTDIR=$(CURDIR)/debian/ghostty ./zig/zig build install \
+		--prefix /usr \
+		--system $(CURDIR)/zig-deps/p \
+		-Doptimize=ReleaseFast \
+		-Dcpu=baseline
+
+override_dh_auto_clean:
+	rm -rf zig-cache zig-out .zig-cache
+	dh_auto_clean

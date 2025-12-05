@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       package:
-        description: 'Package to upload (cliphist, matugen, niri, niri-git, quickshell, quickshell-git, xwayland-satellite, xwayland-satellite-git, danksearch, dgop, or all)'
+        description: 'Package to upload (cliphist, ghostty, matugen, niri, niri-git, quickshell, quickshell-git, xwayland-satellite, xwayland-satellite-git, or all)'
         required: false
         default: 'auto'
       force_upload:
@@ -114,7 +114,7 @@ jobs:
           if [[ "${{ github.event.inputs.force_upload }}" == "true" ]]; then
             PKG="${{ github.event.inputs.package }}"
             if [[ "$PKG" == "auto" ]]; then
-              PACKAGES="cliphist matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git danksearch dgop"
+              PACKAGES="cliphist ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git"
             else
               PACKAGES="$PKG"
             fi
@@ -133,11 +133,11 @@ jobs:
               echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
               echo "✨ Uploading updated packages: $PACKAGES"
             else
-              PACKAGES="cliphist matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git danksearch dgop"
+              PACKAGES="cliphist ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git"
               echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
             fi
           else
-            PACKAGES="cliphist matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git danksearch dgop"
+            PACKAGES="cliphist ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git"
             echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
           fi
       
@@ -154,7 +154,7 @@ jobs:
               echo "🔄 Using rebuild release number: ppa$REBUILD_RELEASE"
             fi
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            bash distro/scripts/ppa-upload.sh "distro/ubuntu/$pkg" danklinux questing || echo "⚠️ Failed to upload $pkg"
+            bash distro/scripts/ppa-upload.sh "$pkg" danklinux questing || echo "⚠️ Failed to upload $pkg"
           done
       
       - name: Commit changelog updates

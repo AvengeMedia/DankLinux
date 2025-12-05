@@ -1,0 +1,36 @@
+Source: ghostty
+Maintainer: Avenge Media <AvengeMedia.US@gmail.com>
+Section: x11
+Priority: optional
+Build-Depends: debhelper-compat (= 13),
+               pkg-config,
+               libfontconfig-dev,
+               libfreetype-dev,
+               libglib2.0-dev,
+               libgtk-4-dev,
+               libgtk4-layer-shell-dev,
+               libharfbuzz-dev,
+               libjpeg-turbo8-dev,
+               libadwaita-1-dev,
+               libpng-dev,
+               libonig-dev,
+               libpixman-1-dev,
+               libwayland-dev,
+               wayland-protocols,
+               zlib1g-dev,
+               pandoc
+Standards-Version: 4.6.2
+Homepage: https://github.com/ghostty-org/ghostty
+Vcs-Browser: https://github.com/ghostty-org/ghostty
+Vcs-Git: https://github.com/ghostty-org/ghostty.git
+
+Package: ghostty
+Architecture: amd64 arm64
+Depends: ${shlibs:Depends},
+         ${misc:Depends}
+Description: Fast, feature-rich, cross-platform terminal emulator
+ Ghostty is a terminal emulator that uses platform-native UI and GPU
+ acceleration for enhanced performance and visual quality.
+ .
+ Features include GPU acceleration, ligature support, custom shaders,
+ and native OS integration for macOS, Linux, and Windows.

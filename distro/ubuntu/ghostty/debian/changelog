@@ -1,0 +1,6 @@
+ghostty (1.2.3ppa33) questing; urgency=medium
+
+  * Initial PPA packaging for Ubuntu
+  * Offline build with vendored Zig toolchain and dependencies
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Thu, 05 Dec 2025 00:00:00 -0500

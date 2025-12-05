@@ -11,12 +11,10 @@
 
 set -e
 
-# Download all files from _service download_url entries into a directory
 download_service_files() {
     local service_file="$1"
     local target_dir="$2"
     
-    # Extract all url/filename pairs from download_url services
     local urls=$(grep -A2 '<service name="download_url">' "$service_file" | grep 'param name="url"' | sed 's/.*<param name="url">\(.*\)<\/param>.*/\1/')
     local filenames=$(grep -A2 '<service name="download_url">' "$service_file" | grep 'param name="filename"' | sed 's/.*<param name="filename">\(.*\)<\/param>.*/\1/')
     
@@ -65,7 +63,7 @@ done
 PROJECT="danklinux"
 OBS_BASE_PROJECT="home:AvengeMedia"
 OBS_BASE="$HOME/.cache/osc-checkouts"
-AVAILABLE_PACKAGES=(cliphist matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git danksearch dgop)
+AVAILABLE_PACKAGES=(cliphist matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git danksearch dgop ghostty)
 
 if [[ -z "$PACKAGE" ]]; then
     echo "Available packages:"
@@ -99,7 +97,6 @@ if [[ ! -d "distro/debian" ]]; then
     exit 1
 fi
 
-# Handle "all" option
 if [[ "$PACKAGE" == "all" ]]; then
     echo "==> Uploading all packages"
     DISTRO_ARG=""
@@ -145,7 +142,6 @@ if [[ "$PACKAGE" == "all" ]]; then
     fi
 fi
 
-# Check if package exists
 if [[ ! -d "distro/debian/$PACKAGE" ]]; then
     echo "Error: Package '$PACKAGE' not found in distro/debian/"
     exit 1
@@ -179,7 +175,7 @@ echo "==> Preparing $PACKAGE for OBS upload"
 
 find "$WORK_DIR" -maxdepth 1 -type f \( -name "*.tar.gz" -o -name "*.tar.xz" -o -name "*.tar.bz2" -o -name "*.tar" -o -name "*.spec" -o -name "_service" -o -name "*.dsc" \) -delete 2>/dev/null || true
 
-# Remove debian.tar.gz from OSC tracking
+# Remove debian.tar.gz when converting to native format
 SOURCE_FORMAT_CHECK=$(cat "distro/debian/$PACKAGE/debian/source/format" 2>/dev/null || echo "")
 if [[ "$SOURCE_FORMAT_CHECK" == *"native"* ]] && [[ -f "$WORK_DIR/debian.tar.gz" ]]; then
     echo "  - Removing old debian.tar.gz (converting from quilt to native format)"
@@ -191,14 +187,12 @@ fi
 CHANGELOG_VERSION=$(grep -m1 "^$PACKAGE" distro/debian/$PACKAGE/debian/changelog 2>/dev/null | sed 's/.*(\([^)]*\)).*/\1/' || echo "0.1.11-1")
 SOURCE_FORMAT=$(cat "distro/debian/$PACKAGE/debian/source/format" 2>/dev/null || echo "3.0 (quilt)")
 
-# Native format cannot have Debian revisions, strip them if present
 if [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ "$CHANGELOG_VERSION" == *"-"* ]]; then
     CHANGELOG_VERSION=$(echo "$CHANGELOG_VERSION" | sed 's/-[0-9]*$//')
     echo "  Warning: Removed Debian revision from version for native format: $CHANGELOG_VERSION"
 fi
 
-
-# Format 3.0 (native) requires: <package>_<version>.tar.gz
+# Native format: <package>_<version>.tar.gz
 if [[ "$SOURCE_FORMAT" == *"native"* ]]; then
     COMBINED_TARBALL="${PACKAGE}_${CHANGELOG_VERSION}.tar.gz"
     echo "  - Creating combined source tarball for native format: $COMBINED_TARBALL"
@@ -218,6 +212,81 @@ if [[ "$SOURCE_FORMAT" == *"native"* ]]; then
                 mkdir -p "$SOURCE_DIR"
                 download_service_files "distro/debian/$PACKAGE/_service" "$SOURCE_DIR" || exit 1
                 echo "    Downloaded binaries to $SOURCE_DIR"
+            # Ghostty: download source + Zig compiler
+            elif [[ "$PACKAGE" == "ghostty" ]]; then
+                echo "    Ghostty package detected: downloading source and Zig compiler"
+                SOURCE_DIR="$TEMP_DIR/${PACKAGE}-${CHANGELOG_VERSION}"
+                mkdir -p "$SOURCE_DIR"
+
+                # Extract URL from _service file
+                SERVICE_BLOCK=$(awk '/<service name="download_url">/,/<\/service>/' "distro/debian/$PACKAGE/_service" | head -10)
+                URL_PROTOCOL=$(echo "$SERVICE_BLOCK" | grep "protocol" | sed 's/.*<param name="protocol">\(.*\)<\/param>.*/\1/' | head -1)
+                URL_HOST=$(echo "$SERVICE_BLOCK" | grep "host" | sed 's/.*<param name="host">\(.*\)<\/param>.*/\1/' | head -1)
+                URL_PATH=$(echo "$SERVICE_BLOCK" | grep "path" | sed 's/.*<param name="path">\(.*\)<\/param>.*/\1/' | head -1)
+                SOURCE_URL="${URL_PROTOCOL}://${URL_HOST}${URL_PATH}"
+
+                # Download Ghostty source
+                echo "    Downloading Ghostty source from: $SOURCE_URL"
+                if curl -L -f -s -o "$TEMP_DIR/ghostty-source.tar.gz" "$SOURCE_URL" 2>/dev/null || \
+                   wget -q -O "$TEMP_DIR/ghostty-source.tar.gz" "$SOURCE_URL" 2>/dev/null; then
+                    cd "$TEMP_DIR"
+                    tar -xzf ghostty-source.tar.gz
+                    EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "ghostty-*" ! -name "ghostty-${CHANGELOG_VERSION}" | head -1)
+                    if [ -n "$EXTRACTED_DIR" ]; then
+                        mv "$EXTRACTED_DIR"/* "$SOURCE_DIR/" 2>/dev/null || cp -r "$EXTRACTED_DIR"/* "$SOURCE_DIR/"
+                        rm -rf "$EXTRACTED_DIR"
+                    fi
+                    rm -f ghostty-source.tar.gz
+                    cd "$REPO_ROOT"
+                else
+                    echo "Error: Failed to download Ghostty source from $SOURCE_URL"
+                    exit 1
+                fi
+
+                # Download Zig compiler
+                ZIG_VERSION="0.14.0"
+                ZIG_ARCH="x86_64"  # Default to amd64, OBS will build for both architectures
+                echo "    Downloading Zig compiler $ZIG_VERSION..."
+                if curl -L -f -s -o "$TEMP_DIR/zig.tar.xz" "https://ziglang.org/download/$ZIG_VERSION/zig-linux-$ZIG_ARCH-$ZIG_VERSION.tar.xz" 2>/dev/null || \
+                   wget -q -O "$TEMP_DIR/zig.tar.xz" "https://ziglang.org/download/$ZIG_VERSION/zig-linux-$ZIG_ARCH-$ZIG_VERSION.tar.xz" 2>/dev/null; then
+                    cd "$TEMP_DIR"
+                    tar -xJf zig.tar.xz
+                    mv zig-linux-* "$SOURCE_DIR/zig"
+                    rm -f zig.tar.xz
+                    cd "$REPO_ROOT"
+                    echo "    Zig compiler extracted to source"
+                else
+                    echo "Error: Failed to download Zig compiler"
+                    exit 1
+                fi
+
+                # Fetch Zig dependencies
+                echo "    Fetching Zig dependencies..."
+                cd "$SOURCE_DIR"
+                export ZIG_GLOBAL_CACHE_DIR="$SOURCE_DIR/zig-deps"
+                if [ -f "nix/build-support/fetch-zig-cache.sh" ] && [ -f "build.zig.zon.txt" ]; then
+                    echo "    Using official fetch-zig-cache.sh script"
+                    export PATH="$SOURCE_DIR/zig:$PATH"
+                    bash nix/build-support/fetch-zig-cache.sh 2>&1 | grep -E "Fetching:|Failed" || true
+                elif [ -f "build.zig.zon.txt" ]; then
+                    echo "    Using manual dependency fetching from build.zig.zon.txt"
+                    while IFS= read -r url; do
+                        [ -z "$url" ] || [[ "$url" =~ ^[[:space:]]*# ]] && continue
+                        "$SOURCE_DIR/zig/zig" fetch "$url" >/dev/null 2>&1 || true
+                    done < "build.zig.zon.txt"
+                fi
+                DEP_COUNT=$(find zig-deps/p -maxdepth 1 -type d 2>/dev/null | wc -l)
+                if [ $DEP_COUNT -gt 1 ]; then
+                    echo "    Fetched $((DEP_COUNT - 1)) Zig dependencies"
+                else
+                    echo "    Warning: No Zig dependencies found in zig-deps/p/"
+                fi
+                unset ZIG_GLOBAL_CACHE_DIR
+
+                # Remove Zig compiler (OBS _service downloads arch-specific binary)
+                rm -rf "$SOURCE_DIR/zig"
+
+                cd "$REPO_ROOT"
             else
                 SERVICE_BLOCK=$(awk '/<service name="download_url">/,/<\/service>/' "distro/debian/$PACKAGE/_service" | head -10)
                 URL_PROTOCOL=$(echo "$SERVICE_BLOCK" | grep "protocol" | sed 's/.*<param name="protocol">\(.*\)<\/param>.*/\1/' | head -1)
@@ -428,7 +497,6 @@ CARGO_CONFIG_EOF
         cd "$REPO_ROOT"
     fi
     
-    # Vendor Rust dependencies for Rust packages that need offline builds
     if [[ "$PACKAGE" == "xwayland-satellite" || "$PACKAGE" == "xwayland-satellite-git" || "$PACKAGE" == "matugen" ]] && [[ -f "$SOURCE_DIR/Cargo.toml" ]] && [[ ! -d "$SOURCE_DIR/vendor" ]]; then
         echo "    Vendoring Rust dependencies for $PACKAGE"
         cd "$SOURCE_DIR"
@@ -447,19 +515,14 @@ CARGO_CONFIG_EOF
         cd "$REPO_ROOT"
     fi
     
-    # Create OpenSUSE-compatible source tarballs BEFORE adding debian/ directory
-    # (OpenSUSE doesn't need debian/ directory)
     if [[ "$PACKAGE" != "matugen" ]]; then
         ORIGINAL_SOURCE_DIR="$SOURCE_DIR"
     fi
-    
-    # niri stable is Debian-only (openSUSE only builds niri-git)
     if [[ "$PACKAGE" == "niri" && "$UPLOAD_OPENSUSE" == true ]]; then
         echo "  - Note: niri stable is Debian-only (openSUSE builds niri-git)"
         UPLOAD_OPENSUSE=false
     fi
 
-    # Binary-download packages use direct URLs in spec files (No tar needed)
     SKIP_OPENSUSE_TARBALL=false
     if [[ "$PACKAGE" == "danksearch" || "$PACKAGE" == "dgop" ]]; then
         SKIP_OPENSUSE_TARBALL=true
@@ -895,7 +958,7 @@ if [[ $OSC_UP_EXIT -ne 0 ]]; then
 fi
 rm -f /tmp/osc-up.log
 
-# Only auto-increment on manual runs (REBUILD_RELEASE set or not in CI), not automated workflows
+# Auto-increment version on manual runs
 OLD_DSC_FILE=""
 if [[ -f "$WORK_DIR/$PACKAGE.dsc" ]]; then
     OLD_DSC_FILE="$WORK_DIR/$PACKAGE.dsc"
@@ -920,8 +983,6 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
     
     if [[ -n "$OLD_DSC_VERSION" ]] && [[ "$OLD_DSC_VERSION" == "$CHANGELOG_VERSION" ]] && [[ "$IS_MANUAL" == true ]]; then
         echo "==> Detected rebuild of same version $CHANGELOG_VERSION, incrementing version"
-        
-        # For native format, we cannot add Debian revisions (-1), so we only increment existing counters
         if [[ "$CHANGELOG_VERSION" =~ ^([0-9.]+)ppa([0-9]+)$ ]]; then
             BASE_VERSION="${BASH_REMATCH[1]}"
             PPA_NUM="${BASH_REMATCH[2]}"
@@ -984,7 +1045,133 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
         done
         
         echo "  Recreating tarball with new version: $COMBINED_TARBALL"
-        if [[ "$PACKAGE" == "matugen" ]]; then
+        if [[ "$PACKAGE" == "ghostty" ]]; then
+            # Ghostty: re-download source + zig + zig-deps with updated changelog
+            PKG_DIR_NAME="ghostty-${NEW_VERSION}"
+            PKG_DIR="$TEMP_DIR/$PKG_DIR_NAME"
+            mkdir -p "$PKG_DIR"
+
+            # Extract URL from _service file
+            SERVICE_BLOCK=$(awk '/<service name="download_url">/,/<\/service>/' "$REPO_ROOT/distro/debian/$PACKAGE/_service" | head -10)
+            URL_PROTOCOL=$(echo "$SERVICE_BLOCK" | grep "protocol" | sed 's/.*<param name="protocol">\(.*\)<\/param>.*/\1/' | head -1)
+            URL_HOST=$(echo "$SERVICE_BLOCK" | grep "host" | sed 's/.*<param name="host">\(.*\)<\/param>.*/\1/' | head -1)
+            URL_PATH=$(echo "$SERVICE_BLOCK" | grep "path" | sed 's/.*<param name="path">\(.*\)<\/param>.*/\1/' | head -1)
+            SOURCE_URL="${URL_PROTOCOL}://${URL_HOST}${URL_PATH}"
+
+            # Download and extract ghostty source
+            if curl -L -f -s -o "$TEMP_DIR/ghostty-rebuild.tar.gz" "$SOURCE_URL" 2>/dev/null || \
+               wget -q -O "$TEMP_DIR/ghostty-rebuild.tar.gz" "$SOURCE_URL" 2>/dev/null; then
+                cd "$TEMP_DIR"
+                tar -xzf ghostty-rebuild.tar.gz
+                EXTRACTED=$(find . -maxdepth 1 -type d -name "ghostty-*" ! -name "$PKG_DIR_NAME" | head -1)
+                if [ -n "$EXTRACTED" ]; then
+                    mv "$EXTRACTED"/* "$PKG_DIR/" 2>/dev/null || cp -r "$EXTRACTED"/* "$PKG_DIR/"
+                    rm -rf "$EXTRACTED"
+                fi
+                rm -f ghostty-rebuild.tar.gz
+            fi
+
+            # Download Zig
+            ZIG_VERSION="0.14.0"
+            cd "$TEMP_DIR"
+            for arch in x86_64 aarch64; do
+                TARBALL="zig-linux-${arch}-${ZIG_VERSION}.tar.xz"
+                if curl -L -f -s -o "$TARBALL" "https://ziglang.org/download/$ZIG_VERSION/$TARBALL" 2>/dev/null || \
+                   wget -q -O "$TARBALL" "https://ziglang.org/download/$ZIG_VERSION/$TARBALL" 2>/dev/null; then
+                    cp "$TARBALL" "$PKG_DIR/$TARBALL"
+                    if [ "$arch" = "x86_64" ]; then
+                        tar -xJf "$TARBALL"
+                        EXTRACTED_ZIG=$(find . -maxdepth 1 -type d -name "zig-linux-*" | head -1)
+                        if [ -n "$EXTRACTED_ZIG" ]; then
+                            mv "$EXTRACTED_ZIG" "$PKG_DIR/zig"
+                        else
+                            echo "    Warning: Zig extraction failed for $arch"
+                        fi
+                        rm -rf zig-linux-*
+                    fi
+                fi
+            done
+            cd "$PKG_DIR"
+
+            # Vendor ghostty-themes (using /latest/ redirect to avoid stale pinned URLs)
+            THEMES_URL="https://github.com/mbadolato/iTerm2-Color-Schemes/releases/latest/download/ghostty-themes.tgz"
+            THEMES_SRC="$REPO_ROOT/distro/debian/ghostty/ghostty-themes.tgz"
+            if [ -f "$THEMES_SRC" ]; then
+                cp "$THEMES_SRC" "$PKG_DIR/ghostty-themes.tgz"
+                THEMES_DL=true
+            else
+                THEMES_DL=false
+                for url in "$THEMES_URL" "https://ghproxy.com/$THEMES_URL" "https://github.moeyy.xyz/$THEMES_URL"; do
+                    if curl -L -f -s -o "$PKG_DIR/ghostty-themes.tgz" "$url" 2>/dev/null || \
+                       wget -q -O "$PKG_DIR/ghostty-themes.tgz" "$url" 2>/dev/null; then
+                        THEMES_DL=true
+                        break
+                    fi
+                done
+                if [ "$THEMES_DL" = false ]; then
+                    echo "    Error: failed to download ghostty-themes.tgz from $THEMES_URL (and mirrors)"
+                    exit 1
+                fi
+            fi
+
+            # Inject themes into zig-deps
+            THEME_HASH=$(grep -A2 "iterm2_themes" "$PKG_DIR/build.zig.zon" | grep hash | sed 's/.*"\(.*\)".*/\1/' | head -1)
+            if [ -n "$THEME_HASH" ]; then
+                mkdir -p "$PKG_DIR/zig-deps/p/$THEME_HASH"
+                tar -xzf "$PKG_DIR/ghostty-themes.tgz" -C "$PKG_DIR/zig-deps/p/$THEME_HASH"
+            else
+                echo "    Warning: could not determine iterm2_themes hash; theme may be missing in zig-deps"
+            fi
+
+            # Fetch zig-deps
+            export ZIG_GLOBAL_CACHE_DIR="$PKG_DIR/zig-deps"
+            FETCH_LOG="$TEMP_DIR/zig-fetch.log"
+            if [ -f "nix/build-support/fetch-zig-cache.sh" ] && [ -f "build.zig.zon.txt" ]; then
+                export PATH="$PKG_DIR/zig:$PATH"
+                bash nix/build-support/fetch-zig-cache.sh >"$FETCH_LOG" 2>&1 || true
+                grep -E "Fetching:|Failed" "$FETCH_LOG" || true
+                FAILED_URLS=$(grep -E "Failed to fetch:" "$FETCH_LOG" | sed 's/.*Failed to fetch: //')
+                for url in $FAILED_URLS; do
+                    case "$url" in
+                        *ghostty-themes.tgz) echo "    Skipping ghostty-themes fetch failure; vendored tarball will be used"; continue;;
+                    esac
+                    echo "    Retrying Zig dep fetch: $url"
+                    if ! "$PKG_DIR/zig/zig" fetch "$url" >/dev/null 2>&1; then
+                        echo "    Error: failed to fetch Zig dependency $url"
+                        cat "$FETCH_LOG"
+                        exit 1
+                    fi
+                done
+            fi
+
+            # Always run a manual fetch pass to ensure lazy deps are present
+            if [ -f "build.zig.zon.txt" ]; then
+                while IFS= read -r url; do
+                    [ -z "$url" ] || [[ "$url" =~ ^[[:space:]]*# ]] && continue
+                    case "$url" in
+                        *ghostty-themes.tgz) continue;;
+                    esac
+                    "$PKG_DIR/zig/zig" fetch "$url" >/dev/null 2>&1 || true
+                done < "build.zig.zon.txt"
+            fi
+
+            DEP_COUNT=$(find "$PKG_DIR/zig-deps/p" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | wc -l)
+            if [ "$DEP_COUNT" -lt 5 ]; then
+                echo "    Warning: zig-deps seems sparse ($DEP_COUNT entries); offline build may fail"
+            fi
+            rm -f "$FETCH_LOG"
+            unset ZIG_GLOBAL_CACHE_DIR
+
+            # Remove Zig compiler (OBS _service downloads arch-specific binary)
+            rm -rf "$PKG_DIR/zig"
+
+            cp -r "$REPO_ROOT/distro/debian/$PACKAGE/debian" "$PKG_DIR/"
+            cp "$TEMP_CHANGELOG" "$PKG_DIR/debian/changelog"
+            cd "$TEMP_DIR"
+            tar --sort=name --mtime='2000-01-01 00:00:00' --owner=0 --group=0 -czf "$WORK_DIR/$COMBINED_TARBALL" "$PKG_DIR_NAME"
+            rm -rf "$PKG_DIR_NAME"
+            cd "$WORK_DIR"
+        elif [[ "$PACKAGE" == "matugen" ]]; then
             # Matugen: recreate tarball with updated changelog and vendored dependencies
             PKG_DIR_NAME="matugen-${NEW_VERSION}"
             PKG_DIR="$TEMP_DIR/$PKG_DIR_NAME"
