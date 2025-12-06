@@ -258,7 +258,7 @@ for pkg_info in "${PACKAGES[@]}"; do
                 if [ "$UPDATE_MODE" = true ]; then
                     update_changelog "$package_dir" "$new_version" "Pinned to commit $PINNED_COUNT (${PINNED_COMMIT:0:8}) - unreleased stable with latest features"
                     # Update _service to use pinned commit
-                    local service_file="$package_dir/_service"
+                    service_file="$package_dir/_service"
                     if [ -f "$service_file" ]; then
                         sed -i "s|/archive/refs/tags/v[0-9.]\+\.tar|/archive/$PINNED_COMMIT.tar|g" "$service_file"
                         sed -i "s|/archive/[a-f0-9]\{40\}\.tar|/archive/$PINNED_COMMIT.tar|g" "$service_file"

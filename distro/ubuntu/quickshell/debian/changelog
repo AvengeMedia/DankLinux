@@ -1,4 +1,4 @@
-quickshell (0.2.1.1+pin713.26531fcppa5) questing; urgency=medium
+quickshell (0.2.1.1+pin713.26531fcppa6) questing; urgency=medium
 
   * Pinned to git commit 713 (26531fc) - unreleased stable with latest features
 
