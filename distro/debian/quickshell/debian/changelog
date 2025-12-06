@@ -1,3 +1,9 @@
+quickshell (0.2.1.1+pin713.26531fc4ppa1) unstable; urgency=medium
+
+  * Pinned to commit 713 (26531fc4) - unreleased stable with latest features
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 06 Dec 2025 06:41:23 +0000
+
 quickshell (0.2.1.1+pin713.26531fc-1) unstable; urgency=medium
 
   * Pinned to git commit 713 (26531fc) - unreleased stable with latest features

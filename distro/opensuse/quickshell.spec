@@ -1,5 +1,5 @@
 Name:           quickshell
-Version:        0.2.1.1+pin713.26531fc
+Version:        0.2.1.1+pin713.26531fc4
 Release:        1%{?dist}
 Summary:        Flexible toolkit for creating desktop shells using QtQuick
 
@@ -98,6 +98,8 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.quickshell.deskto
 %{_datadir}/icons/hicolor/scalable/apps/org.quickshell.svg
 
 %changelog
+* Sat Dec 06 2025 Avenge Media <AvengeMedia.US@gmail.com> - 0.2.1.1+pin713.26531fc4-1
+- Pinned to commit 713 (26531fc4) - unreleased stable with latest features
 * Thu Dec 05 2024 Avenge Media <AvengeMedia.US@gmail.com> - 0.2.1.1+pin713.26531fc-1
 - Pinned to git commit 713 (26531fc) - unreleased stable with latest features
 
