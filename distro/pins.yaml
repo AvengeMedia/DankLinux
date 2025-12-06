@@ -1,0 +1,10 @@
+# Package pinning configuration
+# Allows pinning stable packages to specific git commits
+# When a new stable release appears that's newer than base_version, the pin is automatically overridden
+
+quickshell:
+  enabled: true
+  base_version: "0.2.1"
+  commit: "26531fc46ef17e9365b03770edd3fb9206fcb460"
+  commit_count: 713
+  snap_date: "20251202"

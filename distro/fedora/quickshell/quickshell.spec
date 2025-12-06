@@ -1,16 +1,19 @@
 %bcond_with         asan
 
 %global debug_package %{nil}
+%global commit      26531fc46ef17e9365b03770edd3fb9206fcb460
+%global commits     713
+%global snapdate    20251202
 %global tag         0.2.1
 
 Name:               quickshell
-Version:            %{tag}
+Version:            %{tag}.1+pin%{commits}.%(c=%{commit}; echo ${c:0:7})
 Release:            %autorelease
 Summary:            Flexible QtQuick based desktop shell toolkit
 
 License:            LGPL-3.0-only AND GPL-3.0-only
 URL:                https://github.com/quickshell-mirror/quickshell
-Source0:            %{url}/archive/v%{tag}/quickshell-%{tag}.tar.gz
+Source0:            %{url}/archive/%{commit}/quickshell-%{commit}.tar.gz
 
 BuildRequires:      breakpad-static
 BuildRequires:      cmake
@@ -47,7 +50,7 @@ Flexible toolkit for making desktop shells with QtQuick, targeting
 Wayland and X11.
 
 %prep
-%autosetup -n quickshell-%{tag} -p1
+%autosetup -n quickshell-%{commit} -p1
 
 %build
 %cmake  -GNinja \
@@ -58,6 +61,7 @@ Wayland and X11.
         -DCMAKE_BUILD_TYPE=Release \
         -DDISTRIBUTOR="Fedora COPR (avengemedia/quickshell)" \
         -DDISTRIBUTOR_DEBUGINFO_AVAILABLE=YES \
+        -DGIT_REVISION=%{commit} \
         -DINSTALL_QML_PREFIX=%{_lib}/qt6/qml
 %cmake_build
 
@@ -70,7 +74,6 @@ Wayland and X11.
 %doc BUILD.md
 %doc CONTRIBUTING.md
 %doc README.md
-%doc changelog/v%{tag}.md
 %{_bindir}/qs
 %{_bindir}/quickshell
 %{_datadir}/applications/org.quickshell.desktop

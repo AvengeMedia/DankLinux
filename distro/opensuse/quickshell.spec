@@ -1,5 +1,5 @@
 Name:           quickshell
-Version:        0.2.1
+Version:        0.2.1.1+pin713.26531fc
 Release:        1%{?dist}
 Summary:        Flexible toolkit for creating desktop shells using QtQuick
 
@@ -69,6 +69,7 @@ cmake -GNinja \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_INSTALL_RPATH="" \
     -DCMAKE_BUILD_RPATH="" \
+    -DGIT_REVISION=26531fc46ef17e9365b03770edd3fb9206fcb460 \
     ..
 
 cmake --build .
@@ -97,6 +98,6 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.quickshell.deskto
 %{_datadir}/icons/hicolor/scalable/apps/org.quickshell.svg
 
 %changelog
-* Tue Nov 25 2025 Avenge Media <AvengeMedia.US@gmail.com> - 0.2.1-1
-- Stable release 0.2.1
+* Thu Dec 05 2024 Avenge Media <AvengeMedia.US@gmail.com> - 0.2.1.1+pin713.26531fc-1
+- Pinned to git commit 713 (26531fc) - unreleased stable with latest features
 

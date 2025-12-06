@@ -37,6 +37,7 @@ error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 PACKAGES=(
     "niri-git:YaLTeR/niri:git"
     "quickshell-git:quickshell-mirror/quickshell:git"
+    "quickshell:quickshell-mirror/quickshell:release"
     "cliphist:sentriz/cliphist:release"
     "matugen:InioX/matugen:release"
     "danksearch:AvengeMedia/danksearch:release"
@@ -46,7 +47,6 @@ PACKAGES=(
 get_latest_tag() {
     local repo="$1"
     local tag
-    # Use centralized fetch script with retry/token support
     tag=$("$SCRIPT_DIR/fetch-version.sh" "$repo" "release")
     
     echo "${tag#v}"
@@ -97,12 +97,14 @@ get_spec_version() {
 
 extract_git_commit_from_spec() {
     local version="$1"
-    echo "$version" | sed -n 's/.*+git[0-9]*\.\([a-f0-9]*\).*/\1/p'
+    # Extract commit from ~git, ~pin, and +pin formats
+    echo "$version" | sed -n 's/.*[~+]\(git\|pin\)[0-9]*\.\([a-f0-9]*\).*/\2/p'
 }
 
 extract_base_version() {
     local version="$1"
-    echo "$version" | sed 's/+git.*//'
+    # Remove ~git, ~pin, and +pin suffixes
+    echo "$version" | sed 's/[~+]\(git\|pin\).*//'
 }
 
 update_spec() {
@@ -114,7 +116,7 @@ update_spec() {
     
     sed -i "s/^Version:\s\+.*/Version:        $new_version/" "$spec"
     
-    # Update changelog - add new entry at the top of %changelog section
+    # Update changelog - add new entry in %changelog section
     local date_str
     date_str=$(date "+%a %b %d %Y")
     local changelog_entry="* $date_str Avenge Media <AvengeMedia.US@gmail.com> - ${new_version}-1\n- $message"
@@ -180,28 +182,82 @@ for pkg_info in "${PACKAGES[@]}"; do
             info "   ✓ Already up to date"
         fi
     else
-        current_base=$(extract_base_version "$current_version")
-        info "   Current: $current_version (base: $current_base)"
-        
-        latest_tag=$(get_latest_tag "$repo")
-        if [ -z "$latest_tag" ]; then
-            warn "   Could not fetch latest tag from $repo"
-            echo "" >&2
-            continue
-        fi
-        
-        info "   Latest release: $latest_tag"
-        
-        if [ "$current_base" != "$latest_tag" ]; then
-            success "   ✨ Update available: $current_base → $latest_tag"
-            
-            if [ "$UPDATE_MODE" = true ]; then
-                update_spec "$spec_file" "$latest_tag" "Update to upstream version $latest_tag"
+        # Check for pin (only for quickshell stable)
+        USE_PIN=false
+        if [ "$package" = "quickshell" ] && [ -f "$REPO_ROOT/distro/pins.yaml" ]; then
+            if command -v yq &> /dev/null; then
+                PIN_ENABLED=$(yq eval '.quickshell.enabled' "$REPO_ROOT/distro/pins.yaml" 2>/dev/null || echo "false")
+                if [ "$PIN_ENABLED" = "true" ]; then
+                    PIN_BASE=$(yq eval '.quickshell.base_version' "$REPO_ROOT/distro/pins.yaml")
+
+                    # Fetch latest release to check if it's newer than pin base
+                    latest_tag=$(get_latest_tag "$repo")
+
+                    # Compare versions - if latest > pin_base, override pin
+                    if [[ -n "$latest_tag" ]] && [[ "$(printf '%s\n' "$latest_tag" "$PIN_BASE" | sort -V | tail -1)" != "$PIN_BASE" ]]; then
+                        info "   📌 Pin override: New stable release $latest_tag detected (newer than pin base $PIN_BASE)"
+                        USE_PIN=false
+                    else
+                        info "   📌 Using pinned commit (no newer stable release than $PIN_BASE)"
+                        USE_PIN=true
+                        PINNED_COMMIT=$(yq eval '.quickshell.commit' "$REPO_ROOT/distro/pins.yaml")
+                        PINNED_COUNT=$(yq eval '.quickshell.commit_count' "$REPO_ROOT/distro/pins.yaml")
+                        PINNED_BASE=$(yq eval '.quickshell.base_version' "$REPO_ROOT/distro/pins.yaml")
+                    fi
+                fi
             fi
-            
-            UPDATED_PACKAGES+=("$package")
+        fi
+
+        if [ "$USE_PIN" = "true" ]; then
+            # Handle pinned version
+            current_commit=$(extract_git_commit_from_spec "$current_version")
+            info "   Current: $current_version (pinned commit: ${current_commit:-unknown})"
+            info "   Target:  pinned to ${PINNED_COMMIT:0:8}"
+
+            if [ "${current_commit:0:8}" != "${PINNED_COMMIT:0:8}" ]; then
+                new_version="${PINNED_BASE}.1+pin${PINNED_COUNT}.${PINNED_COMMIT:0:8}"
+                success "   ✨ Update to pinned commit: ${current_commit:-none} → ${PINNED_COMMIT:0:8}"
+
+                if [ "$UPDATE_MODE" = true ]; then
+                    update_spec "$spec_file" "$new_version" "Pinned to commit $PINNED_COUNT (${PINNED_COMMIT:0:8}) - unreleased stable with latest features"
+                fi
+
+                UPDATED_PACKAGES+=("$package")
+            else
+                info "   ✓ Already at pinned commit"
+            fi
         else
-            info "   ✓ Already up to date"
+            # Normal release handling
+            current_base=$(extract_base_version "$current_version")
+            info "   Current: $current_version (base: $current_base)"
+
+            latest_tag=$(get_latest_tag "$repo")
+            if [ -z "$latest_tag" ]; then
+                warn "   Could not fetch latest tag from $repo"
+                echo "" >&2
+                continue
+            fi
+
+            info "   Latest release: $latest_tag"
+
+            if [ "$current_base" != "$latest_tag" ]; then
+                success "   ✨ Update available: $current_base → $latest_tag"
+
+                if [ "$UPDATE_MODE" = true ]; then
+                    # Check if transitioning from pinned (has +pin or ~pin in version)
+                    if [[ "$current_version" == *"+pin"* ]] || [[ "$current_version" == *"~pin"* ]]; then
+                        info "   🔄 Transitioning from pinned version to stable release"
+                        # Remove -DGIT_REVISION line if present
+                        sed -i '/-DGIT_REVISION/d' "$spec_file"
+                    fi
+
+                    update_spec "$spec_file" "$latest_tag" "Update to upstream version $latest_tag"
+                fi
+
+                UPDATED_PACKAGES+=("$package")
+            else
+                info "   ✓ Already up to date"
+            fi
         fi
     fi
     

@@ -638,10 +638,24 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
     fi
 elif [ -n "$GIT_REPO" ] && [ "${SKIP_VERSION_UPDATE:-false}" != "true" ]; then
     info "Detected stable package: $PACKAGE_NAME"
-    info "Fetching latest tag from $GIT_REPO..."
 
-    LATEST_TAG=$(get_latest_tag "$GIT_REPO")
-    if [ -n "$LATEST_TAG" ]; then
+    # Check if this is a pinned quickshell version - if so, skip version update
+    CURRENT_VERSION=$(dpkg-parsechangelog -S Version 2>/dev/null || echo "")
+    if [ "$PACKAGE_NAME" = "quickshell" ]; then
+        if [[ "$CURRENT_VERSION" =~ \+pin([0-9]+)\.([a-f0-9]+) ]] || [[ "$CURRENT_VERSION" =~ ~pin([0-9]+)\.([a-f0-9]+) ]]; then
+            info "Detected pinned quickshell version ($CURRENT_VERSION), preserving changelog"
+            SKIP_VERSION_UPDATE=true
+        fi
+    fi
+
+    if [ "${SKIP_VERSION_UPDATE:-false}" = "true" ]; then
+        info "Skipping version update (manual version in changelog)"
+    else
+        info "Fetching latest tag from $GIT_REPO..."
+        LATEST_TAG=$(get_latest_tag "$GIT_REPO")
+    fi
+
+    if [ -n "$LATEST_TAG" ] && [ "${SKIP_VERSION_UPDATE:-false}" != "true" ]; then
         SOURCE_FORMAT=$(cat debian/source/format 2>/dev/null | head -1 || echo "3.0 (quilt)")
 
         CURRENT_VERSION=$(dpkg-parsechangelog -S Version 2>/dev/null || echo "")
@@ -886,25 +900,61 @@ case "$PACKAGE_NAME" in
         ;;
     quickshell)
         info "Preparing quickshell source..."
-        # Get version from changelog (remove ppa suffix for both quilt and native formats)
-        # Native: 0.2.1ppa1 -> 0.2.1, Quilt: 0.2.1-1ppa1 -> 0.2.1
-        VERSION=$(dpkg-parsechangelog -S Version | sed 's/-[^-]*$//' | sed 's/ppa[0-9]*$//')
+        # Get full version from changelog
+        FULL_VERSION=$(dpkg-parsechangelog -S Version)
 
-        # Download source tarball (Launchpad has no internet access)
-        if [ ! -d "quickshell-${VERSION}" ]; then
-            info "Downloading quickshell source tarball v${VERSION}..."
-            if wget -O quickshell-download.tar.gz "https://github.com/quickshell-mirror/quickshell/archive/refs/tags/v${VERSION}.tar.gz"; then
-                info "Extracting source..."
-                rm -rf "quickshell-${VERSION}"
-                tar -xzf quickshell-download.tar.gz
-                rm -f quickshell-download.tar.gz
-                success "Source prepared for packaging"
+        # Check if this is a pinned version
+        if [[ "$FULL_VERSION" =~ \+pin([0-9]+)\.([a-f0-9]+) ]] || [[ "$FULL_VERSION" =~ ~pin([0-9]+)\.([a-f0-9]+) ]]; then
+            PINNED_COMMIT="${BASH_REMATCH[2]}"
+            info "Detected pinned version with commit: $PINNED_COMMIT"
+
+            # Extract base version (0.2.1.1+pin713.26531fcppa5 -> 0.2.1.1)
+            BASE_VERSION=$(echo "$FULL_VERSION" | sed 's/[+~]pin.*//' | sed 's/ppa[0-9]*$//')
+
+            # Download source from pinned commit
+            if [ ! -d "quickshell-source" ]; then
+                info "Downloading quickshell source from pinned commit ${PINNED_COMMIT}..."
+                FULL_COMMIT_HASH=$(curl -s "https://api.github.com/repos/quickshell-mirror/quickshell/commits/${PINNED_COMMIT}" | grep '"sha":' | head -1 | sed 's/.*"sha": "\(.*\)".*/\1/')
+                if [ -z "$FULL_COMMIT_HASH" ]; then
+                    error "Failed to get full commit hash for $PINNED_COMMIT"
+                    exit 1
+                fi
+
+                if wget -O quickshell-download.tar.gz "https://github.com/quickshell-mirror/quickshell/archive/${FULL_COMMIT_HASH}.tar.gz"; then
+                    info "Extracting source..."
+                    rm -rf quickshell-source
+                    mkdir -p quickshell-source
+                    tar -xzf quickshell-download.tar.gz --strip-components=1 -C quickshell-source
+                    rm -f quickshell-download.tar.gz
+                    success "Source prepared for pinned build"
+                else
+                    error "Failed to download quickshell source from commit $PINNED_COMMIT"
+                    exit 1
+                fi
             else
-                error "Failed to download quickshell source"
-                exit 1
+                info "Pinned source already exists"
             fi
         else
-            info "Source already exists"
+            # Normal stable release - get version from changelog
+            # Native: 0.2.1ppa1 -> 0.2.1, Quilt: 0.2.1-1ppa1 -> 0.2.1
+            VERSION=$(echo "$FULL_VERSION" | sed 's/-[^-]*$//' | sed 's/ppa[0-9]*$//')
+
+            # Download source tarball from tag
+            if [ ! -d "quickshell-${VERSION}" ]; then
+                info "Downloading quickshell source tarball v${VERSION}..."
+                if wget -O quickshell-download.tar.gz "https://github.com/quickshell-mirror/quickshell/archive/refs/tags/v${VERSION}.tar.gz"; then
+                    info "Extracting source..."
+                    rm -rf "quickshell-${VERSION}"
+                    tar -xzf quickshell-download.tar.gz
+                    rm -f quickshell-download.tar.gz
+                    success "Source prepared for packaging"
+                else
+                    error "Failed to download quickshell source"
+                    exit 1
+                fi
+            else
+                info "Source already exists"
+            fi
         fi
         ;;
     xwayland-satellite)

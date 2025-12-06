@@ -2,7 +2,7 @@
   <service name="download_url">
     <param name="protocol">https</param>
     <param name="host">github.com</param>
-    <param name="path">/quickshell-mirror/quickshell/archive/refs/tags/v0.2.1.tar.gz</param>
+    <param name="path">/quickshell-mirror/quickshell/archive/26531fc46ef17e9365b03770edd3fb9206fcb460.tar.gz</param>
     <param name="filename">quickshell-source.tar.gz</param>
   </service>
 </services>
