@@ -1,9 +1,8 @@
 🔍 Checking for package updates...
 
 📦 Checking quickshell (stable)...
-   Current: 0.2.1
-   Latest:  0.2.1
-   ✓ Already up to date
+   📌 Using pinned commit (no newer stable release than 0.2.1)
+   ✓ Already at pinned commit
 
 📦 Checking quickshell-git (development)...
    Current commit: 26531fc (date: 20251202)
