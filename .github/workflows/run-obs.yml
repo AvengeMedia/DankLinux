@@ -93,11 +93,11 @@ jobs:
             UPDATED_SUSE=""
             
             if [ "$DEBIAN_CHANGED" = true ]; then
-              UPDATED_DEB=$(git diff --name-only distro/debian/ | grep 'debian/changelog' | xargs dirname | xargs -I{} basename {} | tr '\n' ',' | sed 's/,$//')
+              UPDATED_DEB=$(git diff --name-only distro/debian/ | grep 'debian/changelog' | xargs dirname | xargs dirname | xargs basename | tr '\n' ',' | sed 's/,$//')
             fi
             
             if [ "$OPENSUSE_CHANGED" = true ]; then
-              UPDATED_SUSE=$(git diff --name-only distro/opensuse/ | sed 's/\.spec$//' | xargs -I{} basename {} | tr '\n' ',' | sed 's/,$//')
+              UPDATED_SUSE=$(git diff --name-only distro/opensuse/ | grep '\.spec$' | sed 's|distro/opensuse/||' | sed 's/\.spec$//' | tr '\n' ',' | sed 's/,$//')
             fi
             
             # Combine and deduplicate
@@ -114,8 +114,8 @@ jobs:
         if: steps.check.outputs.has_updates == 'true'
         run: |
           # Get changed packages for commit message
-          CHANGED_DEB=$(git diff --name-only distro/debian/ 2>/dev/null | grep 'debian/changelog' | xargs dirname 2>/dev/null | xargs -I{} basename {} 2>/dev/null | tr '\n' ', ' | sed 's/, $//' || echo "")
-          CHANGED_SUSE=$(git diff --name-only distro/opensuse/ 2>/dev/null | sed 's/\.spec$//' | xargs -I{} basename {} 2>/dev/null | tr '\n' ', ' | sed 's/, $//' || echo "")
+          CHANGED_DEB=$(git diff --name-only distro/debian/ 2>/dev/null | grep 'debian/changelog' | xargs dirname 2>/dev/null | xargs dirname 2>/dev/null | xargs basename 2>/dev/null | tr '\n' ', ' | sed 's/, $//' || echo "")
+          CHANGED_SUSE=$(git diff --name-only distro/opensuse/ 2>/dev/null | grep '\.spec$' | sed 's|distro/opensuse/||' | sed 's/\.spec$//' | tr '\n' ', ' | sed 's/, $//' || echo "")
           
           CHANGED=""
           [ -n "$CHANGED_DEB" ] && CHANGED="Debian: $CHANGED_DEB"

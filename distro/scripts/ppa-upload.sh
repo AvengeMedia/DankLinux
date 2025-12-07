@@ -650,6 +650,11 @@ elif [ -n "$GIT_REPO" ] && [ "${SKIP_VERSION_UPDATE:-false}" != "true" ]; then
 
     if [ "${SKIP_VERSION_UPDATE:-false}" = "true" ]; then
         info "Skipping version update (manual version in changelog)"
+        # In CI, exit early - we don't rebuild pinned versions automatically
+        if [ -n "${GITHUB_ACTIONS:-}" ] || [ -n "${CI:-}" ]; then
+            info "CI run detected with pinned version - skipping upload"
+            exit 0
+        fi
     else
         info "Fetching latest tag from $GIT_REPO..."
         LATEST_TAG=$(get_latest_tag "$GIT_REPO")
