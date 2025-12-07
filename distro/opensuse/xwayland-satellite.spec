@@ -1,5 +1,5 @@
 Name:           xwayland-satellite
-Version:        0.7
+Version:        0.8
 Release:        1%{?dist}
 Summary:        Rootless Xwayland integration for Wayland compositors
 
@@ -49,6 +49,8 @@ install -Dm755 target/release/xwayland-satellite %{buildroot}%{_bindir}/xwayland
 %{_bindir}/xwayland-satellite
 
 %changelog
+* Sat Dec 06 2025 Avenge Media <AvengeMedia.US@gmail.com> - 0.8-1
+- Update to upstream version 0.8
 * Tue Nov 25 2025 Avenge Media <AvengeMedia.US@gmail.com> - 0.7-1
 - Initial stable release 0.7
 

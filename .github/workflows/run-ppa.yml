@@ -125,9 +125,18 @@ jobs:
             echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
             echo "🚀 Force upload: $PACKAGES"
           elif [[ -n "${{ github.event.inputs.package }}" && "${{ github.event.inputs.package }}" != "auto" ]]; then
-            PACKAGES="${{ github.event.inputs.package }}"
-            echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
-            echo "📦 Manual selection: $PACKAGES"
+            # Manual package selection should respect change detection
+            SELECTED_PKG="${{ github.event.inputs.package }}"
+            UPDATED_PKG="${{ needs.check-updates.outputs.updated_packages }}"
+
+            # Check if manually selected package is in the updated list
+            if [[ "$UPDATED_PKG" == *"$SELECTED_PKG"* ]]; then
+              echo "packages=$SELECTED_PKG" >> $GITHUB_OUTPUT
+              echo "📦 Manual selection (has updates): $SELECTED_PKG"
+            else
+              echo "packages=" >> $GITHUB_OUTPUT
+              echo "⚠️ Manual selection '$SELECTED_PKG' has no updates - skipping (use force_upload to override)"
+            fi
           elif [[ "${{ needs.check-updates.outputs.has_updates }}" == "true" ]]; then
             # Upload only updated packages
             UPDATED="${{ needs.check-updates.outputs.updated_packages }}"

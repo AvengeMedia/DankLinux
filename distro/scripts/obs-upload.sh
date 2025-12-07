@@ -970,19 +970,43 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
     OLD_DSC_VERSION=$(grep "^Version:" "$OLD_DSC_FILE" 2>/dev/null | awk '{print $2}' | head -1)
     
     IS_MANUAL=false
+    IS_FORCE_UPLOAD=false
+
+    # Check if this is a force upload (allows version increment on same version)
+    if [[ "${FORCE_UPLOAD:-}" == "true" ]]; then
+        IS_FORCE_UPLOAD=true
+        echo "==> Force upload detected (FORCE_UPLOAD=true)"
+    fi
+
+    # Manual run detection: only truly manual runs, not scheduled CI runs
     if [[ -n "${REBUILD_RELEASE:-}" ]]; then
         IS_MANUAL=true
         echo "==> Manual rebuild detected (REBUILD_RELEASE=$REBUILD_RELEASE)"
-    elif [[ -n "${FORCE_REBUILD:-}" ]] && [[ "${FORCE_REBUILD}" == "true" ]]; then
-        IS_MANUAL=true
-        echo "==> Manual workflow trigger detected (FORCE_REBUILD=true)"
     elif [[ -z "${GITHUB_ACTIONS:-}" ]] && [[ -z "${CI:-}" ]]; then
         IS_MANUAL=true
         echo "==> Local/manual run detected (not in CI)"
     fi
+
+    # In CI without force_upload, treat as automated run (no version increment)
+    if [[ -n "${GITHUB_ACTIONS:-}" ]] || [[ -n "${CI:-}" ]]; then
+        if [[ "${IS_FORCE_UPLOAD}" != "true" ]]; then
+            echo "==> Automated CI run (no force_upload) - will skip if version unchanged"
+        fi
+    fi
     
-    if [[ -n "$OLD_DSC_VERSION" ]] && [[ "$OLD_DSC_VERSION" == "$CHANGELOG_VERSION" ]] && [[ "$IS_MANUAL" == true ]]; then
-        echo "==> Detected rebuild of same version $CHANGELOG_VERSION, incrementing version"
+    if [[ -n "$OLD_DSC_VERSION" ]] && [[ "$OLD_DSC_VERSION" == "$CHANGELOG_VERSION" ]]; then
+        # In CI without force_upload, skip if version unchanged (matching PPA behavior)
+        if [[ -n "${GITHUB_ACTIONS:-}" ]] || [[ -n "${CI:-}" ]]; then
+            if [[ "${IS_FORCE_UPLOAD}" != "true" ]] && [[ "$IS_MANUAL" != "true" ]]; then
+                echo "==> Same version detected in CI (current: $OLD_DSC_VERSION), skipping upload"
+                echo "    Use force_upload=true or set rebuild_release to override"
+                exit 0
+            fi
+        fi
+
+        # Only increment version for truly manual runs or force uploads
+        if [[ "$IS_MANUAL" == true ]] || [[ "$IS_FORCE_UPLOAD" == true ]]; then
+            echo "==> Detected rebuild of same version $CHANGELOG_VERSION, incrementing version"
         if [[ "$CHANGELOG_VERSION" =~ ^([0-9.]+)ppa([0-9]+)$ ]]; then
             BASE_VERSION="${BASH_REMATCH[1]}"
             PPA_NUM="${BASH_REMATCH[2]}"
@@ -1250,6 +1274,7 @@ Files:
  $TARBALL_MD5 $TARBALL_SIZE $COMBINED_TARBALL
 EOF
         echo "  - Updated changelog and recreated tarball with version $NEW_VERSION"
+        fi
     fi
 fi
 
@@ -1288,6 +1313,18 @@ fi
 
 if ! osc status 2>/dev/null | grep -qE '^[MAD]|^[?]'; then
     echo "==> No changes to commit (package already up to date)"
+    echo "    Working directory matches OBS server state"
+
+    # In automated CI runs, exit cleanly
+    if [[ -n "${GITHUB_ACTIONS:-}" ]] || [[ -n "${CI:-}" ]]; then
+        if [[ "${IS_FORCE_UPLOAD}" != "true" ]]; then
+            echo "    Skipping commit in automated run (no changes detected)"
+            exit 0
+        fi
+    fi
+
+    # For manual/force runs, warn but don't fail
+    echo "    WARNING: Manual run with no OBS changes - this may indicate an issue"
 else
     echo "==> Committing to OBS"
     set +e

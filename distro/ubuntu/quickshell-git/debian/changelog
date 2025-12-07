@@ -1,3 +1,9 @@
+quickshell-git (0.2.1+git713.26531fc4ppa1) unstable; urgency=medium
+
+  * Git snapshot (commit 713: 26531fc4)
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 06 Dec 2025 22:14:15 -0500
+
 quickshell-git (0.2.1+git713.26531fcppa1) questing; urgency=medium
 
   * Git snapshot (commit 713: 26531fc)

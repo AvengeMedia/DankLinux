@@ -37,9 +37,12 @@ error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 PACKAGES=(
     "niri-git:YaLTeR/niri:git"
     "quickshell-git:quickshell-mirror/quickshell:git"
+    "xwayland-satellite-git:Supreeeme/xwayland-satellite:git"
     "quickshell:quickshell-mirror/quickshell:release"
+    "xwayland-satellite:Supreeeme/xwayland-satellite:release"
     "cliphist:sentriz/cliphist:release"
     "matugen:InioX/matugen:release"
+    "ghostty:ghostty-org/ghostty:release"
     "danksearch:AvengeMedia/danksearch:release"
     "dgop:AvengeMedia/dgop:release"
 )
@@ -239,6 +242,23 @@ for pkg_info in "${PACKAGES[@]}"; do
             fi
 
             info "   Latest release: $latest_tag"
+
+            # For pinned packages, check if latest release is actually newer than base version
+            if [[ "$current_version" == *"+pin"* ]] || [[ "$current_version" == *"~pin"* ]]; then
+                # Extract base version from pinned version (e.g., "0.2.1" from "0.2.1.1+pin713...")
+                pin_base=$(echo "$current_version" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+
+                # Compare latest release with pinned base version using sort -V
+                if [[ -n "$latest_tag" ]] && [[ "$(printf '%s\n' "$latest_tag" "$pin_base" | sort -V | tail -1)" != "$pin_base" ]]; then
+                    info "   🎉 New stable release $latest_tag available (pinned base: $pin_base)"
+                    # Continue to update logic below (switches back to stable)
+                else
+                    info "   📌 Currently using pinned version (base: $pin_base, latest release: $latest_tag)"
+                    info "      Will switch to stable when a newer release than $pin_base is available"
+                    echo "" >&2
+                    continue  # Skip update
+                fi
+            fi
 
             if [ "$current_base" != "$latest_tag" ]; then
                 success "   ✨ Update available: $current_base → $latest_tag"

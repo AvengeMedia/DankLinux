@@ -138,8 +138,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event.inputs.force_upload == 'true' ||
-      needs.check-updates.outputs.has_updates == 'true' ||
-      github.event.inputs.package != 'auto'
+      (needs.check-updates.outputs.has_updates == 'true' && needs.check-updates.outputs.updated_packages != '')
     
     steps:
       - name: Checkout
@@ -161,8 +160,18 @@ jobs:
               echo "🚀 Force upload: $PKG"
             fi
           elif [[ -n "${{ github.event.inputs.package }}" && "${{ github.event.inputs.package }}" != "auto" ]]; then
-            echo "packages=${{ github.event.inputs.package }}" >> $GITHUB_OUTPUT
-            echo "📦 Manual selection: ${{ github.event.inputs.package }}"
+            # Manual package selection should respect change detection
+            SELECTED_PKG="${{ github.event.inputs.package }}"
+            UPDATED_PKG="${{ needs.check-updates.outputs.updated_packages }}"
+
+            # Check if manually selected package is in the updated list
+            if [[ "$UPDATED_PKG" == *"$SELECTED_PKG"* ]]; then
+              echo "packages=$SELECTED_PKG" >> $GITHUB_OUTPUT
+              echo "📦 Manual selection (has updates): $SELECTED_PKG"
+            else
+              echo "packages=" >> $GITHUB_OUTPUT
+              echo "⚠️ Manual selection '$SELECTED_PKG' has no updates - skipping (use force_upload to override)"
+            fi
           elif [[ "${{ needs.check-updates.outputs.has_updates }}" == "true" ]]; then
             UPDATED="${{ needs.check-updates.outputs.updated_packages }}"
             if [[ -n "$UPDATED" ]]; then
@@ -196,7 +205,7 @@ jobs:
       
       - name: Upload to OBS
         env:
-          FORCE_REBUILD: ${{ github.event_name == 'workflow_dispatch' && 'true' || '' }}
+          FORCE_UPLOAD: ${{ github.event.inputs.force_upload }}
           REBUILD_RELEASE: ${{ github.event.inputs.rebuild_release }}
         run: |
           PACKAGES="${{ steps.packages.outputs.packages }}"
