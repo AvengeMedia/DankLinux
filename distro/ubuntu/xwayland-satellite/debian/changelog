@@ -1,3 +1,9 @@
+xwayland-satellite (0.8ppa2) questing; urgency=medium
+
+  * Update to upstream version 0.8 (ppa2)
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sun, 08 Dec 2025 00:00:00 -0500
+
 xwayland-satellite (0.7ppa4) questing; urgency=medium
 
   * Rebuild for packaging fixes (ppa4)
