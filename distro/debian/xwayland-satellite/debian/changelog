@@ -1,3 +1,9 @@
+xwayland-satellite (0.8ppa1) unstable; urgency=medium
+
+  * Update to upstream version 0.8
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sun, 07 Dec 2025 04:18:49 +0000
+
 xwayland-satellite (0.7ppa1) unstable; urgency=medium
 
   * Initial stable release 0.7
