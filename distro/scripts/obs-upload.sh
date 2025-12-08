@@ -958,6 +958,14 @@ if [[ $OSC_UP_EXIT -ne 0 ]]; then
             echo "Error: Failed to update working copy after conflict resolution"
             exit 1
         fi
+    elif grep -q "inconsistent state" /tmp/osc-up.log 2>/dev/null; then
+        echo "==> Inconsistent working copy detected, repairing..."
+        osc repairwc . 2>&1 | head -5
+        echo "==> Retrying osc up after repair"
+        if ! osc up; then
+            echo "Error: Failed to update working copy after repair"
+            exit 1
+        fi
     else
         echo "Error: Failed to update working copy"
         cat /tmp/osc-up.log
