@@ -1,5 +1,5 @@
 Name:           xwayland-satellite-git
-Version:        0.8+git205.1b918e29
+Version:        0.8+git207.2f9981ad
 Release:        1%{?dist}
 Summary:        Rootless Xwayland integration for Wayland compositors (git)
 
@@ -53,6 +53,8 @@ install -Dm755 target/release/xwayland-satellite %{buildroot}%{_bindir}/xwayland
 %{_bindir}/xwayland-satellite
 
 %changelog
+* Mon Dec 08 2025 Avenge Media <AvengeMedia.US@gmail.com> - 0.8+git207.2f9981ad-1
+- Git snapshot (commit 207: 2f9981ad)
 * Sat Dec 06 2025 Avenge Media <AvengeMedia.US@gmail.com> - 0.8+git205.1b918e29-1
 - Git snapshot (commit 205: 1b918e29)
 * Tue Nov 25 2025 Avenge Media <AvengeMedia.US@gmail.com> - 0.7+git-1

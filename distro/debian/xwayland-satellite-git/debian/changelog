@@ -1,3 +1,9 @@
+xwayland-satellite-git (0.8+git207.2f9981adppa1) unstable; urgency=medium
+
+  * Git snapshot (commit 207: 2f9981ad)
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Mon, 08 Dec 2025 18:32:32 +0000
+
 xwayland-satellite-git (0.8+git205.1b918e29ppa1) unstable; urgency=medium
 
   * Git snapshot (commit 205: 1b918e29)
