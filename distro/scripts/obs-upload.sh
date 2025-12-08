@@ -961,9 +961,10 @@ if [[ $OSC_UP_EXIT -ne 0 ]]; then
     elif grep -q "inconsistent state" /tmp/osc-up.log 2>/dev/null; then
         echo "==> Inconsistent working copy detected, attempting repair..."
         set +e
-        osc repairwc . 2>&1 | head -5
+        REPAIR_OUTPUT=$(osc repairwc . 2>&1)
         REPAIR_EXIT=$?
         set -e
+        echo "$REPAIR_OUTPUT" | head -5
         
         if [[ $REPAIR_EXIT -eq 0 ]]; then
             echo "==> Retrying osc up after repair"
