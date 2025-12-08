@@ -171,6 +171,14 @@ WORK_DIR="$OBS_BASE/$OBS_PROJECT/$PACKAGE"
 TEMP_DIR=$(mktemp -d)
 trap "rm -rf $TEMP_DIR" EXIT
 
+OLD_DSC_FILE=""
+OLD_DSC_SNAPSHOT_DIR="$WORK_DIR/.osc/original"
+mkdir -p "$OLD_DSC_SNAPSHOT_DIR"
+if [[ -f "$WORK_DIR/$PACKAGE.dsc" ]]; then
+    cp "$WORK_DIR/$PACKAGE.dsc" "$OLD_DSC_SNAPSHOT_DIR/$PACKAGE.dsc"
+    OLD_DSC_FILE="$OLD_DSC_SNAPSHOT_DIR/$PACKAGE.dsc"
+fi
+
 echo "==> Preparing $PACKAGE for OBS upload"
 
 find "$WORK_DIR" -maxdepth 1 -type f \( -name "*.tar.gz" -o -name "*.tar.xz" -o -name "*.tar.bz2" -o -name "*.tar" -o -name "*.spec" -o -name "_service" -o -name "*.dsc" \) -delete 2>/dev/null || true
@@ -959,11 +967,14 @@ fi
 rm -f /tmp/osc-up.log
 
 # Auto-increment version on manual runs
-OLD_DSC_FILE=""
-if [[ -f "$WORK_DIR/$PACKAGE.dsc" ]]; then
-    OLD_DSC_FILE="$WORK_DIR/$PACKAGE.dsc"
-elif [[ -f "$WORK_DIR/.osc/sources/$PACKAGE.dsc" ]]; then
-    OLD_DSC_FILE="$WORK_DIR/.osc/sources/$PACKAGE.dsc"
+# Prefer the server snapshot (copied before regenerating artifacts) so we do not
+# compare against a freshly generated .dsc in this working tree.
+if [[ -z "$OLD_DSC_FILE" ]]; then
+    if [[ -f "$WORK_DIR/.osc/original/$PACKAGE.dsc" ]]; then
+        OLD_DSC_FILE="$WORK_DIR/.osc/original/$PACKAGE.dsc"
+    elif [[ -f "$WORK_DIR/$PACKAGE.dsc" ]]; then
+        OLD_DSC_FILE="$WORK_DIR/$PACKAGE.dsc"
+    fi
 fi
 
 if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ -n "$OLD_DSC_FILE" ]]; then
