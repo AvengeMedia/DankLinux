@@ -959,12 +959,29 @@ if [[ $OSC_UP_EXIT -ne 0 ]]; then
             exit 1
         fi
     elif grep -q "inconsistent state" /tmp/osc-up.log 2>/dev/null; then
-        echo "==> Inconsistent working copy detected, repairing..."
+        echo "==> Inconsistent working copy detected, attempting repair..."
+        set +e
         osc repairwc . 2>&1 | head -5
-        echo "==> Retrying osc up after repair"
-        if ! osc up; then
-            echo "Error: Failed to update working copy after repair"
-            exit 1
+        REPAIR_EXIT=$?
+        set -e
+        
+        if [[ $REPAIR_EXIT -eq 0 ]]; then
+            echo "==> Retrying osc up after repair"
+            if ! osc up; then
+                echo "Error: Failed to update working copy after repair"
+                exit 1
+            fi
+        else
+            echo "==> Repair failed, forcing fresh checkout..."
+            cd "$OBS_BASE"
+            rm -rf "$OBS_PROJECT/$PACKAGE"
+            osc co "$OBS_PROJECT/$PACKAGE"
+            cd "$WORK_DIR"
+            echo "==> Fresh checkout complete, updating..."
+            if ! osc up; then
+                echo "Error: Failed to update fresh checkout"
+                exit 1
+            fi
         fi
     else
         echo "Error: Failed to update working copy"
