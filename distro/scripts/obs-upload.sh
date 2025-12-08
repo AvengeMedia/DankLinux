@@ -169,6 +169,8 @@ fi
 
 WORK_DIR="$OBS_BASE/$OBS_PROJECT/$PACKAGE"
 TEMP_DIR=$(mktemp -d)
+ARTIFACT_STAGING="$TEMP_DIR/artifacts"
+mkdir -p "$ARTIFACT_STAGING"
 trap "rm -rf $TEMP_DIR" EXIT
 
 OLD_DSC_FILE=""
@@ -937,6 +939,9 @@ fi
 
 cd "$WORK_DIR"
 
+echo "==> Staging artifacts for potential recovery..."
+cp -a *.tar.gz *.tar.xz *.tar.bz2 *.tar *.spec *.dsc _service "$ARTIFACT_STAGING/" 2>/dev/null || true
+
 echo "==> Updating working copy"
 set +e
 osc up 2>&1 | tee /tmp/osc-up.log
@@ -978,7 +983,9 @@ if [[ $OSC_UP_EXIT -ne 0 ]]; then
             rm -rf "$OBS_PROJECT/$PACKAGE"
             osc co "$OBS_PROJECT/$PACKAGE"
             cd "$WORK_DIR"
-            echo "==> Fresh checkout complete, updating..."
+            echo "==> Fresh checkout complete, restoring artifacts..."
+            cp -a "$ARTIFACT_STAGING"/* . 2>/dev/null || true
+            echo "==> Updating fresh checkout..."
             if ! osc up; then
                 echo "Error: Failed to update fresh checkout"
                 exit 1
