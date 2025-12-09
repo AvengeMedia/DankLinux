@@ -1,4 +1,4 @@
-ghostty (1.2.3ppa8) unstable; urgency=medium
+ghostty (1.2.3ppa9) unstable; urgency=medium
 
   * Initial OBS packaging for Debian
   * Offline build with vendored Zig toolchain and dependencies

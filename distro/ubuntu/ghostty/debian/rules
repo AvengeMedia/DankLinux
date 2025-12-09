@@ -24,6 +24,8 @@ override_dh_auto_install:
 		--system $(CURDIR)/zig-deps/p \
 		-Doptimize=ReleaseFast \
 		-Dcpu=baseline
+	# Remove terminfo file that conflicts with ncurses-term (Ubuntu 25.04+)
+	rm -f $(CURDIR)/debian/ghostty/usr/share/terminfo/g/ghostty
 
 override_dh_auto_clean:
 	rm -rf zig-cache zig-out .zig-cache

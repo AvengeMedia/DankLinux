@@ -253,22 +253,31 @@ if [[ "$SOURCE_FORMAT" == *"native"* ]]; then
                     exit 1
                 fi
 
-                # Download Zig compiler
+                # Download Zig compilers for both architectures (OBS needs tarballs, not extracted)
                 ZIG_VERSION="0.14.0"
-                ZIG_ARCH="x86_64"  # Default to amd64, OBS will build for both architectures
-                echo "    Downloading Zig compiler $ZIG_VERSION..."
-                if curl -L -f -s -o "$TEMP_DIR/zig.tar.xz" "https://ziglang.org/download/$ZIG_VERSION/zig-linux-$ZIG_ARCH-$ZIG_VERSION.tar.xz" 2>/dev/null || \
-                   wget -q -O "$TEMP_DIR/zig.tar.xz" "https://ziglang.org/download/$ZIG_VERSION/zig-linux-$ZIG_ARCH-$ZIG_VERSION.tar.xz" 2>/dev/null; then
-                    cd "$TEMP_DIR"
-                    tar -xJf zig.tar.xz
-                    mv zig-linux-* "$SOURCE_DIR/zig"
-                    rm -f zig.tar.xz
-                    cd "$REPO_ROOT"
-                    echo "    Zig compiler extracted to source"
-                else
-                    echo "Error: Failed to download Zig compiler"
-                    exit 1
-                fi
+                echo "    Downloading Zig compilers $ZIG_VERSION for x86_64 and aarch64..."
+                cd "$TEMP_DIR"
+                for arch in x86_64 aarch64; do
+                    TARBALL="zig-linux-${arch}-${ZIG_VERSION}.tar.xz"
+                    if curl -L -f -s -o "$TARBALL" "https://ziglang.org/download/$ZIG_VERSION/$TARBALL" 2>/dev/null || \
+                       wget -q -O "$TARBALL" "https://ziglang.org/download/$ZIG_VERSION/$TARBALL" 2>/dev/null; then
+                        cp "$TARBALL" "$SOURCE_DIR/$TARBALL"
+                        # Extract x86_64 for dependency fetching
+                        if [ "$arch" = "x86_64" ]; then
+                            tar -xJf "$TARBALL"
+                            EXTRACTED_ZIG=$(find . -maxdepth 1 -type d -name "zig-linux-*" | head -1)
+                            if [ -n "$EXTRACTED_ZIG" ]; then
+                                mv "$EXTRACTED_ZIG" "$SOURCE_DIR/zig"
+                            fi
+                            rm -rf zig-linux-*
+                        fi
+                    else
+                        echo "Error: Failed to download Zig compiler for $arch"
+                        exit 1
+                    fi
+                done
+                cd "$REPO_ROOT"
+                echo "    Zig compilers downloaded (tarballs for OBS, extracted x86_64 for deps)"
 
                 # Fetch Zig dependencies
                 echo "    Fetching Zig dependencies..."
@@ -293,8 +302,16 @@ if [[ "$SOURCE_FORMAT" == *"native"* ]]; then
                 fi
                 unset ZIG_GLOBAL_CACHE_DIR
 
-                # Remove Zig compiler (OBS _service downloads arch-specific binary)
+                # Remove extracted Zig (OBS will extract from tarballs per-arch during build)
+                # Keep the Zig tarballs in source for debian/rules to use
                 rm -rf "$SOURCE_DIR/zig"
+
+                # Copy debian/ directory to source
+                echo "    Copying debian/ packaging files to source"
+                cp -r "$REPO_ROOT/distro/debian/$PACKAGE/debian" "$SOURCE_DIR/" || {
+                    echo "Error: Failed to copy debian/ directory for ghostty"
+                    exit 1
+                }
 
                 cd "$REPO_ROOT"
             else
