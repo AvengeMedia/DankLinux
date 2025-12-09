@@ -1,5 +1,5 @@
 Name:           niri-git
-Version:        25.11+git2568.ba29735f
+Version:        25.11+git2569.83a733e0
 Release:        1%{?dist}
 Epoch:          1
 Summary:        Scrollable-tiling Wayland compositor (nightly)
@@ -93,6 +93,8 @@ install -Dm644 zsh-completions %{buildroot}%{_datadir}/zsh/site-functions/_niri
 %{_datadir}/zsh/site-functions/_niri
 
 %changelog
+* Tue Dec 09 2025 Avenge Media <AvengeMedia.US@gmail.com> - 25.11+git2569.83a733e0-1
+- Git snapshot (commit 2569: 83a733e0)
 * Sat Dec 06 2025 Avenge Media <AvengeMedia.US@gmail.com> - 25.11+git2568.ba29735f-1
 - Git snapshot (commit 2568: ba29735f)
 * Tue Dec 02 2025 Avenge Media <AvengeMedia.US@gmail.com> - 25.11+git2566.f874b2fc-1
