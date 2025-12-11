@@ -2,6 +2,7 @@
 
 Name:           dgop
 Version:        0.1.11
+Epoch:          1
 Release:        1%{?dist}
 Summary:        System monitoring CLI and REST API
 
@@ -57,11 +58,7 @@ install -Dm755 dgop %{buildroot}%{_bindir}/dgop
 %{_bindir}/dgop
 
 %changelog
-* Mon Oct 14 2024 Purian23 <purian23@users.noreply.github.com> - 0.1.7-1
-- Simplified spec to use latest stable tagged binary
-- Updated to version 0.1.7
-- Uses /latest/download/ for automatic binary fetching
-
-* Tue Oct 08 2024 Purian23 <purian23@users.noreply.github.com> - 0.1.4-1
-- Create unified spec file supporting both stable and git builds
-- Stable: Uses pre-built binaries from GitHub releases with SHA256 verification
+* Wed Dec 11 2025 Purian23 <purian23@users.noreply.github.com> - 1:0.1.11-1
+- Add Epoch: 1 to supersede old bundled dgop 0.6.2 from dms package
+- Updated to version 0.1.11
+- Standalone dgop package now properly replaces legacy bundled version
