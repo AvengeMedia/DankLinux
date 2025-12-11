@@ -39,6 +39,11 @@
    Latest:  1.2.3
    ✓ Already up to date
 
+📦 Checking danksearch...
+   Current: 0.0.7
+   Latest:  0.0.7
+   ✓ Already up to date
+
 📦 Checking dms-greeter...
    ℹ️  Builds directly from: https://github.com/AvengeMedia/DankMaterialShell
    Not tracked in dms_copr repo - managed in separate DankMaterialShell repo
