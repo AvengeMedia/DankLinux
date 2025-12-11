@@ -30,6 +30,7 @@ on:
       - 'distro/scripts/fetch-version.sh'
       - 'distro/scripts/copr-trigger.sh'
       - 'distro/pins.yaml'
+      - 'distro/fedora/**/*.spec'
 
 jobs:
   update-packages:
@@ -95,9 +96,20 @@ jobs:
               echo "spec_changes=false" >> $GITHUB_OUTPUT
               echo "📋 No spec files modified in push"
             fi
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # For manual triggers, check if any spec files differ from previous commit
+            SPEC_CHANGES=$(git diff HEAD~1 --name-only | grep '\.spec$' || echo "")
+            if [[ -n "$SPEC_CHANGES" ]]; then
+              echo "spec_changes=true" >> $GITHUB_OUTPUT
+              echo "📋 Spec files modified in recent commit:"
+              echo "$SPEC_CHANGES" | sed 's/^/  - /'
+            else
+              echo "spec_changes=false" >> $GITHUB_OUTPUT
+              echo "📋 No spec files modified in recent commits"
+            fi
           else
             echo "spec_changes=false" >> $GITHUB_OUTPUT
-            echo "📋 Not a push event, skipping spec change check"
+            echo "📋 Not a push/manual event, skipping spec change check"
           fi
 
       - name: Debug outputs

@@ -389,6 +389,41 @@ else
 fi
 
 # ============================================================================
+# DANKSEARCH
+# ============================================================================
+echo ""
+echo "📦 Checking danksearch..."
+
+SPEC_FILE="danksearch/danksearch.spec"
+UPSTREAM_REPO="AvengeMedia/danksearch"
+
+# Get current version from spec
+CURRENT_VERSION=$(grep -oP '^Version:\s+\K[0-9.]+' "$SPEC_FILE" || echo "unknown")
+echo "   Current: $CURRENT_VERSION"
+
+# Fetch latest release tag
+LATEST_TAG=$("$SCRIPT_DIR/fetch-version.sh" "$UPSTREAM_REPO" "release")
+LATEST_VERSION="${LATEST_TAG#v}"
+
+if [[ -n "$LATEST_VERSION" ]]; then
+    echo "   Latest:  $LATEST_VERSION"
+
+    if [[ "$CURRENT_VERSION" != "$LATEST_VERSION" ]]; then
+        echo "   ✨ Update available: $CURRENT_VERSION → $LATEST_VERSION"
+
+        # Update the spec file
+        sed -i "s/^Version:\s\+.*/Version:        $LATEST_VERSION/" "$SPEC_FILE"
+
+        UPDATED=$((UPDATED + 1))
+        UPDATED_PACKAGES+=("danksearch: $CURRENT_VERSION → $LATEST_VERSION")
+    else
+        echo "   ✓ Already up to date"
+    fi
+else
+    echo "   ⚠ Could not fetch latest version"
+fi
+
+# ============================================================================
 # DMS-GREETER (Managed separately)
 # ============================================================================
 echo ""
