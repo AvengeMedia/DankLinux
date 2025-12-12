@@ -59,6 +59,7 @@ BUILD_BREAKPAD=false
 BUILD_GHOSTTY=false
 BUILD_MATERIAL_SYMBOLS=false
 BUILD_DANKSEARCH=false
+BUILD_CLI11=false
 
 # Check which specs changed (paths relative to repo root)
 if echo "$CHANGED_FILES" | grep -q "distro/fedora/quickshell/quickshell.spec"; then
@@ -101,6 +102,11 @@ if echo "$CHANGED_FILES" | grep -q "distro/fedora/danksearch/danksearch.spec"; t
     BUILD_DANKSEARCH=true
 fi
 
+# New CLI11 package
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/cli11/cli11.spec"; then
+    BUILD_CLI11=true
+fi
+
 # Note: dms-greeter builds from https://github.com/AvengeMedia/DankMaterialShell
 # and is not tracked in this repository
 
@@ -119,6 +125,9 @@ if [[ -z "$CHANGED_FILES" ]]; then
     echo "$UNCOMMITTED" | grep -q "distro/fedora/ghostty/ghostty.spec" && BUILD_GHOSTTY=true
     echo "$UNCOMMITTED" | grep -q "distro/fedora/fonts/material-symbols-fonts.spec" && BUILD_MATERIAL_SYMBOLS=true
     echo "$UNCOMMITTED" | grep -q "distro/fedora/danksearch/danksearch.spec" && BUILD_DANKSEARCH=true
+
+    # New CLI11 package
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/cli11/cli11.spec" && BUILD_CLI11=true
 fi
 
 # Trigger builds
@@ -162,6 +171,10 @@ fi
 
 if [[ "$BUILD_DANKSEARCH" == true ]] || [[ "$FORCE_PACKAGE" == "danksearch" ]]; then
     trigger_build "danksearch" "distro/fedora/danksearch/danksearch.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+fi
+
+if [[ "$BUILD_CLI11" == true ]] || [[ "$FORCE_PACKAGE" == "cli11" ]]; then
+    trigger_build "cli11" "distro/fedora/cli11/cli11.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
 echo ""

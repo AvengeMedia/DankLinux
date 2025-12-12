@@ -42,7 +42,7 @@ if [[ $# -lt 1 ]]; then
     error "Usage: $0 <package-name>"
     echo ""
     echo "Available packages:"
-    echo "  quickshell, quickshell-git, dgop, cliphist, matugen,"
+    echo "  cli11, quickshell, quickshell-git, dgop, cliphist, matugen,"
     echo "  hyprpicker, breakpad, ghostty, danksearch, material-symbols-fonts"
     exit 1
 fi
@@ -53,6 +53,8 @@ SPEC_FILE="$REPO_ROOT/distro/fedora/$PACKAGE/$PACKAGE.spec"
 # Handle special cases
 if [[ "$PACKAGE" == "material-symbols-fonts" ]]; then
     SPEC_FILE="$REPO_ROOT/distro/fedora/fonts/material-symbols-fonts.spec"
+elif [[ "$PACKAGE" == "quickshell-git" ]]; then
+    SPEC_FILE="$REPO_ROOT/distro/fedora/quickshell/quickshell-git.spec"
 fi
 
 if [[ ! -f "$SPEC_FILE" ]]; then
