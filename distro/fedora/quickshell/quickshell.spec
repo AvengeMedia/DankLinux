@@ -15,7 +15,9 @@ License:            LGPL-3.0-only AND GPL-3.0-only
 URL:                https://github.com/quickshell-mirror/quickshell
 Source0:            %{url}/archive/%{commit}/quickshell-%{commit}.tar.gz
 
+%if 0%{?fedora}
 BuildRequires:      breakpad-static
+%endif
 BuildRequires:      cmake
 BuildRequires:      cmake(Qt6Core)
 BuildRequires:      cmake(Qt6Qml)
@@ -23,12 +25,16 @@ BuildRequires:      cmake(Qt6ShaderTools)
 BuildRequires:      cmake(Qt6WaylandClient)
 BuildRequires:      gcc-c++
 BuildRequires:      ninja-build
+%if 0%{?fedora}
 BuildRequires:      pkgconfig(breakpad)
 BuildRequires:      pkgconfig(CLI11)
+%endif
 BuildRequires:      pkgconfig(gbm)
 BuildRequires:      pkgconfig(glib-2.0)
 BuildRequires:      pkgconfig(polkit-agent-1)
+%if 0%{?fedora}
 BuildRequires:      pkgconfig(jemalloc)
+%endif
 BuildRequires:      pkgconfig(libdrm)
 BuildRequires:      pkgconfig(libpipewire-0.3)
 BuildRequires:      pkgconfig(pam)

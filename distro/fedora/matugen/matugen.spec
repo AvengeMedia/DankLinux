@@ -1,3 +1,7 @@
+%if 0%{?el10}
+%global debug_package %{nil}
+%endif
+
 Name:           matugen
 Version:        3.1.0
 Release:        1%{?dist}

@@ -9,8 +9,10 @@ Source0:            %{url}/+archive/v%{version}.tar.gz
 Source1:            https://chromium.googlesource.com/linux-syscall-support/+archive/v2024.02.01.tar.gz
 
 BuildRequires:      gcc-c++
+%if 0%{?fedora}
 BuildRequires:      pkgconfig(gmock)
 BuildRequires:      pkgconfig(gtest)
+%endif
 BuildRequires:      pkgconfig(zlib)
 
 %description
