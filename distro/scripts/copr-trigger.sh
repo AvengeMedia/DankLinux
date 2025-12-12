@@ -54,7 +54,6 @@ BUILD_QUICKSHELL_GIT=false
 BUILD_DGOP=false
 BUILD_CLIPHIST=false
 BUILD_MATUGEN=false
-BUILD_HYPRPICKER=false
 BUILD_BREAKPAD=false
 BUILD_GHOSTTY=false
 BUILD_MATERIAL_SYMBOLS=false
@@ -80,10 +79,6 @@ fi
 
 if echo "$CHANGED_FILES" | grep -q "distro/fedora/matugen/matugen.spec"; then
     BUILD_MATUGEN=true
-fi
-
-if echo "$CHANGED_FILES" | grep -q "distro/fedora/hyprpicker/hyprpicker.spec"; then
-    BUILD_HYPRPICKER=true
 fi
 
 if echo "$CHANGED_FILES" | grep -q "distro/fedora/breakpad/breakpad.spec"; then
@@ -120,7 +115,6 @@ if [[ -z "$CHANGED_FILES" ]]; then
     echo "$UNCOMMITTED" | grep -q "distro/fedora/dgop/dgop.spec" && BUILD_DGOP=true
     echo "$UNCOMMITTED" | grep -q "distro/fedora/cliphist/cliphist.spec" && BUILD_CLIPHIST=true
     echo "$UNCOMMITTED" | grep -q "distro/fedora/matugen/matugen.spec" && BUILD_MATUGEN=true
-    echo "$UNCOMMITTED" | grep -q "distro/fedora/hyprpicker/hyprpicker.spec" && BUILD_HYPRPICKER=true
     echo "$UNCOMMITTED" | grep -q "distro/fedora/breakpad/breakpad.spec" && BUILD_BREAKPAD=true
     echo "$UNCOMMITTED" | grep -q "distro/fedora/ghostty/ghostty.spec" && BUILD_GHOSTTY=true
     echo "$UNCOMMITTED" | grep -q "distro/fedora/fonts/material-symbols-fonts.spec" && BUILD_MATERIAL_SYMBOLS=true
@@ -151,10 +145,6 @@ fi
 
 if [[ "$BUILD_MATUGEN" == true ]] || [[ "$FORCE_PACKAGE" == "matugen" ]]; then
     trigger_build "matugen" "distro/fedora/matugen/matugen.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
-fi
-
-if [[ "$BUILD_HYPRPICKER" == true ]] || [[ "$FORCE_PACKAGE" == "hyprpicker" ]]; then
-    trigger_build "hyprpicker" "distro/fedora/hyprpicker/hyprpicker.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
 if [[ "$BUILD_BREAKPAD" == true ]] || [[ "$FORCE_PACKAGE" == "breakpad" ]]; then

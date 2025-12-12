@@ -43,7 +43,7 @@ if [[ $# -lt 1 ]]; then
     echo ""
     echo "Available packages:"
     echo "  cli11, quickshell, quickshell-git, dgop, cliphist, matugen,"
-    echo "  hyprpicker, breakpad, ghostty, danksearch, material-symbols-fonts"
+    echo "  breakpad, ghostty, danksearch, material-symbols-fonts"
     exit 1
 fi
 
