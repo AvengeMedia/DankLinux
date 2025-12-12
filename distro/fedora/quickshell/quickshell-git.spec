@@ -17,8 +17,12 @@ Source0:            %{url}/archive/%{commit}/quickshell-%{commit}.tar.gz
 
 Conflicts:          quickshell <= %{tag}
 
+# Crash reporter depends on breakpad only available on Fedora
 %if 0%{?fedora}
+%global crash_reporter ON
 BuildRequires:      breakpad-static
+%else
+%global crash_reporter OFF
 %endif
 BuildRequires:      cmake
 BuildRequires:      cmake(Qt6Core)
@@ -30,6 +34,8 @@ BuildRequires:      ninja-build
 %if 0%{?fedora}
 BuildRequires:      pkgconfig(breakpad)
 BuildRequires:      pkgconfig(CLI11)
+%else
+BuildRequires:      cli11-devel
 %endif
 BuildRequires:      pkgconfig(gbm)
 BuildRequires:      pkgconfig(glib-2.0)
@@ -64,6 +70,7 @@ Wayland and X11.
         -DASAN=ON \
 %endif
         -DBUILD_SHARED_LIBS=OFF \
+        -DCRASH_REPORTER=%{crash_reporter} \
         -DCMAKE_BUILD_TYPE=Release \
         -DDISTRIBUTOR="Fedora COPR (avengemedia/quickshell)" \
         -DDISTRIBUTOR_DEBUGINFO_AVAILABLE=YES \
