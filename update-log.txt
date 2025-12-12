@@ -24,11 +24,6 @@
    Latest:  3.1.0
    ✓ Already up to date
 
-📦 Checking hyprpicker...
-   Current: 0.4.5
-   Latest:  0.4.5
-   ✓ Already up to date
-
 📦 Checking breakpad...
    Current: 2024.02.16
    ℹ️  Breakpad uses manual versioning (chromium snapshots)
