@@ -1,3 +1,9 @@
+niri-git (25.11+git2575.d1fc1ab7ppa1) unstable; urgency=medium
+
+  * Git snapshot (commit 2575: d1fc1ab7)
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 13 Dec 2025 12:39:30 +0000
+
 niri-git (25.11+git2571.c22d8358ppa1) unstable; urgency=medium
 
   * Git snapshot (commit 2571: c22d8358)
