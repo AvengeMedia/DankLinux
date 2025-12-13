@@ -182,7 +182,7 @@ jobs:
           else
             echo "has_changes=true" >> $GITHUB_OUTPUT
             # Get list of changed packages for commit message (deduplicate)
-            CHANGED=$(git diff --name-only distro/ubuntu/ | grep 'debian/changelog' | xargs -I{} dirname {} | xargs -I{} basename {} | sort -u | tr '\n' ',' | sed 's/,$//')
+            CHANGED=$(git diff --name-only distro/ubuntu/ | grep 'debian/changelog' | sed 's|/debian/changelog||' | xargs -I{} basename {} | sort -u | tr '\n' ',' | sed 's/,$//')
             echo "packages=$CHANGED" >> $GITHUB_OUTPUT
             echo "📋 Changed packages: $CHANGED"
             echo "📋 Debug - Changed files:"
@@ -229,8 +229,6 @@ jobs:
           labels: |
             automated
             ci
-          path: |
-            distro/ubuntu/
       
       - name: Summary
         run: |

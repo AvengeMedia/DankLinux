@@ -155,7 +155,6 @@ jobs:
           labels: |
             automated
             ci
-          path: distro/debian/ distro/opensuse/
 
   upload-obs:
     name: Upload to OBS
@@ -301,8 +300,7 @@ jobs:
           labels: |
             automated
             ci
-          path: distro/debian/ distro/opensuse/
-      
+
       - name: Summary
         run: |
           echo "### OBS Package Upload Complete" >> $GITHUB_STEP_SUMMARY
