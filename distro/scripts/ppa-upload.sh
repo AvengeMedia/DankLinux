@@ -22,7 +22,15 @@ success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-TEMP_DIR=$(mktemp -d)
+# Choose temp directory: use /tmp in CI, ~/tmp locally (keeps artifacts out of repo)
+if [ -n "${GITHUB_ACTIONS:-}" ] || [ -n "${CI:-}" ]; then
+    TEMP_BASE="/tmp"
+else
+    TEMP_BASE="$HOME/tmp"
+    mkdir -p "$TEMP_BASE"
+fi
+
+TEMP_DIR=$(mktemp -d "$TEMP_BASE/ppa_build_XXXXXX")
 trap "rm -rf $TEMP_DIR" EXIT
 
 AVAILABLE_PACKAGES=(cliphist ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git)
@@ -215,7 +223,7 @@ get_latest_tag() {
             return
         fi
     fi
-    TEMP_REPO=$(mktemp -d)
+    TEMP_REPO=$(mktemp -d "$TEMP_BASE/ppa_tag_XXXXXX")
     if git clone --depth=1 --quiet "https://github.com/$repo.git" "$TEMP_REPO" 2>/dev/null; then
         LATEST_TAG=$(cd "$TEMP_REPO" && git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "")
         rm -rf "$TEMP_REPO"
@@ -448,7 +456,7 @@ EOF
         if [ -n "$THEME_HASH" ]; then
             if [ ! -d "zig-deps/p/$THEME_HASH" ]; then
                 info "Downloading ghostty-themes and injecting into zig-deps..."
-                THEMES_TMP=$(mktemp)
+                THEMES_TMP=$(mktemp "$TEMP_BASE/ppa_themes_XXXXXX")
                 THEMES_DL=false
                 for url in "$THEMES_URL" "https://ghproxy.com/$THEMES_URL" "https://github.moeyy.xyz/$THEMES_URL"; do
                     if curl -L -f -s -o "$THEMES_TMP" "$url" 2>/dev/null || \
@@ -513,7 +521,7 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
     fi
     
     info "Cloning $GIT_REPO from GitHub (getting latest commit info)..."
-    TEMP_CLONE=$(mktemp -d)
+    TEMP_CLONE=$(mktemp -d "$TEMP_BASE/ppa_clone_XXXXXX")
     if git clone "https://github.com/$GIT_REPO.git" "$TEMP_CLONE"; then
         GIT_COMMIT_HASH=$(cd "$TEMP_CLONE" && git rev-parse --short HEAD)
         GIT_COMMIT_COUNT=$(cd "$TEMP_CLONE" && git rev-list --count HEAD)
@@ -585,6 +593,11 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
             echo "$CHANGELOG_CONTENT" >> debian/changelog
         fi
         success "Version updated to $NEW_VERSION"
+        
+        # Write changelog back to original package directory
+        info "Writing updated changelog back to repository..."
+        cp debian/changelog "$PACKAGE_DIR/debian/changelog"
+        success "Changelog written back to $PACKAGE_DIR/debian/changelog"
         
         rm -rf "$SOURCE_DIR"
         cp -r "$TEMP_CLONE" "$SOURCE_DIR"
@@ -741,6 +754,11 @@ elif [ -n "$GIT_REPO" ] && [ "${SKIP_VERSION_UPDATE:-false}" != "true" ]; then
                 echo "$CHANGELOG_CONTENT" >> debian/changelog
             fi
             success "Version updated to $NEW_VERSION"
+            
+            # Write changelog back to original package directory
+            info "Writing updated changelog back to repository..."
+            cp debian/changelog "$PACKAGE_DIR/debian/changelog"
+            success "Changelog written back to $PACKAGE_DIR/debian/changelog"
         else
             info "Version already at latest tag: $LATEST_TAG"
         fi
@@ -1116,7 +1134,7 @@ if yes | DEBIAN_FRONTEND=noninteractive debuild -S $DEBUILD_SOURCE_FLAG -d; then
         echo
         
         # Use lftp for upload (works on Fedora where dput is broken)
-        LFTP_SCRIPT=$(mktemp)
+        LFTP_SCRIPT=$(mktemp "$TEMP_BASE/ppa_lftp_XXXXXX")
         cat > "$LFTP_SCRIPT" <<EOF
 cd ~avengemedia/ubuntu/$PPA_NAME/
 lcd $TEMP_DIR

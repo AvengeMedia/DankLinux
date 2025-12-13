@@ -223,6 +223,35 @@ jobs:
             bash distro/scripts/obs-upload.sh "$pkg" "Auto-update: $pkg" || echo "⚠️ Failed to upload $pkg"
           done
       
+      - name: Commit changelog and spec updates
+        run: |
+          # Configure git user for commits
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Check if there are any changes to commit (from obs-upload.sh writeback)
+          if git diff --exit-code distro/debian/ distro/opensuse/ >/dev/null 2>&1; then
+            echo "📋 No changelog or spec changes to commit"
+          else
+            # Get list of changed packages for commit message
+            CHANGED_DEB=$(git diff --name-only distro/debian/ 2>/dev/null | grep 'debian/changelog' | xargs dirname 2>/dev/null | xargs dirname 2>/dev/null | xargs basename 2>/dev/null | tr '\n' ', ' | sed 's/, $//' || echo "")
+            CHANGED_SUSE=$(git diff --name-only distro/opensuse/ 2>/dev/null | grep '\.spec$' | sed 's|distro/opensuse/||' | sed 's/\.spec$//' | tr '\n' ', ' | sed 's/, $//' || echo "")
+            
+            CHANGED=""
+            [ -n "$CHANGED_DEB" ] && CHANGED="Debian: $CHANGED_DEB"
+            [ -n "$CHANGED_SUSE" ] && [ -n "$CHANGED" ] && CHANGED="$CHANGED | "
+            [ -n "$CHANGED_SUSE" ] && CHANGED="${CHANGED}OpenSUSE: $CHANGED_SUSE"
+            
+            PKGS=$(echo "$CHANGED_DEB,$CHANGED_SUSE" | tr ',' '\n' | grep -v '^$' | sort -u | tr '\n' ',' | sed 's/,$//')
+            
+            echo "📋 Committing changelog and spec updates for: $PKGS"
+            
+            git add distro/debian/ distro/opensuse/
+            git commit -m "ci: Auto-update OBS packages [$PKGS]" -m "🤖 Automated by GitHub Actions (version increments)"
+            
+            git push
+          fi
+      
       - name: Summary
         run: |
           echo "### OBS Package Upload Complete" >> $GITHUB_STEP_SUMMARY

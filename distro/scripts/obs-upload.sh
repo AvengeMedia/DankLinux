@@ -746,15 +746,18 @@ CARGO_CONFIG_EOF
             if [[ -n "${REBUILD_RELEASE:-}" ]]; then
                 echo "  🔄 Using manual rebuild release number: $REBUILD_RELEASE"
                 sed -i "s/^Release:[[:space:]]*${NEW_RELEASE}%{?dist}/Release:        ${REBUILD_RELEASE}%{?dist}/" "$WORK_DIR/$PACKAGE.spec"
+                cp "$WORK_DIR/$PACKAGE.spec" "$REPO_ROOT/distro/opensuse/$PACKAGE.spec"
             elif [[ "$NEW_VERSION" == "$OLD_VERSION" ]]; then
                 if [[ "$OLD_RELEASE" =~ ^([0-9]+) ]]; then
                     BASE_RELEASE="${BASH_REMATCH[1]}"
                     NEXT_RELEASE=$((BASE_RELEASE + 1))
                     echo "  - Detected rebuild of same version $NEW_VERSION (release $OLD_RELEASE -> $NEXT_RELEASE)"
                     sed -i "s/^Release:[[:space:]]*${NEW_RELEASE}%{?dist}/Release:        ${NEXT_RELEASE}%{?dist}/" "$WORK_DIR/$PACKAGE.spec"
+                    cp "$WORK_DIR/$PACKAGE.spec" "$REPO_ROOT/distro/opensuse/$PACKAGE.spec"
                 fi
             else
                 echo "  - New version detected: $OLD_VERSION -> $NEW_VERSION (keeping release $NEW_RELEASE)"
+                cp "$WORK_DIR/$PACKAGE.spec" "$REPO_ROOT/distro/opensuse/$PACKAGE.spec"
             fi
         else
             echo "  - First upload to OBS (no previous spec found)"
@@ -1252,6 +1255,7 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
 
             cp -r "$REPO_ROOT/distro/debian/$PACKAGE/debian" "$PKG_DIR/"
             cp "$TEMP_CHANGELOG" "$PKG_DIR/debian/changelog"
+            cp "$TEMP_CHANGELOG" "$REPO_CHANGELOG"
             cd "$TEMP_DIR"
             tar --sort=name --mtime='2000-01-01 00:00:00' --owner=0 --group=0 -czf "$WORK_DIR/$COMBINED_TARBALL" "$PKG_DIR_NAME"
             rm -rf "$PKG_DIR_NAME"
@@ -1289,6 +1293,7 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
             
             cp -r "$REPO_ROOT/distro/debian/$PACKAGE/debian" "$PKG_DIR/"
             cp "$TEMP_CHANGELOG" "$PKG_DIR/debian/changelog"
+            cp "$TEMP_CHANGELOG" "$REPO_CHANGELOG"
             cd "$TEMP_DIR"
             tar --sort=name --mtime='2000-01-01 00:00:00' --owner=0 --group=0 -czf "$WORK_DIR/$COMBINED_TARBALL" "$PKG_DIR_NAME"
             rm -rf "$PKG_DIR_NAME"
@@ -1296,6 +1301,7 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
         elif [[ -d "$SOURCE_DIR" ]] && [[ -d "$SOURCE_DIR/debian" ]]; then
             SOURCE_CHANGELOG="$SOURCE_DIR/debian/changelog"
             cp "$TEMP_CHANGELOG" "$SOURCE_CHANGELOG"
+            cp "$TEMP_CHANGELOG" "$REPO_CHANGELOG"
             cd "$TEMP_DIR"
             DIR_NAME=$(basename "$SOURCE_DIR")
             tar --sort=name --mtime='2000-01-01 00:00:00' --owner=0 --group=0 -czf "$WORK_DIR/$COMBINED_TARBALL" "$DIR_NAME"
