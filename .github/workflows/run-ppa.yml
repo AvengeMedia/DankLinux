@@ -189,46 +189,14 @@ jobs:
             git diff --name-only distro/ubuntu/ | grep 'debian/changelog' || echo "No changelog files found"
           fi
 
-      - name: Debug - Show changes before PR
+      - name: Commit changelog changes
         if: steps.changed-packages.outputs.has_changes == 'true'
         run: |
-          echo "📋 Checking git status:"
-          git status --short distro/ubuntu/ || true
-          echo ""
-          echo "📋 Checking git diff:"
-          git diff --stat distro/ubuntu/ || true
-
-      - name: Prepare PR body
-        if: steps.changed-packages.outputs.has_changes == 'true'
-        id: pr-body
-        run: |
-          {
-            echo 'body<<EOF'
-            echo '🤖 Automated by GitHub Actions'
-            echo ''
-            echo 'This PR updates Debian changelog files for PPA packages:'
-            echo "- **Packages**: ${{ steps.changed-packages.outputs.packages }}"
-            echo ''
-            echo 'Please review and merge to update the changelog files.'
-            echo 'EOF'
-          } >> $GITHUB_OUTPUT
-
-      - name: Create Pull Request
-        if: steps.changed-packages.outputs.has_changes == 'true'
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: |
-            ci: Auto-update PPA packages [${{ steps.changed-packages.outputs.packages }}]
-
-            🤖 Automated by GitHub Actions
-          title: "ci: Auto-update PPA packages [${{ steps.changed-packages.outputs.packages }}]"
-          body: ${{ steps.pr-body.outputs.body }}
-          branch: ci/ppa-changelog-update
-          delete-branch: true
-          labels: |
-            automated
-            ci
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add distro/ubuntu/*/debian/changelog
+          git commit -m "ci: Auto-update PPA packages [${{ steps.changed-packages.outputs.packages }}]" -m "🤖 Automated by GitHub Actions"
+          git push
       
       - name: Summary
         run: |

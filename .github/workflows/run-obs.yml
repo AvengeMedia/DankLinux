@@ -112,49 +112,23 @@ jobs:
             echo "📋 No updates found"
           fi
       
-      - name: Get changed packages for version updates
+      - name: Commit version updates
         if: steps.check.outputs.has_updates == 'true'
-        id: changed-packages-v1
         run: |
           # Get changed packages for commit message
           CHANGED_DEB=$(git diff --name-only distro/debian/ 2>/dev/null | grep 'debian/changelog' | xargs dirname 2>/dev/null | xargs dirname 2>/dev/null | xargs basename 2>/dev/null | tr '\n' ',' | sed 's/,$//' || echo "")
           CHANGED_SUSE=$(git diff --name-only distro/opensuse/ 2>/dev/null | grep '\.spec$' | sed 's|distro/opensuse/||' | sed 's/\.spec$//' | tr '\n' ',' | sed 's/,$//' || echo "")
-          
+
           # Build package list for commit message
           PKGS=$(echo "$CHANGED_DEB,$CHANGED_SUSE" | tr ',' '\n' | grep -v '^$' | sort -u | tr '\n' ',' | sed 's/,$//')
-          echo "packages=$PKGS" >> $GITHUB_OUTPUT
 
-      - name: Prepare PR body for version updates
-        if: steps.check.outputs.has_updates == 'true'
-        id: pr-body-v1
-        run: |
-          {
-            echo 'body<<EOF'
-            echo '🤖 Automated by GitHub Actions'
-            echo ''
-            echo 'This PR updates package versions for OBS packages:'
-            echo "- **Packages**: ${{ steps.changed-packages-v1.outputs.packages }}"
-            echo ''
-            echo 'Please review and merge to update the packaging files.'
-            echo 'EOF'
-          } >> $GITHUB_OUTPUT
-
-      - name: Create Pull Request for version updates
-        if: steps.check.outputs.has_updates == 'true'
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: |
-            ci: Auto-update OBS packages [${{ steps.changed-packages-v1.outputs.packages }}]
-
-            🤖 Automated by GitHub Actions
-          title: "ci: Auto-update OBS packages [${{ steps.changed-packages-v1.outputs.packages }}]"
-          body: ${{ steps.pr-body-v1.outputs.body }}
-          branch: ci/obs-version-update
-          delete-branch: true
-          labels: |
-            automated
-            ci
+          if [ -n "$PKGS" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add distro/debian/*/debian/changelog distro/opensuse/*.spec
+            git commit -m "ci: Auto-update OBS packages [$PKGS]" -m "🤖 Automated by GitHub Actions"
+            git push
+          fi
 
   upload-obs:
     name: Upload to OBS
@@ -269,37 +243,14 @@ jobs:
             echo "📋 Changed packages: $PKGS"
           fi
 
-      - name: Prepare PR body for upload updates
+      - name: Commit upload updates
         if: steps.changed-packages-v2.outputs.has_changes == 'true'
-        id: pr-body-v2
         run: |
-          {
-            echo 'body<<EOF'
-            echo '🤖 Automated by GitHub Actions'
-            echo ''
-            echo 'This PR updates packaging files after OBS upload (version increments):'
-            echo "- **Packages**: ${{ steps.changed-packages-v2.outputs.packages }}"
-            echo ''
-            echo 'Please review and merge to update the packaging files.'
-            echo 'EOF'
-          } >> $GITHUB_OUTPUT
-
-      - name: Create Pull Request for upload updates
-        if: steps.changed-packages-v2.outputs.has_changes == 'true'
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: |
-            ci: Auto-update OBS packages [${{ steps.changed-packages-v2.outputs.packages }}]
-
-            🤖 Automated by GitHub Actions (version increments)
-          title: "ci: Auto-update OBS packages [${{ steps.changed-packages-v2.outputs.packages }}] (version increments)"
-          body: ${{ steps.pr-body-v2.outputs.body }}
-          branch: ci/obs-upload-update
-          delete-branch: true
-          labels: |
-            automated
-            ci
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add distro/debian/*/debian/changelog distro/opensuse/*.spec
+          git commit -m "ci: Auto-update OBS packages [${{ steps.changed-packages-v2.outputs.packages }}]" -m "🤖 Automated by GitHub Actions (version increments)"
+          git push
 
       - name: Summary
         run: |
