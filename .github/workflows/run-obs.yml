@@ -41,13 +41,27 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-      
+
+      - name: Check if last commit was automated
+        id: check-loop
+        run: |
+          LAST_COMMIT_MSG=$(git log -1 --pretty=%B | head -1)
+          if [[ "$LAST_COMMIT_MSG" == "ci: Auto-update PPA packages"* ]] || [[ "$LAST_COMMIT_MSG" == "ci: Auto-update OBS packages"* ]]; then
+            echo "⏭️ Last commit was automated ($LAST_COMMIT_MSG), skipping to prevent infinite loop"
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Last commit was not automated, proceeding"
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Configure Git
+        if: steps.check-loop.outputs.skip != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
       
       - name: Install dependencies
+        if: steps.check-loop.outputs.skip != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y jq curl git
@@ -57,6 +71,7 @@ jobs:
           sudo chmod +x /usr/local/bin/yq
       
       - name: Update package versions
+        if: steps.check-loop.outputs.skip != 'true'
         id: update
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -73,6 +88,7 @@ jobs:
           distro/scripts/opensuse-update.sh --update
       
       - name: Check for updates
+        if: steps.check-loop.outputs.skip != 'true'
         id: check
         run: |
           # Check if there are any changes in debian or opensuse directories
@@ -113,7 +129,7 @@ jobs:
           fi
       
       - name: Commit version updates
-        if: steps.check.outputs.has_updates == 'true'
+        if: steps.check-loop.outputs.skip != 'true' && steps.check.outputs.has_updates == 'true'
         run: |
           # Get changed packages for commit message
           CHANGED_DEB=$(git diff --name-only distro/debian/ 2>/dev/null | grep 'debian/changelog' | xargs dirname 2>/dev/null | xargs dirname 2>/dev/null | xargs basename 2>/dev/null | tr '\n' ',' | sed 's/,$//' || echo "")
@@ -127,6 +143,7 @@ jobs:
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add distro/debian/*/debian/changelog distro/opensuse/*.spec
             git commit -m "ci: Auto-update OBS packages [$PKGS]" -m "🤖 Automated by GitHub Actions"
+            git pull --rebase origin master
             git push
           fi
 
@@ -148,8 +165,21 @@ jobs:
           ref: master
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-      
+
+      - name: Check if last commit was automated
+        id: check-loop-upload
+        run: |
+          LAST_COMMIT_MSG=$(git log -1 --pretty=%B | head -1)
+          if [[ "$LAST_COMMIT_MSG" == "ci: Auto-update PPA packages"* ]] || [[ "$LAST_COMMIT_MSG" == "ci: Auto-update OBS packages"* ]]; then
+            echo "⏭️ Last commit was automated ($LAST_COMMIT_MSG), skipping to prevent infinite loop"
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Last commit was not automated, proceeding"
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Determine packages to upload
+        if: steps.check-loop-upload.outputs.skip != 'true'
         id: packages
         run: |
           if [[ "${{ github.event.inputs.force_upload }}" == "true" ]]; then
@@ -188,8 +218,9 @@ jobs:
             echo "packages=" >> $GITHUB_OUTPUT
             echo "ℹ️ No updates detected and no manual trigger; nothing to upload."
           fi
-      
+
       - name: Install OSC
+        if: steps.check-loop-upload.outputs.skip != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y osc
@@ -204,8 +235,9 @@ jobs:
           pass = ${{ secrets.OBS_PASSWORD }}
           EOF
           chmod 600 ~/.config/osc/oscrc
-      
+
       - name: Upload to OBS
+        if: steps.check-loop-upload.outputs.skip != 'true'
         env:
           FORCE_UPLOAD: ${{ github.event.inputs.force_upload }}
           REBUILD_RELEASE: ${{ github.event.inputs.rebuild_release }}
@@ -226,6 +258,7 @@ jobs:
           done
       
       - name: Get changed packages for upload updates
+        if: steps.check-loop-upload.outputs.skip != 'true'
         id: changed-packages-v2
         run: |
           # Check if there are any changes to commit (from obs-upload.sh writeback)
@@ -244,12 +277,13 @@ jobs:
           fi
 
       - name: Commit upload updates
-        if: steps.changed-packages-v2.outputs.has_changes == 'true'
+        if: steps.check-loop-upload.outputs.skip != 'true' && steps.changed-packages-v2.outputs.has_changes == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add distro/debian/*/debian/changelog distro/opensuse/*.spec
           git commit -m "ci: Auto-update OBS packages [${{ steps.changed-packages-v2.outputs.packages }}]" -m "🤖 Automated by GitHub Actions (version increments)"
+          git pull --rebase origin master
           git push
 
       - name: Summary
