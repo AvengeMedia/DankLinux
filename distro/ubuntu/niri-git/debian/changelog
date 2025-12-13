@@ -1,8 +1,8 @@
-niri-git (25.11+git2568.ba29735fppa1) unstable; urgency=medium
+niri-git (25.11+git2571.c22d8358ppa1) questing; urgency=medium
 
-  * Git snapshot (commit 2568: ba29735f)
+  * Git snapshot (commit 2571: c22d8358)
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 06 Dec 2025 22:14:15 -0500
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 13 Dec 2025 04:55:15 +0000
 
 niri-git (25.11+git2566.f874b2fcppa1) questing; urgency=medium
 
