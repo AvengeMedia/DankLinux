@@ -181,11 +181,22 @@ jobs:
             echo "📋 No changelog changes to commit"
           else
             echo "has_changes=true" >> $GITHUB_OUTPUT
-            # Get list of changed packages for commit message
-            CHANGED=$(git diff --name-only distro/ubuntu/ | grep 'debian/changelog' | xargs dirname | xargs -I{} basename {} | tr '\n' ',' | sed 's/,$//')
+            # Get list of changed packages for commit message (deduplicate)
+            CHANGED=$(git diff --name-only distro/ubuntu/ | grep 'debian/changelog' | xargs -I{} dirname {} | xargs -I{} basename {} | sort -u | tr '\n' ',' | sed 's/,$//')
             echo "packages=$CHANGED" >> $GITHUB_OUTPUT
             echo "📋 Changed packages: $CHANGED"
+            echo "📋 Debug - Changed files:"
+            git diff --name-only distro/ubuntu/ | grep 'debian/changelog' || echo "No changelog files found"
           fi
+
+      - name: Debug - Show changes before PR
+        if: steps.changed-packages.outputs.has_changes == 'true'
+        run: |
+          echo "📋 Checking git status:"
+          git status --short distro/ubuntu/ || true
+          echo ""
+          echo "📋 Checking git diff:"
+          git diff --stat distro/ubuntu/ || true
 
       - name: Prepare PR body
         if: steps.changed-packages.outputs.has_changes == 'true'
