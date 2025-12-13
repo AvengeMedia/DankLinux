@@ -1,3 +1,9 @@
+danksearch (0.1.0ppa1) unstable; urgency=medium
+
+  * Update to upstream version 0.1.0
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 13 Dec 2025 01:38:41 +0000
+
 danksearch (0.0.7ppa1) nightly; urgency=medium
 
   * Convert to native format for deterministic builds

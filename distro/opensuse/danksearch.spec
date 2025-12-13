@@ -1,5 +1,5 @@
 Name:           danksearch
-Version:        0.0.7
+Version:        0.1.0
 Release:        1%{?dist}
 Summary:        Fast file search utility for DMS
 
@@ -33,5 +33,7 @@ ln -s danksearch %{buildroot}%{_bindir}/dsearch
 %{_bindir}/dsearch
 
 %changelog
+* Sat Dec 13 2025 Avenge Media <AvengeMedia.US@gmail.com> - 0.1.0-1
+- Update to upstream version 0.1.0
 * Fri Nov 22 2025 Avenge Media <AvengeMedia.US@gmail.com> - 0.0.7-1
 - Add dsearch symlink for compatibility
