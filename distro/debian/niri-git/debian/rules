@@ -33,6 +33,12 @@ override_dh_auto_build:
 		fi; \
 	fi
 
+	sed -i 's/< 0\.3\.0/< 0.4.0/g' vendor/libdisplay-info-sys-*/build.rs vendor/libdisplay-info-sys-*/Cargo.toml 2>/dev/null || true
+	for f in vendor/libdisplay-info-sys-*/.cargo-checksum.json; do \
+		[ -f "$$f" ] && echo '{"files":{}}' > "$$f"; \
+	done
+	sed -i '/name = "libdisplay-info-sys"/,/^$$/{/^checksum/d}' Cargo.lock 2>/dev/null || true
+
 	cargo build --offline --release --features default -j$(NCPU)
 
 	for shell in bash fish zsh; do \

@@ -1,8 +1,8 @@
-niri-git (25.11+git2575.d1fc1ab7ppa1) unstable; urgency=medium
+niri-git (25.11+git2575.d1fc1ab7ppa2) unstable; urgency=medium
 
-  * Git snapshot (commit 2575: d1fc1ab7)
+  * Rebuild to fix repository metadata issues
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 13 Dec 2025 12:39:30 +0000
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 13 Dec 2025 22:22:29 -0500
 
 niri-git (25.11+git2571.c22d8358ppa1) unstable; urgency=medium
 

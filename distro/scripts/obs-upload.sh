@@ -1,13 +1,15 @@
 #!/bin/bash
 # Unified OBS upload script for danklinux packages
 # Handles Debian and OpenSUSE builds for both x86_64 and aarch64
-# Usage: ./distro/scripts/obs-upload.sh [distro] <package-name> [commit-message]
+# Usage: ./distro/scripts/obs-upload.sh [distro] <package-name> [commit-message|rebuild-number]
 #
 # Examples:
 #   ./distro/scripts/obs-upload.sh cliphist "Update to v0.7.0"
 #   ./distro/scripts/obs-upload.sh debian cliphist
 #   ./distro/scripts/obs-upload.sh opensuse niri
 #   ./distro/scripts/obs-upload.sh niri-git "Fix cargo vendor config"
+#   ./distro/scripts/obs-upload.sh debian niri-git 2    # Rebuild with ppa2 suffix
+#   ./distro/scripts/obs-upload.sh niri-git --rebuild=2 # Rebuild with ppa2 suffix (flag syntax)
 
 set -e
 
@@ -40,6 +42,8 @@ UPLOAD_DEBIAN=true
 UPLOAD_OPENSUSE=true
 PACKAGE=""
 MESSAGE=""
+REBUILD_RELEASE=""
+POSITIONAL_ARGS=()
 
 for arg in "$@"; do
     case "$arg" in
@@ -51,15 +55,42 @@ for arg in "$@"; do
             UPLOAD_DEBIAN=false
             UPLOAD_OPENSUSE=true
             ;;
+        --rebuild=*)
+            REBUILD_RELEASE="${arg#*=}"
+            ;;
+        -r|--rebuild)
+            REBUILD_NEXT=true
+            ;;
         *)
-            if [[ -z "$PACKAGE" ]]; then
-                PACKAGE="$arg"
-            elif [[ -z "$MESSAGE" ]]; then
-                MESSAGE="$arg"
+            if [[ -n "${REBUILD_NEXT:-}" ]]; then
+                REBUILD_RELEASE="$arg"
+                REBUILD_NEXT=false
+            else
+                POSITIONAL_ARGS+=("$arg")
             fi
             ;;
     esac
 done
+
+# Check if last positional argument is a number (rebuild release)
+if [[ ${#POSITIONAL_ARGS[@]} -gt 0 ]]; then
+    LAST_INDEX=$((${#POSITIONAL_ARGS[@]} - 1))
+    LAST_ARG="${POSITIONAL_ARGS[$LAST_INDEX]}"
+    if [[ "$LAST_ARG" =~ ^[0-9]+$ ]] && [[ -z "$REBUILD_RELEASE" ]]; then
+        # Last argument is a number and no --rebuild flag was used
+        # Use it as rebuild release and remove from positional args
+        REBUILD_RELEASE="$LAST_ARG"
+        POSITIONAL_ARGS=("${POSITIONAL_ARGS[@]:0:$LAST_INDEX}")
+    fi
+fi
+
+# Assign remaining positional args to PACKAGE and MESSAGE
+if [[ ${#POSITIONAL_ARGS[@]} -gt 0 ]]; then
+    PACKAGE="${POSITIONAL_ARGS[0]}"
+    if [[ ${#POSITIONAL_ARGS[@]} -gt 1 ]]; then
+        MESSAGE="${POSITIONAL_ARGS[1]}"
+    fi
+fi
 PROJECT="danklinux"
 OBS_BASE_PROJECT="home:AvengeMedia"
 OBS_BASE="$HOME/.cache/osc-checkouts"
@@ -716,12 +747,12 @@ CARGO_CONFIG_EOF
                 echo "  🔄 Using manual rebuild release number: $REBUILD_RELEASE"
                 sed -i "s/^Release:[[:space:]]*${NEW_RELEASE}%{?dist}/Release:        ${REBUILD_RELEASE}%{?dist}/" "$WORK_DIR/$PACKAGE.spec"
             elif [[ "$NEW_VERSION" == "$OLD_VERSION" ]]; then
-                if [[ "$OLD_RELEASE" =~ ^([0-9]+) ]]; then
-                    BASE_RELEASE="${BASH_REMATCH[1]}"
-                    NEXT_RELEASE=$((BASE_RELEASE + 1))
-                    echo "  - Detected rebuild of same version $NEW_VERSION (release $OLD_RELEASE -> $NEXT_RELEASE)"
-                    sed -i "s/^Release:[[:space:]]*${NEW_RELEASE}%{?dist}/Release:        ${NEXT_RELEASE}%{?dist}/" "$WORK_DIR/$PACKAGE.spec"
-                fi
+                echo "  - Error: Same version detected ($NEW_VERSION) but no rebuild number specified"
+                echo "    To rebuild, explicitly specify a rebuild number:"
+                echo "      ./distro/scripts/obs-upload.sh opensuse $PACKAGE 2"
+                echo "    or use flag syntax:"
+                echo "      ./distro/scripts/obs-upload.sh opensuse $PACKAGE --rebuild=2"
+                exit 1
             else
                 echo "  - New version detected: $OLD_VERSION -> $NEW_VERSION (keeping release $NEW_RELEASE)"
             fi
@@ -748,13 +779,12 @@ CARGO_CONFIG_EOF
                 sed -i "s/^Release:[[:space:]]*${NEW_RELEASE}%{?dist}/Release:        ${REBUILD_RELEASE}%{?dist}/" "$WORK_DIR/$PACKAGE.spec"
                 cp "$WORK_DIR/$PACKAGE.spec" "$REPO_ROOT/distro/opensuse/$PACKAGE.spec"
             elif [[ "$NEW_VERSION" == "$OLD_VERSION" ]]; then
-                if [[ "$OLD_RELEASE" =~ ^([0-9]+) ]]; then
-                    BASE_RELEASE="${BASH_REMATCH[1]}"
-                    NEXT_RELEASE=$((BASE_RELEASE + 1))
-                    echo "  - Detected rebuild of same version $NEW_VERSION (release $OLD_RELEASE -> $NEXT_RELEASE)"
-                    sed -i "s/^Release:[[:space:]]*${NEW_RELEASE}%{?dist}/Release:        ${NEXT_RELEASE}%{?dist}/" "$WORK_DIR/$PACKAGE.spec"
-                    cp "$WORK_DIR/$PACKAGE.spec" "$REPO_ROOT/distro/opensuse/$PACKAGE.spec"
-                fi
+                echo "  - Error: Same version detected ($NEW_VERSION) but no rebuild number specified"
+                echo "    To rebuild, explicitly specify a rebuild number:"
+                echo "      ./distro/scripts/obs-upload.sh opensuse $PACKAGE 2"
+                echo "    or use flag syntax:"
+                echo "      ./distro/scripts/obs-upload.sh opensuse $PACKAGE --rebuild=2"
+                exit 1
             else
                 echo "  - New version detected: $OLD_VERSION -> $NEW_VERSION (keeping release $NEW_RELEASE)"
                 cp "$WORK_DIR/$PACKAGE.spec" "$REPO_ROOT/distro/opensuse/$PACKAGE.spec"
@@ -942,12 +972,12 @@ EOF
                 echo "  🔄 Using manual rebuild release number: $REBUILD_RELEASE"
                 sed -i "s/^Release:[[:space:]]*${NEW_RELEASE}%{?dist}/Release:        ${REBUILD_RELEASE}%{?dist}/" "$WORK_DIR/$PACKAGE.spec"
             elif [[ "$NEW_VERSION" == "$OLD_VERSION" ]]; then
-                if [[ "$OLD_RELEASE" =~ ^([0-9]+) ]]; then
-                    BASE_RELEASE="${BASH_REMATCH[1]}"
-                    NEXT_RELEASE=$((BASE_RELEASE + 1))
-                    echo "  - Detected rebuild of same version $NEW_VERSION (release $OLD_RELEASE -> $NEXT_RELEASE)"
-                    sed -i "s/^Release:[[:space:]]*${NEW_RELEASE}%{?dist}/Release:        ${NEXT_RELEASE}%{?dist}/" "$WORK_DIR/$PACKAGE.spec"
-                fi
+                echo "  - Error: Same version detected ($NEW_VERSION) but no rebuild number specified"
+                echo "    To rebuild, explicitly specify a rebuild number:"
+                echo "      ./distro/scripts/obs-upload.sh opensuse $PACKAGE 2"
+                echo "    or use flag syntax:"
+                echo "      ./distro/scripts/obs-upload.sh opensuse $PACKAGE --rebuild=2"
+                exit 1
             else
                 echo "  - New version detected: $OLD_VERSION -> $NEW_VERSION (keeping release $NEW_RELEASE)"
             fi
@@ -1068,41 +1098,45 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
             fi
         fi
 
-        # Only increment version for truly manual runs or force uploads
-        if [[ "$IS_MANUAL" == true ]] || [[ "$IS_FORCE_UPLOAD" == true ]]; then
-            echo "==> Detected rebuild of same version $CHANGELOG_VERSION, incrementing version"
+        # Only increment version when explicitly specified via REBUILD_RELEASE
+        if [[ -n "$REBUILD_RELEASE" ]]; then
+            echo "==> Using specified rebuild release: ppa$REBUILD_RELEASE"
+            USE_REBUILD_NUM="$REBUILD_RELEASE"
+        elif [[ -n "${GITHUB_ACTIONS:-}" ]] || [[ -n "${CI:-}" ]]; then
+            # In CI without rebuild_release, skip cleanly
+            echo "==> Same version detected in CI (current: $CHANGELOG_VERSION), skipping upload"
+            echo "    Use force_upload=true or set rebuild_release to override"
+            exit 0
+        else
+            echo "==> Error: Same version detected ($CHANGELOG_VERSION) but no rebuild number specified"
+            echo "    To rebuild, explicitly specify a rebuild number:"
+            echo "      ./distro/scripts/obs-upload.sh debian $PACKAGE 2"
+            echo "    or use flag syntax:"
+            echo "      ./distro/scripts/obs-upload.sh debian $PACKAGE --rebuild=2"
+            exit 1
+        fi
+        
         if [[ "$CHANGELOG_VERSION" =~ ^([0-9.]+)ppa([0-9]+)$ ]]; then
             BASE_VERSION="${BASH_REMATCH[1]}"
-            PPA_NUM="${BASH_REMATCH[2]}"
-            NEW_PPA_NUM=$((PPA_NUM + 1))
-            NEW_VERSION="${BASE_VERSION}ppa${NEW_PPA_NUM}"
-            echo "  Incrementing PPA number: $CHANGELOG_VERSION -> $NEW_VERSION"
+            NEW_VERSION="${BASE_VERSION}ppa${USE_REBUILD_NUM}"
+            echo "  Setting PPA number to specified value: $CHANGELOG_VERSION -> $NEW_VERSION"
         elif [[ "$CHANGELOG_VERSION" =~ ^([0-9.]+)\+git([0-9]+)(\.[a-f0-9]+)?(ppa([0-9]+))?$ ]]; then
             BASE_VERSION="${BASH_REMATCH[1]}"
             GIT_NUM="${BASH_REMATCH[2]}"
             GIT_HASH="${BASH_REMATCH[3]}"
-            PPA_NUM="${BASH_REMATCH[5]}"
-            if [[ -n "$PPA_NUM" ]]; then
-                NEW_PPA_NUM=$((PPA_NUM + 1))
-                NEW_VERSION="${BASE_VERSION}+git${GIT_NUM}${GIT_HASH}ppa${NEW_PPA_NUM}"
-                echo "  Incrementing PPA number: $CHANGELOG_VERSION -> $NEW_VERSION"
-            else
-                NEW_VERSION="${BASE_VERSION}+git${GIT_NUM}${GIT_HASH}ppa1"
-                echo "  Adding PPA number: $CHANGELOG_VERSION -> $NEW_VERSION"
-            fi
+            NEW_VERSION="${BASE_VERSION}+git${GIT_NUM}${GIT_HASH}ppa${USE_REBUILD_NUM}"
+            echo "  Setting PPA number to specified value: $CHANGELOG_VERSION -> $NEW_VERSION"
         elif [[ "$CHANGELOG_VERSION" =~ ^([0-9.]+)\+gitppa([0-9]+)$ ]]; then
             BASE_VERSION="${BASH_REMATCH[1]}"
-            PPA_NUM="${BASH_REMATCH[2]}"
-            NEW_PPA_NUM=$((PPA_NUM + 1))
-            NEW_VERSION="${BASE_VERSION}+gitppa${NEW_PPA_NUM}"
-            echo "  Incrementing PPA number: $CHANGELOG_VERSION -> $NEW_VERSION"
+            NEW_VERSION="${BASE_VERSION}+gitppa${USE_REBUILD_NUM}"
+            echo "  Setting PPA number to specified value: $CHANGELOG_VERSION -> $NEW_VERSION"
         elif [[ "$CHANGELOG_VERSION" =~ ^([0-9.]+)(-([0-9]+))?$ ]]; then
             BASE_VERSION="${BASH_REMATCH[1]}"
-            NEW_VERSION="${BASE_VERSION}ppa1"
+            NEW_VERSION="${BASE_VERSION}ppa${USE_REBUILD_NUM}"
             echo "  Warning: Native format cannot have Debian revision, converting to PPA format: $CHANGELOG_VERSION -> $NEW_VERSION"
         else
-            NEW_VERSION="${CHANGELOG_VERSION}ppa1"
-            echo "  Warning: Could not parse version format, appending ppa1: $CHANGELOG_VERSION -> $NEW_VERSION"
+            NEW_VERSION="${CHANGELOG_VERSION}ppa${USE_REBUILD_NUM}"
+            echo "  Warning: Could not parse version format, appending ppa${USE_REBUILD_NUM}: $CHANGELOG_VERSION -> $NEW_VERSION"
         fi
         
         REPO_CHANGELOG="$REPO_ROOT/distro/debian/$PACKAGE/debian/changelog"
@@ -1341,7 +1375,6 @@ Files:
  $TARBALL_MD5 $TARBALL_SIZE $COMBINED_TARBALL
 EOF
         echo "  - Updated changelog and recreated tarball with version $NEW_VERSION"
-        fi
     fi
 fi
 

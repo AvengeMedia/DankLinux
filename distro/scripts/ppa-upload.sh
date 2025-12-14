@@ -1,13 +1,15 @@
 #!/bin/bash
 # Unified PPA build and upload script for danklinux packages
 # Builds source package and uploads to Launchpad PPA
-# Usage: ./ppa-upload.sh [package-name] [ppa-name] [ubuntu-series] [--keep-builds] [--build-only]
+# Usage: ./ppa-upload.sh [package-name] [ppa-name] [ubuntu-series] [rebuild-number] [--keep-builds] [--build-only]
 #
 # Examples:
 #   ./ppa-upload.sh                           # Interactive menu
 #   ./ppa-upload.sh ghostty                   # Single package
 #   ./ppa-upload.sh all                       # All packages
 #   ./ppa-upload.sh ghostty danklinux questing --build-only
+#   ./ppa-upload.sh niri-git 2                # Rebuild with ppa2 suffix
+#   ./ppa-upload.sh niri-git --rebuild=2      # Rebuild with ppa2 suffix (flag syntax)
 
 set -e
 
@@ -36,14 +38,42 @@ trap "rm -rf $TEMP_DIR" EXIT
 AVAILABLE_PACKAGES=(cliphist ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git)
 KEEP_BUILDS=false
 BUILD_ONLY=false
+REBUILD_RELEASE=""
 POSITIONAL_ARGS=()
+REBUILD_NEXT=false
+
 for arg in "$@"; do
     case "$arg" in
         --keep-builds) KEEP_BUILDS=true ;;
         --build-only) BUILD_ONLY=true ;;
-        *) POSITIONAL_ARGS+=("$arg") ;;
+        --rebuild=*)
+            REBUILD_RELEASE="${arg#*=}"
+            ;;
+        -r|--rebuild)
+            REBUILD_NEXT=true
+            ;;
+        *)
+            if [[ -n "${REBUILD_NEXT:-}" ]]; then
+                REBUILD_RELEASE="$arg"
+                REBUILD_NEXT=false
+            else
+                POSITIONAL_ARGS+=("$arg")
+            fi
+            ;;
     esac
 done
+
+# Check if last positional argument is a number (rebuild release)
+if [[ ${#POSITIONAL_ARGS[@]} -gt 0 ]]; then
+    LAST_INDEX=$((${#POSITIONAL_ARGS[@]} - 1))
+    LAST_ARG="${POSITIONAL_ARGS[$LAST_INDEX]}"
+    if [[ "$LAST_ARG" =~ ^[0-9]+$ ]] && [[ -z "$REBUILD_RELEASE" ]]; then
+        # Last argument is a number and no --rebuild flag was used
+        # Use it as rebuild release and remove from positional args
+        REBUILD_RELEASE="$LAST_ARG"
+        POSITIONAL_ARGS=("${POSITIONAL_ARGS[@]:0:$LAST_INDEX}")
+    fi
+fi
 
 PACKAGE="${POSITIONAL_ARGS[0]:-}"
 PPA_NAME="${POSITIONAL_ARGS[1]:-danklinux}"
@@ -303,9 +333,17 @@ case "$PACKAGE_NAME" in
                 if [ -n "${REBUILD_RELEASE:-}" ]; then
                     PPA_NUM=$REBUILD_RELEASE
                     info "🔄 Using manual rebuild release number: ppa$PPA_NUM"
+                elif [ -n "${GITHUB_ACTIONS:-}" ] || [ -n "${CI:-}" ]; then
+                    # In CI, skip if same version (no changes needed)
+                    info "Same version detected in CI (current: $CURRENT_VERSION), skipping build"
+                    exit 0
                 else
-                    PPA_NUM=$((CURRENT_PPA_NUM + 1))
-                    info "Detected rebuild of version $VERSION (current: $CURRENT_VERSION), incrementing PPA number to $PPA_NUM"
+                    error "Same version detected ($CURRENT_VERSION) but no rebuild number specified"
+                    error "To rebuild, explicitly specify a rebuild number:"
+                    error "  ./distro/scripts/ppa-upload.sh $PACKAGE_NAME 2"
+                    error "or use flag syntax:"
+                    error "  ./distro/scripts/ppa-upload.sh $PACKAGE_NAME --rebuild=2"
+                    exit 1
                 fi
 
                 NEW_VERSION="${VERSION}ppa${PPA_NUM}"
@@ -560,13 +598,17 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
             PPA_NUM=$REBUILD_RELEASE
             info "🔄 Using manual rebuild release number: ppa$PPA_NUM"
         elif [[ "$CURRENT_VERSION" =~ ^${ESCAPED_BASE}ppa([0-9]+)$ ]]; then
-            # In CI, don't auto-increment - skip if same version (no new commits)
+            # In CI, skip if same version (no new commits)
             if [ -n "${GITHUB_ACTIONS:-}" ] || [ -n "${CI:-}" ]; then
                 info "Same commit detected in CI (current: $CURRENT_VERSION), skipping build"
                 exit 0
             fi
-            PPA_NUM=$((BASH_REMATCH[1] + 1))
-            info "Detected rebuild of same commit (current: $CURRENT_VERSION), incrementing PPA number to $PPA_NUM"
+            error "Same commit detected ($CURRENT_VERSION) but no rebuild number specified"
+            error "To rebuild, explicitly specify a rebuild number:"
+            error "  ./distro/scripts/ppa-upload.sh $PACKAGE_NAME 2"
+            error "or use flag syntax:"
+            error "  ./distro/scripts/ppa-upload.sh $PACKAGE_NAME --rebuild=2"
+            exit 1
         else
             info "New commit or first build, using PPA number $PPA_NUM"
         fi
@@ -686,13 +728,17 @@ elif [ -n "$GIT_REPO" ] && [ "${SKIP_VERSION_UPDATE:-false}" != "true" ]; then
                 PPA_NUM=$REBUILD_RELEASE
                 info "🔄 Using manual rebuild release number: ppa$PPA_NUM"
             elif [[ "$CURRENT_VERSION" =~ ^${LATEST_TAG}ppa([0-9]+)$ ]]; then
-                # In CI, don't auto-increment - skip if same version
+                # In CI, skip if same version
                 if [ -n "${GITHUB_ACTIONS:-}" ] || [ -n "${CI:-}" ]; then
                     info "Same version detected in CI (current: $CURRENT_VERSION), skipping build"
                     exit 0
                 fi
-                PPA_NUM=$((BASH_REMATCH[1] + 1))
-                info "Detected rebuild of same version (current: $CURRENT_VERSION), incrementing PPA number to $PPA_NUM"
+                error "Same version detected ($CURRENT_VERSION) but no rebuild number specified"
+                error "To rebuild, explicitly specify a rebuild number:"
+                error "  ./distro/scripts/ppa-upload.sh $PACKAGE_NAME 2"
+                error "or use flag syntax:"
+                error "  ./distro/scripts/ppa-upload.sh $PACKAGE_NAME --rebuild=2"
+                exit 1
             else
                 info "New version or first build, using PPA number $PPA_NUM"
             fi
@@ -704,16 +750,20 @@ elif [ -n "$GIT_REPO" ] && [ "${SKIP_VERSION_UPDATE:-false}" != "true" ]; then
                 PPA_NUM=$REBUILD_RELEASE
                 info "🔄 Using manual rebuild release number: ppa$PPA_NUM"
             else
-                # Check if we're rebuilding the same version (increment PPA number if so)
+                # Check if we're rebuilding the same version
                 ESCAPED_BASE=$(echo "$BASE_VERSION" | sed 's/\./\\./g' | sed 's/-/\\-/g')
                 if [[ "$CURRENT_VERSION" =~ ^${ESCAPED_BASE}ppa([0-9]+)$ ]]; then
-                    # In CI, don't auto-increment - skip if same version
+                    # In CI, skip if same version
                     if [ -n "${GITHUB_ACTIONS:-}" ] || [ -n "${CI:-}" ]; then
                         info "Same version detected in CI (current: $CURRENT_VERSION), skipping build"
                         exit 0
                     fi
-                    PPA_NUM=$((BASH_REMATCH[1] + 1))
-                    info "Detected rebuild of same version (current: $CURRENT_VERSION), incrementing PPA number to $PPA_NUM"
+                    error "Same version detected ($CURRENT_VERSION) but no rebuild number specified"
+                    error "To rebuild, explicitly specify a rebuild number:"
+                    error "  ./distro/scripts/ppa-upload.sh $PACKAGE_NAME 2"
+                    error "or use flag syntax:"
+                    error "  ./distro/scripts/ppa-upload.sh $PACKAGE_NAME --rebuild=2"
+                    exit 1
                 else
                     info "New version or first build, using PPA number $PPA_NUM"
                 fi
