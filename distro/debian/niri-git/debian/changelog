@@ -1,3 +1,9 @@
+niri-git (25.11+git2576.7c089857ppa1) unstable; urgency=medium
+
+  * Git snapshot (commit 2576: 7c089857)
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sun, 14 Dec 2025 06:30:53 +0000
+
 niri-git (25.11+git2575.d1fc1ab7ppa2) unstable; urgency=medium
 
   * Rebuild to fix repository metadata issues
