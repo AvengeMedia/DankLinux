@@ -1,3 +1,15 @@
+%global zig_version 0.14.0
+
+%ifarch x86_64
+%global zig_arch x86_64
+%endif
+%ifarch aarch64
+%global zig_arch aarch64
+%endif
+
+%global _missing_build_ids_terminate_build 0
+%global debug_package %{nil}
+
 Name:           ghostty
 Version:        1.2.3
 Release:        1%{?dist}
@@ -6,6 +18,8 @@ Summary:        Fast, feature-rich, and cross-platform terminal emulator that us
 License:        MIT
 URL:            https://github.com/ghostty-org/ghostty
 Source0:        https://github.com/ghostty-org/ghostty/archive/refs/tags/v%{version}.tar.gz
+Source1:        https://ziglang.org/download/%{zig_version}/zig-linux-x86_64-%{zig_version}.tar.xz
+Source2:        https://ziglang.org/download/%{zig_version}/zig-linux-aarch64-%{zig_version}.tar.xz
 
 ExclusiveArch: x86_64 aarch64
 
@@ -19,11 +33,9 @@ BuildRequires: harfbuzz-devel
 BuildRequires: libadwaita-devel
 BuildRequires: libpng-devel
 BuildRequires: oniguruma-devel
-BuildRequires: pandoc-cli
 BuildRequires: pixman-devel
 BuildRequires: pkg-config
 BuildRequires: wayland-protocols-devel
-BuildRequires: zig
 BuildRequires: zlib-ng-devel
 
 Requires: fontconfig
@@ -43,18 +55,37 @@ Requires: zlib-ng
 %prep
 %setup -q -n ghostty-%{version}
 
+curl -L --fail --retry 3 --retry-delay 5 -o ghostty-themes.tgz \
+    "https://github.com/mbadolato/iTerm2-Color-Schemes/releases/download/release-20251201-150531-bfb3ee1/ghostty-themes.tgz"
+THEMES_FILE="file://$PWD/ghostty-themes.tgz"
+sed -i "s|https://github.com/mbadolato/iTerm2-Color-Schemes/releases/download/.\+/ghostty-themes.tgz|${THEMES_FILE}|" build.zig.zon
+sed -i '/\.iterm2_themes/,/}/ s|\.hash = "[^"]\+"|.hash = "N-V-__8AANFEAwCzzNzNs3Gaq8pzGNl2BbeyFBwTyO5iZJL-"|' build.zig.zon
+
+# Use upstream Zig 0.14.0 binarys to avoid Fedora 43+ Zig 0.15 build breakage
+%ifarch x86_64
+tar -xf %{SOURCE1}
+%endif
+%ifarch aarch64
+tar -xf %{SOURCE2}
+%endif
+
+ZIG_BIN="$PWD/zig-linux-%{zig_arch}-%{zig_version}/zig"
+
 %build
-DESTDIR=%{buildroot} zig build \
+
+%install
+ZIG_BIN="$PWD/zig-linux-%{zig_arch}-%{zig_version}/zig"
+
+DESTDIR=%{buildroot} "$ZIG_BIN" build \
     --summary all \
     --prefix "%{_prefix}" \
     -Dversion-string=%{version}-%{release} \
     -Doptimize=ReleaseFast \
     -Dcpu=baseline \
-    -Dpie=true \
-    -Demit-docs
+    -Dpie=true
 
 %if 0%{?fedora} >= 42
-    rm -f "%{buildroot}%{_prefix}/share/terminfo/g/ghostty"
+rm -f "%{buildroot}%{_prefix}/share/terminfo/g/ghostty"
 %endif
 
 %files
@@ -76,8 +107,6 @@ DESTDIR=%{buildroot} zig build \
 %{_prefix}/share/icons/hicolor/32x32@2/apps/com.mitchellh.ghostty.png
 %{_prefix}/share/icons/hicolor/512x512/apps/com.mitchellh.ghostty.png
 %{_prefix}/share/kio/servicemenus/com.mitchellh.ghostty.desktop
-%{_prefix}/share/man/man1/ghostty.1
-%{_prefix}/share/man/man5/ghostty.5
 %{_prefix}/share/nautilus-python/extensions/ghostty.py
 %{_prefix}/share/nvim/site/compiler/ghostty.vim
 %{_prefix}/share/nvim/site/ftdetect/ghostty.vim
