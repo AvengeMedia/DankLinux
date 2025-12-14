@@ -1,8 +1,8 @@
-niri (25.11ppa1) unstable; urgency=medium
+niri (25.11ppa4) unstable; urgency=medium
 
-  * Update to upstream version 25.11
+  * Rebuild to fix repository metadata issues
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 29 Nov 2025 12:38:55 +0000
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sun, 14 Dec 2025 16:34:54 -0500
 
 niri (25.08ppa2) questing; urgency=medium
 
