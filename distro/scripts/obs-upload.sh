@@ -16,13 +16,13 @@ set -e
 download_service_files() {
     local service_file="$1"
     local target_dir="$2"
-    
+
     local urls=$(grep -A2 '<service name="download_url">' "$service_file" | grep 'param name="url"' | sed 's/.*<param name="url">\(.*\)<\/param>.*/\1/')
     local filenames=$(grep -A2 '<service name="download_url">' "$service_file" | grep 'param name="filename"' | sed 's/.*<param name="filename">\(.*\)<\/param>.*/\1/')
-    
+
     local url_arr=($urls)
     local file_arr=($filenames)
-    
+
     for i in "${!url_arr[@]}"; do
         local url="${url_arr[$i]}"
         local filename="${file_arr[$i]:-$(basename "$url")}"
@@ -36,6 +36,51 @@ download_service_files() {
         fi
     done
     return 0
+}
+
+# Parameters:
+#   $1 = PROJECT
+#   $2 = PACKAGE
+#   $3 = VERSION
+#   $4 = CHECK_MODE - "commit" = check commit hash (default) - Exact version match
+check_obs_version_exists() {
+    local PROJECT="$1"
+    local PACKAGE="$2"
+    local VERSION="$3"
+    local CHECK_MODE="${4:-commit}"
+    local OBS_SPEC=""
+
+    # Use osc api command
+    if command -v osc &> /dev/null; then
+        OBS_SPEC=$(osc api "/source/$PROJECT/$PACKAGE/${PACKAGE}.spec" 2>/dev/null || echo "")
+    else
+        echo "⚠️  osc command not found, skipping version check"
+        return 1
+    fi
+
+    # Check if we got valid spec content
+    if [[ -n "$OBS_SPEC" && "$OBS_SPEC" != *"error"* && "$OBS_SPEC" == *"Version:"* ]]; then
+        OBS_VERSION=$(echo "$OBS_SPEC" | grep "^Version:" | awk '{print $2}' | xargs)
+
+        if [[ "$CHECK_MODE" == "commit" ]] && [[ "$PACKAGE" == *"-git" ]]; then
+            OBS_COMMIT=$(echo "$OBS_VERSION" | grep -oP '\.([a-f0-9]{8})(ppa[0-9]+)?$' | grep -oP '[a-f0-9]{8}' || echo "")
+            NEW_COMMIT=$(echo "$VERSION" | grep -oP '\.([a-f0-9]{8})(ppa[0-9]+)?$' | grep -oP '[a-f0-9]{8}' || echo "")
+
+            if [[ -n "$OBS_COMMIT" && -n "$NEW_COMMIT" && "$OBS_COMMIT" == "$NEW_COMMIT" ]]; then
+                echo "⚠️  Commit $NEW_COMMIT already exists in OBS (current version: $OBS_VERSION)"
+                return 0
+            fi
+        fi
+
+        if [[ "$OBS_VERSION" == "$VERSION" ]]; then
+            echo "⚠️  Version $VERSION already exists in OBS"
+            return 0
+        fi
+    else
+        echo "⚠️  Could not fetch OBS spec (API may be unavailable), proceeding anyway"
+        return 1
+    fi
+    return 1
 }
 
 UPLOAD_DEBIAN=true
@@ -204,14 +249,6 @@ ARTIFACT_STAGING="$TEMP_DIR/artifacts"
 mkdir -p "$ARTIFACT_STAGING"
 trap "rm -rf $TEMP_DIR" EXIT
 
-OLD_DSC_FILE=""
-OLD_DSC_SNAPSHOT_DIR="$WORK_DIR/.osc/original"
-mkdir -p "$OLD_DSC_SNAPSHOT_DIR"
-if [[ -f "$WORK_DIR/$PACKAGE.dsc" ]]; then
-    cp "$WORK_DIR/$PACKAGE.dsc" "$OLD_DSC_SNAPSHOT_DIR/$PACKAGE.dsc"
-    OLD_DSC_FILE="$OLD_DSC_SNAPSHOT_DIR/$PACKAGE.dsc"
-fi
-
 echo "==> Preparing $PACKAGE for OBS upload"
 
 find "$WORK_DIR" -maxdepth 1 -type f \( -name "*.tar.gz" -o -name "*.tar.xz" -o -name "*.tar.bz2" -o -name "*.tar" -o -name "*.spec" -o -name "_service" -o -name "*.dsc" \) -delete 2>/dev/null || true
@@ -231,6 +268,47 @@ SOURCE_FORMAT=$(cat "distro/debian/$PACKAGE/debian/source/format" 2>/dev/null ||
 if [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ "$CHANGELOG_VERSION" == *"-"* ]]; then
     CHANGELOG_VERSION=$(echo "$CHANGELOG_VERSION" | sed 's/-[0-9]*$//')
     echo "  Warning: Removed Debian revision from version for native format: $CHANGELOG_VERSION"
+fi
+
+# Apply rebuild suffix if specified (must happen before API check)
+if [[ -n "$REBUILD_RELEASE" ]] && [[ -n "$CHANGELOG_VERSION" ]]; then
+    CHANGELOG_VERSION=$(echo "$CHANGELOG_VERSION" | sed 's/ppa[0-9]*$//')
+    CHANGELOG_VERSION="${CHANGELOG_VERSION}ppa${REBUILD_RELEASE}"
+    echo "  - Applied rebuild suffix: $CHANGELOG_VERSION"
+fi
+
+# Check if this version already exists in OBS (unless rebuild is specified)
+if [[ -n "$CHANGELOG_VERSION" ]]; then
+    if [[ -z "$REBUILD_RELEASE" ]]; then
+        if check_obs_version_exists "$OBS_PROJECT" "$PACKAGE" "$CHANGELOG_VERSION"; then
+            if [[ "$PACKAGE" == *"-git" ]]; then
+                echo "==> Error: This commit is already uploaded to OBS"
+                echo "    The same git commit ($(echo "$CHANGELOG_VERSION" | grep -oP '[a-f0-9]{8}' | tail -1)) already exists on OBS."
+                echo "    To rebuild the same commit, specify a rebuild number:"
+                echo "      ./distro/scripts/obs-upload.sh $PACKAGE 2"
+                echo "      ./distro/scripts/obs-upload.sh $PACKAGE 3"
+                echo "    Or push a new commit first, then run:"
+                echo "      ./distro/scripts/obs-upload.sh $PACKAGE"
+            else
+                echo "==> Error: Version $CHANGELOG_VERSION already exists in OBS"
+                echo "    To rebuild with a different release number, try:"
+                echo "      ./distro/scripts/obs-upload.sh $PACKAGE --rebuild=2"
+                echo "    or positional syntax:"
+                echo "      ./distro/scripts/obs-upload.sh $PACKAGE 2"
+            fi
+            exit 1
+        fi
+    else
+        # Rebuild number specified - check if this exact version already exists (exact mode)
+        if check_obs_version_exists "$OBS_PROJECT" "$PACKAGE" "$CHANGELOG_VERSION" "exact"; then
+            echo "==> Error: Version $CHANGELOG_VERSION already exists in OBS"
+            echo "    This exact version (including ppa${REBUILD_RELEASE}) is already uploaded."
+            echo "    To rebuild with a different release number, try incrementing:"
+            NEXT_NUM=$((REBUILD_RELEASE + 1))
+            echo "      ./distro/scripts/obs-upload.sh $PACKAGE $NEXT_NUM"
+            exit 1
+        fi
+    fi
 fi
 
 # Native format: <package>_<version>.tar.gz
@@ -350,8 +428,8 @@ if [[ "$SOURCE_FORMAT" == *"native"* ]]; then
                 URL_PROTOCOL=$(echo "$SERVICE_BLOCK" | grep "protocol" | sed 's/.*<param name="protocol">\(.*\)<\/param>.*/\1/' | head -1)
                 URL_HOST=$(echo "$SERVICE_BLOCK" | grep "host" | sed 's/.*<param name="host">\(.*\)<\/param>.*/\1/' | head -1)
                 URL_PATH=$(echo "$SERVICE_BLOCK" | grep "path" | sed 's/.*<param name="path">\(.*\)<\/param>.*/\1/' | head -1)
-                
-                if [[ -n "$URL_PROTOCOL" &&-n "$URL_HOST" && -n "$URL_PATH" ]]; then
+
+                if [[ -n "$URL_PROTOCOL" && -n "$URL_HOST" && -n "$URL_PATH" ]]; then
                     SOURCE_URL="${URL_PROTOCOL}://${URL_HOST}${URL_PATH}"
                 fi
             fi
@@ -777,7 +855,6 @@ CARGO_CONFIG_EOF
             if [[ -n "${REBUILD_RELEASE:-}" ]]; then
                 echo "  🔄 Using manual rebuild release number: $REBUILD_RELEASE"
                 sed -i "s/^Release:[[:space:]]*${NEW_RELEASE}%{?dist}/Release:        ${REBUILD_RELEASE}%{?dist}/" "$WORK_DIR/$PACKAGE.spec"
-                cp "$WORK_DIR/$PACKAGE.spec" "$REPO_ROOT/distro/opensuse/$PACKAGE.spec"
             elif [[ "$NEW_VERSION" == "$OLD_VERSION" ]]; then
                 echo "  - Error: Same version detected ($NEW_VERSION) but no rebuild number specified"
                 echo "    To rebuild, explicitly specify a rebuild number:"
@@ -787,7 +864,6 @@ CARGO_CONFIG_EOF
                 exit 1
             else
                 echo "  - New version detected: $OLD_VERSION -> $NEW_VERSION (keeping release $NEW_RELEASE)"
-                cp "$WORK_DIR/$PACKAGE.spec" "$REPO_ROOT/distro/opensuse/$PACKAGE.spec"
             fi
         else
             echo "  - First upload to OBS (no previous spec found)"
@@ -985,6 +1061,43 @@ EOF
             echo "  - First upload to OBS (no previous spec found)"
         fi
     fi
+fi
+
+# Server-side cleanup via API
+echo "==> Cleaning old tarballs from OBS server (prevents downloading 100+ old versions)"
+OBS_FILES=$(osc api "/source/$OBS_PROJECT/$PACKAGE" 2>/dev/null || echo "")
+if [[ -n "$OBS_FILES" ]]; then
+    DELETED_COUNT=0
+    KEEP_CURRENT=""
+    if [[ -n "$CHANGELOG_VERSION" ]]; then
+        KEEP_CURRENT="${PACKAGE}_${CHANGELOG_VERSION}.tar.gz"
+        echo "  Keeping only current version: ${KEEP_CURRENT}"
+    fi
+
+    for old_file in $(echo "$OBS_FILES" | grep -oP '(?<=name=")[^"]*\.(tar\.gz|tar\.xz|tar\.bz2)(?=")' || true); do
+        if [[ "$old_file" == "$KEEP_CURRENT" ]]; then
+            echo "  - Keeping: $old_file"
+            continue
+        fi
+
+        # Keep source tarballs (for binary-download packages)
+        if [[ "$old_file" == "${PACKAGE}-source.tar.gz" ]]; then
+            echo "  - Keeping source tarball: $old_file"
+            continue
+        fi
+
+        echo "  - Deleting from server: $old_file"
+        if osc api -X DELETE "/source/$OBS_PROJECT/$PACKAGE/$old_file" 2>/dev/null; then
+            ((DELETED_COUNT++)) || true
+        fi
+    done
+    if [[ $DELETED_COUNT -gt 0 ]]; then
+        echo "  ✓ Deleted $DELETED_COUNT old tarball(s) from server"
+    else
+        echo "  ✓ No old tarballs found on server (current version preserved)"
+    fi
+else
+    echo "  ⚠️  Could not fetch file list from server, skipping cleanup"
 fi
 
 cd "$WORK_DIR"

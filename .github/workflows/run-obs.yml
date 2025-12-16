@@ -4,301 +4,377 @@ on:
   workflow_dispatch:
     inputs:
       package:
-        description: 'Package to upload (cliphist, ghostty, matugen, niri, niri-git, quickshell, quickshell-git, xwayland-satellite, xwayland-satellite-git, danksearch, dgop, or all)'
+        description: "Package to update (cliphist, ghostty, matugen, niri, niri-git, quickshell, quickshell-git, xwayland-satellite, xwayland-satellite-git, danksearch, dgop, or all)"
         required: false
-        default: 'auto'
-      force_upload:
-        description: 'Force upload without version check'
-        required: false
-        default: 'false'
-        type: choice
-        options:
-          - 'false'
-          - 'true'
+        default: "all"
       rebuild_release:
-        description: 'Release number for rebuilds (e.g., 2, 3, 4 to increment spec Release)'
+        description: "Release number for rebuilds (e.g., 2, 3, 4 to increment spec Release)"
         required: false
-        default: ''
+        default: ""
   schedule:
-    - cron: '0 */6 * * *'  # Every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
+    - cron: "0 */6 * * *" # Every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
 
 jobs:
   check-updates:
-    name: Check for package updates
+    name: Check for updates
     runs-on: ubuntu-latest
-    
-    permissions:
-      contents: write
-      pull-requests: write
-    
+
     outputs:
       has_updates: ${{ steps.check.outputs.has_updates }}
-      updated_packages: ${{ steps.check.outputs.updated_packages }}
-    
+      packages: ${{ steps.check.outputs.packages }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Check if last commit was automated
-        id: check-loop
-        run: |
-          LAST_COMMIT_MSG=$(git log -1 --pretty=%B | head -1)
-          if [[ "$LAST_COMMIT_MSG" == "ci: Auto-update PPA packages"* ]] || [[ "$LAST_COMMIT_MSG" == "ci: Auto-update OBS packages"* ]]; then
-            echo "⏭️ Last commit was automated ($LAST_COMMIT_MSG), skipping to prevent infinite loop"
-            echo "skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "✅ Last commit was not automated, proceeding"
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Configure Git
-        if: steps.check-loop.outputs.skip != 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      
       - name: Install dependencies
-        if: steps.check-loop.outputs.skip != 'true'
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq curl git
+          sudo apt-get install -y jq curl
 
           # Install yq for reading pins.yaml
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
-      
-      - name: Update package versions
-        if: steps.check-loop.outputs.skip != 'true'
-        id: update
+
+      - name: Check for updates
+        id: check
         env:
+          OBS_USERNAME: ${{ secrets.OBS_USERNAME }}
+          OBS_PASSWORD: ${{ secrets.OBS_PASSWORD }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          chmod +x distro/scripts/*.sh
-          
-          # Update debian/changelog files with latest upstream versions
-          echo "📦 Updating Debian changelogs..."
-          distro/scripts/debian-update.sh --update distro/debian
-          
-          # Update OpenSUSE spec files with latest upstream versions
-          echo ""
-          echo "📦 Updating OpenSUSE specs..."
-          distro/scripts/opensuse-update.sh --update
-      
-      - name: Check for updates
-        if: steps.check-loop.outputs.skip != 'true'
-        id: check
-        run: |
-          # Check if there are any changes in debian or opensuse directories
-          DEBIAN_CHANGED=false
-          OPENSUSE_CHANGED=false
-          
-          if ! git diff --exit-code distro/debian/ >/dev/null 2>&1; then
-            DEBIAN_CHANGED=true
-          fi
-          
-          if ! git diff --exit-code distro/opensuse/ >/dev/null 2>&1; then
-            OPENSUSE_CHANGED=true
-          fi
-          
-          if [ "$DEBIAN_CHANGED" = true ] || [ "$OPENSUSE_CHANGED" = true ]; then
+          # Helper function to get latest version from GitHub
+          get_github_version() {
+            local repo="$1"
+            local current_version=$(curl -s "https://api.github.com/repos/$repo/releases/latest" | grep '"tag_name"' | sed 's/.*"tag_name": "v\?\([^"]*\)".*/\1/')
+            echo "$current_version"
+          }
+
+          # Helper function to check OBS version via API
+          check_obs_version() {
+            local package="$1"
+            local obs_spec=$(curl -s -u "$OBS_USERNAME:$OBS_PASSWORD" "https://api.opensuse.org/source/home:AvengeMedia:danklinux/$package/$package.spec" 2>/dev/null || echo "")
+
+            if [[ -n "$obs_spec" && "$obs_spec" == *"Version:"* ]]; then
+              local obs_version=$(echo "$obs_spec" | grep "^Version:" | awk '{print $2}' | xargs)
+              echo "$obs_version"
+            else
+              echo ""
+            fi
+          }
+
+          # Helper function to get latest GitHub release version
+          get_github_latest_version() {
+            local repo="$1"
+            local version=$(curl -s "https://api.github.com/repos/$repo/releases/latest" | grep '"tag_name"' | sed 's/.*"tag_name": "v\?\([^"]*\)".*/\1/' || echo "")
+            echo "$version"
+          }
+
+          # Helper function to check if package needs update
+          needs_update() {
+            local package="$1"
+            local spec_file="distro/opensuse/$package.spec"
+
+            if [[ ! -f "$spec_file" ]]; then
+              echo "⚠️  $package: No spec file found"
+              return 1
+            fi
+
+            # Get OBS version via API
+            local obs_version=$(check_obs_version "$package")
+
+            if [[ -z "$obs_version" ]]; then
+              echo "📋 $package: Not found on OBS (new package)"
+              return 0  # New package, needs upload
+            fi
+
+            # For -git packages, check if commits differ
+            if [[ "$package" == *"-git" ]]; then
+              # Get current git commit directly (NOT from spec file!)
+              local current_commit=$(git rev-parse --short=8 HEAD)
+
+              # Extract commit from OBS version via API
+              local obs_commit=$(echo "$obs_version" | grep -oP '\.([a-f0-9]{8})(ppa[0-9]+)?$' | grep -oP '[a-f0-9]{8}' | head -1 || echo "")
+
+              if [[ -n "$current_commit" && -n "$obs_commit" && "$current_commit" == "$obs_commit" ]]; then
+                echo "📋 $package: Commit $current_commit already on OBS"
+                return 1  # No update needed
+              else
+                echo "📋 $package: New commit $current_commit (OBS has ${obs_commit:-none})"
+                return 0  # Update needed
+              fi
+            fi
+
+            # For stable packages, check upstream GitHub releases
+            local upstream_version=""
+            case "$package" in
+              danksearch)
+                upstream_version=$(get_github_latest_version "AvengeMedia/DankSearch")
+                ;;
+              dgop)
+                upstream_version=$(get_github_latest_version "AvengeMedia/DGoP")
+                ;;
+              ghostty)
+                upstream_version=$(get_github_latest_version "ghostty-org/ghostty")
+                ;;
+              cliphist)
+                upstream_version=$(get_github_latest_version "sentriz/cliphist")
+                ;;
+              matugen)
+                upstream_version=$(get_github_latest_version "InioX/matugen")
+                ;;
+              niri)
+                upstream_version=$(get_github_latest_version "YaLTeR/niri")
+                ;;
+              quickshell)
+                upstream_version=$(get_github_latest_version "outfoxxed/quickshell")
+                ;;
+              xwayland-satellite)
+                upstream_version=$(get_github_latest_version "Supreeeme/xwayland-satellite")
+                ;;
+              *)
+                # Unknown package - skip (no upstream source configured)
+                echo "⚠️  $package: No upstream source configured, skipping version check"
+                return 1
+                ;;
+            esac
+
+            # Strip ppa suffix from OBS version for comparison
+            local obs_version_clean=$(echo "$obs_version" | sed 's/ppa[0-9]*$//')
+
+            if [[ -n "$upstream_version" && "$upstream_version" != "$obs_version_clean" ]]; then
+              echo "📋 $package: New version $upstream_version (OBS has $obs_version_clean)"
+              return 0  # Update needed
+            fi
+
+            echo "📋 $package: Version $upstream_version already on OBS"
+            return 1  # No update needed
+          }
+
+          # Main logic
+          REBUILD="${{ github.event.inputs.rebuild_release }}"
+          MANUAL_PKG="${{ github.event.inputs.package }}"
+
+          if [[ -n "$REBUILD" ]]; then
+            # Rebuild requested - always proceed with specified package(s)
+            if [[ "$MANUAL_PKG" == "all" || -z "$MANUAL_PKG" ]]; then
+              echo "packages=all" >> $GITHUB_OUTPUT
+            else
+              echo "packages=$MANUAL_PKG" >> $GITHUB_OUTPUT
+            fi
             echo "has_updates=true" >> $GITHUB_OUTPUT
-            
-            # Get list of changed packages from both directories
-            UPDATED_DEB=""
-            UPDATED_SUSE=""
-            
-            if [ "$DEBIAN_CHANGED" = true ]; then
-              UPDATED_DEB=$(git diff --name-only distro/debian/ | grep 'debian/changelog' | xargs dirname | xargs dirname | xargs basename | tr '\n' ',' | sed 's/,$//')
+            echo "🔄 Manual rebuild requested: $MANUAL_PKG (ppa$REBUILD)"
+
+          elif [[ "${{ github.event_name }}" == "schedule" ]]; then
+            # Scheduled run - check git packages only
+            PACKAGES_TO_UPDATE=()
+
+            for pkg in niri-git quickshell-git xwayland-satellite-git; do
+              if needs_update "$pkg"; then
+                PACKAGES_TO_UPDATE+=("$pkg")
+              fi
+            done
+
+            if [[ ${#PACKAGES_TO_UPDATE[@]} -gt 0 ]]; then
+              echo "packages=${PACKAGES_TO_UPDATE[*]}" >> $GITHUB_OUTPUT
+              echo "has_updates=true" >> $GITHUB_OUTPUT
+              echo "✓ Git packages to update: ${PACKAGES_TO_UPDATE[*]}"
+            else
+              echo "packages=" >> $GITHUB_OUTPUT
+              echo "has_updates=false" >> $GITHUB_OUTPUT
+              echo "✓ All git packages up to date"
             fi
-            
-            if [ "$OPENSUSE_CHANGED" = true ]; then
-              UPDATED_SUSE=$(git diff --name-only distro/opensuse/ | grep '\.spec$' | sed 's|distro/opensuse/||' | sed 's/\.spec$//' | tr '\n' ',' | sed 's/,$//')
+
+          elif [[ -n "$MANUAL_PKG" ]]; then
+            # Manual workflow trigger
+            if [[ "$MANUAL_PKG" == "all" ]]; then
+              # Check all packages
+              PACKAGES_TO_UPDATE=()
+              ALL_PACKAGES=(cliphist ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git danksearch dgop)
+
+              for pkg in "${ALL_PACKAGES[@]}"; do
+                if needs_update "$pkg"; then
+                  PACKAGES_TO_UPDATE+=("$pkg")
+                fi
+              done
+
+              if [[ ${#PACKAGES_TO_UPDATE[@]} -gt 0 ]]; then
+                echo "packages=${PACKAGES_TO_UPDATE[*]}" >> $GITHUB_OUTPUT
+                echo "has_updates=true" >> $GITHUB_OUTPUT
+                echo "✓ Packages to update: ${PACKAGES_TO_UPDATE[*]}"
+              else
+                echo "packages=" >> $GITHUB_OUTPUT
+                echo "has_updates=false" >> $GITHUB_OUTPUT
+                echo "✓ All packages up to date"
+              fi
+            else
+              # Check specific package
+              if needs_update "$MANUAL_PKG"; then
+                echo "packages=$MANUAL_PKG" >> $GITHUB_OUTPUT
+                echo "has_updates=true" >> $GITHUB_OUTPUT
+              else
+                echo "packages=" >> $GITHUB_OUTPUT
+                echo "has_updates=false" >> $GITHUB_OUTPUT
+              fi
             fi
-            
-            # Combine and deduplicate
-            ALL_UPDATED=$(echo "$UPDATED_DEB,$UPDATED_SUSE" | tr ',' '\n' | grep -v '^$' | sort -u | tr '\n' ',' | sed 's/,$//')
-            echo "updated_packages=$ALL_UPDATED" >> $GITHUB_OUTPUT
-            echo "📋 Updates found: $ALL_UPDATED"
           else
+            # Fallback
+            echo "packages=" >> $GITHUB_OUTPUT
             echo "has_updates=false" >> $GITHUB_OUTPUT
-            echo "updated_packages=" >> $GITHUB_OUTPUT
-            echo "📋 No updates found"
-          fi
-      
-      - name: Commit version updates
-        if: steps.check-loop.outputs.skip != 'true' && steps.check.outputs.has_updates == 'true'
-        run: |
-          # Get changed packages for commit message
-          CHANGED_DEB=$(git diff --name-only distro/debian/ 2>/dev/null | grep 'debian/changelog' | xargs dirname 2>/dev/null | xargs dirname 2>/dev/null | xargs basename 2>/dev/null | tr '\n' ',' | sed 's/,$//' || echo "")
-          CHANGED_SUSE=$(git diff --name-only distro/opensuse/ 2>/dev/null | grep '\.spec$' | sed 's|distro/opensuse/||' | sed 's/\.spec$//' | tr '\n' ',' | sed 's/,$//' || echo "")
-
-          # Build package list for commit message
-          PKGS=$(echo "$CHANGED_DEB,$CHANGED_SUSE" | tr ',' '\n' | grep -v '^$' | sort -u | tr '\n' ',' | sed 's/,$//')
-
-          if [ -n "$PKGS" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add distro/debian/*/debian/changelog distro/opensuse/*.spec
-            git commit -m "ci: Auto-update OBS packages [$PKGS]" -m "🤖 Automated by GitHub Actions"
-            git pull --rebase origin master
-            git push
           fi
 
-  upload-obs:
+  update-obs:
     name: Upload to OBS
     needs: check-updates
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    if: |
-      github.event.inputs.force_upload == 'true' ||
-      (needs.check-updates.outputs.has_updates == 'true' && needs.check-updates.outputs.updated_packages != '')
-    
+    if: needs.check-updates.outputs.has_updates == 'true'
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: master
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Check if last commit was automated
-        id: check-loop-upload
-        run: |
-          LAST_COMMIT_MSG=$(git log -1 --pretty=%B | head -1)
-          if [[ "$LAST_COMMIT_MSG" == "ci: Auto-update PPA packages"* ]] || [[ "$LAST_COMMIT_MSG" == "ci: Auto-update OBS packages"* ]]; then
-            echo "⏭️ Last commit was automated ($LAST_COMMIT_MSG), skipping to prevent infinite loop"
-            echo "skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "✅ Last commit was not automated, proceeding"
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Determine packages to upload
-        if: steps.check-loop-upload.outputs.skip != 'true'
+      - name: Determine packages to update
         id: packages
         run: |
-          if [[ "${{ github.event.inputs.force_upload }}" == "true" ]]; then
-            PKG="${{ github.event.inputs.package }}"
-            if [[ "$PKG" == "auto" || -z "$PKG" ]]; then
-              echo "packages=all" >> $GITHUB_OUTPUT
-              echo "🚀 Force upload: all packages"
-            else
-              echo "packages=$PKG" >> $GITHUB_OUTPUT
-              echo "🚀 Force upload: $PKG"
-            fi
-          elif [[ -n "${{ github.event.inputs.package }}" && "${{ github.event.inputs.package }}" != "auto" ]]; then
-            # Manual package selection should respect change detection
-            SELECTED_PKG="${{ github.event.inputs.package }}"
-            UPDATED_PKG="${{ needs.check-updates.outputs.updated_packages }}"
+          PACKAGES="${{ needs.check-updates.outputs.packages }}"
 
-            # Check if manually selected package is in the updated list
-            if [[ "$UPDATED_PKG" == *"$SELECTED_PKG"* ]]; then
-              echo "packages=$SELECTED_PKG" >> $GITHUB_OUTPUT
-              echo "📦 Manual selection (has updates): $SELECTED_PKG"
-            else
-              echo "packages=" >> $GITHUB_OUTPUT
-              echo "⚠️ Manual selection '$SELECTED_PKG' has no updates - skipping (use force_upload to override)"
-            fi
-          elif [[ "${{ needs.check-updates.outputs.has_updates }}" == "true" ]]; then
-            UPDATED="${{ needs.check-updates.outputs.updated_packages }}"
-            if [[ -n "$UPDATED" ]]; then
-              PACKAGES=$(echo "$UPDATED" | tr ',' ' ')
-              echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
-              echo "✨ Uploading updated packages: $PACKAGES"
-            else
-              echo "packages=" >> $GITHUB_OUTPUT
-              echo "ℹ️ Updates reported but no package list; skipping."
-            fi
-          else
+          if [[ -z "$PACKAGES" ]]; then
+            echo "✓ No packages need uploading. All up to date!"
             echo "packages=" >> $GITHUB_OUTPUT
-            echo "ℹ️ No updates detected and no manual trigger; nothing to upload."
+          else
+            echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
+            echo "Packages to upload: $PACKAGES"
           fi
 
-      - name: Install OSC
-        if: steps.check-loop-upload.outputs.skip != 'true'
+      - name: Update git package versions inline
+        if: contains(steps.packages.outputs.packages, '-git') || steps.packages.outputs.packages == 'all'
+        run: |
+          # Update each -git package spec with current commit
+          for pkg in niri-git quickshell-git xwayland-satellite-git; do
+            if [[ "${{ steps.packages.outputs.packages }}" == *"$pkg"* ]] || [[ "${{ steps.packages.outputs.packages }}" == "all" ]]; then
+              if [[ -f "distro/opensuse/$pkg.spec" ]]; then
+                COMMIT_HASH=$(git rev-parse --short=8 HEAD)
+                COMMIT_COUNT=$(git rev-list --count HEAD)
+                BASE_VERSION=$(grep -oP '^Version:\s+\K[0-9.]+' distro/opensuse/${pkg%-git}.spec 2>/dev/null || grep -oP '^Version:\s+\K[0-9.]+' distro/opensuse/$pkg.spec | head -1)
+                NEW_VERSION="${BASE_VERSION}+git${COMMIT_COUNT}.${COMMIT_HASH}"
+
+                echo "📦 Updating $pkg spec to version: $NEW_VERSION"
+                sed -i "s/^Version:.*/Version:        $NEW_VERSION/" "distro/opensuse/$pkg.spec"
+
+                # Update changelog in spec
+                DATE_STR=$(date "+%a %b %d %Y")
+                LOCAL_SPEC_HEAD=$(sed -n '1,/%changelog/{ /%changelog/d; p }' "distro/opensuse/$pkg.spec")
+                {
+                  echo "$LOCAL_SPEC_HEAD"
+                  echo "%changelog"
+                  echo "* $DATE_STR Avenge Media <AvengeMedia.US@gmail.com> - ${NEW_VERSION}-1"
+                  echo "- Git snapshot (commit $COMMIT_COUNT: $COMMIT_HASH)"
+                } > "distro/opensuse/$pkg.spec"
+
+                # Update Debian changelog inline (no commit)
+                if [[ -f "distro/debian/$pkg/debian/changelog" ]]; then
+                  CHANGELOG_DATE=$(date -R)
+                  {
+                    echo "$pkg ($NEW_VERSION) nightly; urgency=medium"
+                    echo ""
+                    echo "  * Git snapshot (commit $COMMIT_COUNT: $COMMIT_HASH)"
+                    echo ""
+                    echo " -- Avenge Media <AvengeMedia.US@gmail.com>  $CHANGELOG_DATE"
+                  } > "distro/debian/$pkg/debian/changelog"
+                  echo "✓ Updated Debian changelog for $pkg"
+                fi
+              fi
+            fi
+          done
+
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y osc
-          
+
           mkdir -p ~/.config/osc
           cat > ~/.config/osc/oscrc << EOF
           [general]
           apiurl = https://api.opensuse.org
-          
+
           [https://api.opensuse.org]
           user = ${{ secrets.OBS_USERNAME }}
           pass = ${{ secrets.OBS_PASSWORD }}
           EOF
           chmod 600 ~/.config/osc/oscrc
 
+      - name: Install Go (for Go packages)
+        if: contains(steps.packages.outputs.packages, 'cliphist') || contains(steps.packages.outputs.packages, 'dgop')
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Install Rust (for Rust packages)
+        if: |
+          contains(steps.packages.outputs.packages, 'niri') ||
+          contains(steps.packages.outputs.packages, 'xwayland-satellite') ||
+          contains(steps.packages.outputs.packages, 'matugen')
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
       - name: Upload to OBS
-        if: steps.check-loop-upload.outputs.skip != 'true'
         env:
-          FORCE_UPLOAD: ${{ github.event.inputs.force_upload }}
           REBUILD_RELEASE: ${{ github.event.inputs.rebuild_release }}
         run: |
           PACKAGES="${{ steps.packages.outputs.packages }}"
 
           if [[ -z "$PACKAGES" ]]; then
-            echo "No packages selected for upload. Skipping." 
+            echo "✓ No packages need uploading. All up to date!"
             exit 0
           fi
 
-          # Loop through each package
-          for pkg in $PACKAGES; do
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "Uploading $pkg to OBS..."
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            bash distro/scripts/obs-upload.sh "$pkg" "Auto-update: $pkg" || echo "⚠️ Failed to upload $pkg"
-          done
-      
-      - name: Get changed packages for upload updates
-        if: steps.check-loop-upload.outputs.skip != 'true'
-        id: changed-packages-v2
-        run: |
-          # Check if there are any changes to commit (from obs-upload.sh writeback)
-          if git diff --exit-code distro/debian/ distro/opensuse/ >/dev/null 2>&1; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "📋 No changelog or spec changes to commit"
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            # Get list of changed packages for commit message
-            CHANGED_DEB=$(git diff --name-only distro/debian/ 2>/dev/null | grep 'debian/changelog' | xargs dirname 2>/dev/null | xargs dirname 2>/dev/null | xargs basename 2>/dev/null | tr '\n' ',' | sed 's/,$//' || echo "")
-            CHANGED_SUSE=$(git diff --name-only distro/opensuse/ 2>/dev/null | grep '\.spec$' | sed 's|distro/opensuse/||' | sed 's/\.spec$//' | tr '\n' ',' | sed 's/,$//' || echo "")
-            
-            PKGS=$(echo "$CHANGED_DEB,$CHANGED_SUSE" | tr ',' '\n' | grep -v '^$' | sort -u | tr '\n' ',' | sed 's/,$//')
-            echo "packages=$PKGS" >> $GITHUB_OUTPUT
-            echo "📋 Changed packages: $PKGS"
-          fi
+          MESSAGE="Automated update from GitHub Actions"
 
-      - name: Commit upload updates
-        if: steps.check-loop-upload.outputs.skip != 'true' && steps.changed-packages-v2.outputs.has_changes == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add distro/debian/*/debian/changelog distro/opensuse/*.spec
-          git commit -m "ci: Auto-update OBS packages [${{ steps.changed-packages-v2.outputs.packages }}]" -m "🤖 Automated by GitHub Actions (version increments)"
-          git pull --rebase origin master
-          git push
+          # PACKAGES can be space-separated list (e.g., "niri-git quickshell-git" from "all" check)
+          # Loop through each package and upload
+          for PKG in $PACKAGES; do
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Uploading $PKG to OBS..."
+            if [[ -n "$REBUILD_RELEASE" ]]; then
+              echo "🔄 Using rebuild release number: ppa$REBUILD_RELEASE"
+            fi
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            bash distro/scripts/obs-upload.sh "$PKG" "$MESSAGE"
+          done
 
       - name: Summary
+        if: always()
         run: |
-          echo "### OBS Package Upload Complete" >> $GITHUB_STEP_SUMMARY
+          echo "### OBS Package Upload Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [[ -n "${{ steps.packages.outputs.packages }}" ]]; then
-            echo "- **Uploaded Packages**: ${{ steps.packages.outputs.packages }}" >> $GITHUB_STEP_SUMMARY
-          elif [[ "${{ needs.check-updates.outputs.has_updates }}" == "true" ]]; then
-            echo "- **Updated Packages**: ${{ needs.check-updates.outputs.updated_packages }}" >> $GITHUB_STEP_SUMMARY
+
+          PACKAGES="${{ steps.packages.outputs.packages }}"
+
+          if [[ -z "$PACKAGES" ]]; then
+            echo "**Status:** ✅ All packages up to date (no uploads needed)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "All packages are current. Run completed successfully." >> $GITHUB_STEP_SUMMARY
           else
-            echo "- **Uploaded Packages**: none (no updates detected)" >> $GITHUB_STEP_SUMMARY
+            echo "**Packages Uploaded:**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            for PKG in $PACKAGES; do
+              echo "- ✅ **$PKG** → [View builds](https://build.opensuse.org/package/show/home:AvengeMedia:danklinux/$PKG)" >> $GITHUB_STEP_SUMMARY
+            done
+
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            if [[ -n "${{ github.event.inputs.rebuild_release }}" ]]; then
+              echo "**Rebuild Number:** ppa${{ github.event.inputs.rebuild_release }}" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+
+            echo "Monitor build progress on [OBS project page](https://build.opensuse.org/project/show/home:AvengeMedia:danklinux)." >> $GITHUB_STEP_SUMMARY
           fi
-          
-          echo "- **OBS Project**: https://build.opensuse.org/project/show/home:AvengeMedia:danklinux" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Builds will appear on OBS once processing completes." >> $GITHUB_STEP_SUMMARY
