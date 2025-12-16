@@ -1,4 +1,4 @@
-quickshell-git (0.2.1+git713.26531fc4ppa4) unstable; urgency=medium
+quickshell-git (0.2.1+git713.26531fc4db1) unstable; urgency=medium
 
   * Rebuild to fix repository metadata issues
 

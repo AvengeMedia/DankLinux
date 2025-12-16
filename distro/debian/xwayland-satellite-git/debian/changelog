@@ -1,4 +1,4 @@
-xwayland-satellite-git (0.8+git208.f0ad674bppa2) unstable; urgency=medium
+xwayland-satellite-git (0.8+git208.f0ad674bdb1) unstable; urgency=medium
 
   * Rebuild to fix repository metadata issues
 

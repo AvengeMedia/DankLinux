@@ -1,4 +1,4 @@
-quickshell (0.2.1.1+pin713.26531fc4ppa1) unstable; urgency=medium
+quickshell (0.2.1.1+pin713.26531fc4db1) unstable; urgency=medium
 
   * Pinned to commit 713 (26531fc4) - unreleased stable with latest features
 
