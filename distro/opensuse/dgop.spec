@@ -1,5 +1,5 @@
 Name:           dgop
-Version:        0.1.11
+Version:        0.1.12
 Release:        1%{?dist}
 Summary:        Stateless CPU/GPU monitor for DankMaterialShell
 

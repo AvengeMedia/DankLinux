@@ -253,57 +253,65 @@ jobs:
               danksearch)
                 VERSION=$(get_latest_version "AvengeMedia/DankSearch")
                 if [[ -n "$VERSION" ]]; then
-                  echo "📦 Updating danksearch spec to version: $VERSION"
+                  echo "📦 Updating danksearch to version: $VERSION"
                   sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/danksearch.spec
+                  sed -i "1s/danksearch ([^)]*/danksearch (${VERSION}ppa1/" distro/debian/danksearch/debian/changelog
                 fi
                 ;;
               dgop)
                 VERSION=$(get_latest_version "AvengeMedia/DGoP")
                 if [[ -n "$VERSION" ]]; then
-                  echo "📦 Updating dgop spec to version: $VERSION"
+                  echo "📦 Updating dgop to version: $VERSION"
                   sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/dgop.spec
+                  sed -i "1s/dgop ([^)]*/dgop (${VERSION}ppa1/" distro/debian/dgop/debian/changelog
                 fi
                 ;;
               ghostty)
                 VERSION=$(get_latest_version "ghostty-org/ghostty")
                 if [[ -n "$VERSION" ]]; then
-                  echo "📦 Updating ghostty spec to version: $VERSION"
+                  echo "📦 Updating ghostty to version: $VERSION"
                   sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/ghostty.spec
+                  sed -i "1s/ghostty ([^)]*/ghostty (${VERSION}ppa1/" distro/debian/ghostty/debian/changelog
                 fi
                 ;;
               cliphist)
                 VERSION=$(get_latest_version "sentriz/cliphist")
                 if [[ -n "$VERSION" ]]; then
-                  echo "📦 Updating cliphist spec to version: $VERSION"
+                  echo "📦 Updating cliphist to version: $VERSION"
                   sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/cliphist.spec
+                  sed -i "1s/cliphist ([^)]*/cliphist (${VERSION}ppa1/" distro/debian/cliphist/debian/changelog
                 fi
                 ;;
               matugen)
                 VERSION=$(get_latest_version "InioX/matugen")
                 if [[ -n "$VERSION" ]]; then
-                  echo "📦 Updating matugen spec to version: $VERSION"
+                  echo "📦 Updating matugen to version: $VERSION"
                   sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/matugen.spec
+                  sed -i "1s/matugen ([^)]*/matugen (${VERSION}ppa1/" distro/debian/matugen/debian/changelog
                 fi
                 ;;
               niri)
                 VERSION=$(get_latest_version "YaLTeR/niri")
                 if [[ -n "$VERSION" ]]; then
-                  echo "📦 Updating niri spec to version: $VERSION"
+                  echo "📦 Updating niri to version: $VERSION"
                   sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/niri.spec
+                  sed -i "1s/niri ([^)]*/niri (${VERSION}ppa1/" distro/debian/niri/debian/changelog
                 fi
                 ;;
               quickshell)
                 VERSION=$(get_latest_version "outfoxxed/quickshell")
                 if [[ -n "$VERSION" ]]; then
-                  echo "📦 Updating quickshell spec to version: $VERSION"
+                  echo "📦 Updating quickshell to version: $VERSION"
                   sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/quickshell.spec
+                  sed -i "1s/quickshell ([^)]*/quickshell (${VERSION}ppa1/" distro/debian/quickshell/debian/changelog
                 fi
                 ;;
               xwayland-satellite)
                 VERSION=$(get_latest_version "Supreeeme/xwayland-satellite")
                 if [[ -n "$VERSION" ]]; then
-                  echo "📦 Updating xwayland-satellite spec to version: $VERSION"
+                  echo "📦 Updating xwayland-satellite to version: $VERSION"
                   sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/xwayland-satellite.spec
+                  sed -i "1s/xwayland-satellite ([^)]*/xwayland-satellite (${VERSION}ppa1/" distro/debian/xwayland-satellite/debian/changelog
                 fi
                 ;;
               *-git)

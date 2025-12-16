@@ -1,7 +1,6 @@
-dgop (0.1.11ppa1) nightly; urgency=medium
+dgop (0.1.12ppa2) unstable; urgency=medium
 
-  * Convert to native format for deterministic builds
-  * Stateless CPU/GPU monitoring tool
-  * Supports NVIDIA and AMD GPUs
+  * Rebuild to fix repository metadata issues
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Fri, 22 Nov 2025 22:00:00 -0500
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Mon, 15 Dec 2025 20:32:03 -0500
+

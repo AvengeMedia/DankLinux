@@ -1,8 +1,8 @@
-xwayland-satellite-git (0.8+git208.f0ad674bppa1) unstable; urgency=medium
+xwayland-satellite-git (0.8+git208.f0ad674bppa2) unstable; urgency=medium
 
-  * Git snapshot (commit 208: f0ad674b)
+  * Rebuild to fix repository metadata issues
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Wed, 10 Dec 2025 06:34:00 +0000
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Mon, 15 Dec 2025 20:33:28 -0500
 
 xwayland-satellite-git (0.8+git207.2f9981adppa1) unstable; urgency=medium
 
