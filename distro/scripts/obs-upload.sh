@@ -8,8 +8,8 @@
 #   ./distro/scripts/obs-upload.sh debian cliphist
 #   ./distro/scripts/obs-upload.sh opensuse niri
 #   ./distro/scripts/obs-upload.sh niri-git "Fix cargo vendor config"
-#   ./distro/scripts/obs-upload.sh debian niri-git 2    # Rebuild with ppa2 suffix
-#   ./distro/scripts/obs-upload.sh niri-git --rebuild=2 # Rebuild with ppa2 suffix (flag syntax)
+#   ./distro/scripts/obs-upload.sh debian niri-git 2    # Rebuild with db2 suffix
+#   ./distro/scripts/obs-upload.sh niri-git --rebuild=2 # Rebuild with db2 suffix (flag syntax)
 
 set -e
 
@@ -63,8 +63,8 @@ check_obs_version_exists() {
         OBS_VERSION=$(echo "$OBS_SPEC" | grep "^Version:" | awk '{print $2}' | xargs)
 
         if [[ "$CHECK_MODE" == "commit" ]] && [[ "$PACKAGE" == *"-git" ]]; then
-            OBS_COMMIT=$(echo "$OBS_VERSION" | grep -oP '\.([a-f0-9]{8})(ppa[0-9]+)?$' | grep -oP '[a-f0-9]{8}' || echo "")
-            NEW_COMMIT=$(echo "$VERSION" | grep -oP '\.([a-f0-9]{8})(ppa[0-9]+)?$' | grep -oP '[a-f0-9]{8}' || echo "")
+            OBS_COMMIT=$(echo "$OBS_VERSION" | grep -oP '\.([a-f0-9]{8})(db[0-9]+)?$' | grep -oP '[a-f0-9]{8}' || echo "")
+            NEW_COMMIT=$(echo "$VERSION" | grep -oP '\.([a-f0-9]{8})(db[0-9]+)?$' | grep -oP '[a-f0-9]{8}' || echo "")
 
             if [[ -n "$OBS_COMMIT" && -n "$NEW_COMMIT" && "$OBS_COMMIT" == "$NEW_COMMIT" ]]; then
                 echo "⚠️  Commit $NEW_COMMIT already exists in OBS (current version: $OBS_VERSION)"
@@ -272,8 +272,8 @@ fi
 
 # Apply rebuild suffix if specified (must happen before API check)
 if [[ -n "$REBUILD_RELEASE" ]] && [[ -n "$CHANGELOG_VERSION" ]]; then
-    CHANGELOG_VERSION=$(echo "$CHANGELOG_VERSION" | sed 's/ppa[0-9]*$//')
-    CHANGELOG_VERSION="${CHANGELOG_VERSION}ppa${REBUILD_RELEASE}"
+    CHANGELOG_VERSION=$(echo "$CHANGELOG_VERSION" | sed 's/db[0-9]*$//')
+    CHANGELOG_VERSION="${CHANGELOG_VERSION}db${REBUILD_RELEASE}"
     echo "  - Applied rebuild suffix: $CHANGELOG_VERSION"
 fi
 
@@ -306,7 +306,7 @@ if [[ -n "$CHANGELOG_VERSION" ]]; then
         # Rebuild number specified - check if this exact version already exists (exact mode)
         if check_obs_version_exists "$OBS_PROJECT" "$PACKAGE" "$CHANGELOG_VERSION" "exact"; then
             echo "==> Error: Version $CHANGELOG_VERSION already exists in OBS"
-            echo "    This exact version (including ppa${REBUILD_RELEASE}) is already uploaded."
+            echo "    This exact version (including db${REBUILD_RELEASE}) is already uploaded."
             echo "    To rebuild with a different release number, try incrementing:"
             NEXT_NUM=$((REBUILD_RELEASE + 1))
             echo "      ./distro/scripts/obs-upload.sh $PACKAGE $NEXT_NUM"
@@ -1221,7 +1221,7 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
     fi
     
     if [[ -n "$OLD_DSC_VERSION" ]] && [[ "$OLD_DSC_VERSION" == "$CHANGELOG_VERSION" ]]; then
-        # In CI without force_upload, skip if version unchanged (matching PPA behavior)
+        # In CI without force_upload, skip if version unchanged (matching DB behavior)
         if [[ -n "${GITHUB_ACTIONS:-}" ]] || [[ -n "${CI:-}" ]]; then
             if [[ "${IS_FORCE_UPLOAD}" != "true" ]] && [[ "$IS_MANUAL" != "true" ]]; then
                 echo "==> Same version detected in CI (current: $OLD_DSC_VERSION), skipping upload"
@@ -1232,7 +1232,7 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
 
         # Only increment version when explicitly specified via REBUILD_RELEASE
         if [[ -n "$REBUILD_RELEASE" ]]; then
-            echo "==> Using specified rebuild release: ppa$REBUILD_RELEASE"
+            echo "==> Using specified rebuild release: db$REBUILD_RELEASE"
             USE_REBUILD_NUM="$REBUILD_RELEASE"
         elif [[ -n "${GITHUB_ACTIONS:-}" ]] || [[ -n "${CI:-}" ]]; then
             # In CI without rebuild_release, skip cleanly
@@ -1248,27 +1248,27 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
             exit 1
         fi
         
-        if [[ "$CHANGELOG_VERSION" =~ ^([0-9.]+)ppa([0-9]+)$ ]]; then
+        if [[ "$CHANGELOG_VERSION" =~ ^([0-9.]+)db([0-9]+)$ ]]; then
             BASE_VERSION="${BASH_REMATCH[1]}"
-            NEW_VERSION="${BASE_VERSION}ppa${USE_REBUILD_NUM}"
-            echo "  Setting PPA number to specified value: $CHANGELOG_VERSION -> $NEW_VERSION"
-        elif [[ "$CHANGELOG_VERSION" =~ ^([0-9.]+)\+git([0-9]+)(\.[a-f0-9]+)?(ppa([0-9]+))?$ ]]; then
+            NEW_VERSION="${BASE_VERSION}db${USE_REBUILD_NUM}"
+            echo "  Setting DB number to specified value: $CHANGELOG_VERSION -> $NEW_VERSION"
+        elif [[ "$CHANGELOG_VERSION" =~ ^([0-9.]+)\+git([0-9]+)(\.[a-f0-9]+)?(db([0-9]+))?$ ]]; then
             BASE_VERSION="${BASH_REMATCH[1]}"
             GIT_NUM="${BASH_REMATCH[2]}"
             GIT_HASH="${BASH_REMATCH[3]}"
-            NEW_VERSION="${BASE_VERSION}+git${GIT_NUM}${GIT_HASH}ppa${USE_REBUILD_NUM}"
-            echo "  Setting PPA number to specified value: $CHANGELOG_VERSION -> $NEW_VERSION"
-        elif [[ "$CHANGELOG_VERSION" =~ ^([0-9.]+)\+gitppa([0-9]+)$ ]]; then
+            NEW_VERSION="${BASE_VERSION}+git${GIT_NUM}${GIT_HASH}db${USE_REBUILD_NUM}"
+            echo "  Setting DB number to specified value: $CHANGELOG_VERSION -> $NEW_VERSION"
+        elif [[ "$CHANGELOG_VERSION" =~ ^([0-9.]+)\+gitdb([0-9]+)$ ]]; then
             BASE_VERSION="${BASH_REMATCH[1]}"
-            NEW_VERSION="${BASE_VERSION}+gitppa${USE_REBUILD_NUM}"
-            echo "  Setting PPA number to specified value: $CHANGELOG_VERSION -> $NEW_VERSION"
+            NEW_VERSION="${BASE_VERSION}+gitdb${USE_REBUILD_NUM}"
+            echo "  Setting DB number to specified value: $CHANGELOG_VERSION -> $NEW_VERSION"
         elif [[ "$CHANGELOG_VERSION" =~ ^([0-9.]+)(-([0-9]+))?$ ]]; then
             BASE_VERSION="${BASH_REMATCH[1]}"
-            NEW_VERSION="${BASE_VERSION}ppa${USE_REBUILD_NUM}"
-            echo "  Warning: Native format cannot have Debian revision, converting to PPA format: $CHANGELOG_VERSION -> $NEW_VERSION"
+            NEW_VERSION="${BASE_VERSION}db${USE_REBUILD_NUM}"
+            echo "  Warning: Native format cannot have Debian revision, converting to DB format: $CHANGELOG_VERSION -> $NEW_VERSION"
         else
-            NEW_VERSION="${CHANGELOG_VERSION}ppa${USE_REBUILD_NUM}"
-            echo "  Warning: Could not parse version format, appending ppa${USE_REBUILD_NUM}: $CHANGELOG_VERSION -> $NEW_VERSION"
+            NEW_VERSION="${CHANGELOG_VERSION}db${USE_REBUILD_NUM}"
+            echo "  Warning: Could not parse version format, appending db${USE_REBUILD_NUM}: $CHANGELOG_VERSION -> $NEW_VERSION"
         fi
         
         REPO_CHANGELOG="$REPO_ROOT/distro/debian/$PACKAGE/debian/changelog"

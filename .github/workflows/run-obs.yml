@@ -130,8 +130,8 @@ jobs:
                 ;;
             esac
 
-            # Strip ppa suffix from OBS version for comparison
-            local obs_version_clean=$(echo "$obs_version" | sed 's/ppa[0-9]*$//')
+            # Strip db suffix from OBS version for comparison
+            local obs_version_clean=$(echo "$obs_version" | sed 's/db[0-9]*$//')
 
             if [[ -n "$upstream_version" && "$upstream_version" != "$obs_version_clean" ]]; then
               echo "📋 $package: New version $upstream_version (OBS has $obs_version_clean)"
@@ -154,7 +154,7 @@ jobs:
               echo "packages=$MANUAL_PKG" >> $GITHUB_OUTPUT
             fi
             echo "has_updates=true" >> $GITHUB_OUTPUT
-            echo "🔄 Manual rebuild requested: $MANUAL_PKG (ppa$REBUILD)"
+            echo "🔄 Manual rebuild requested: $MANUAL_PKG (db$REBUILD)"
 
           elif [[ "${{ github.event_name }}" == "schedule" ]]; then
             # Scheduled run - check git packages only
@@ -255,7 +255,7 @@ jobs:
                 if [[ -n "$VERSION" ]]; then
                   echo "📦 Updating danksearch to version: $VERSION"
                   sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/danksearch.spec
-                  sed -i "1s/danksearch ([^)]*/danksearch (${VERSION}ppa1/" distro/debian/danksearch/debian/changelog
+                  sed -i "1s/danksearch ([^)]*/danksearch (${VERSION}db1/" distro/debian/danksearch/debian/changelog
                 fi
                 ;;
               dgop)
@@ -263,7 +263,7 @@ jobs:
                 if [[ -n "$VERSION" ]]; then
                   echo "📦 Updating dgop to version: $VERSION"
                   sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/dgop.spec
-                  sed -i "1s/dgop ([^)]*/dgop (${VERSION}ppa1/" distro/debian/dgop/debian/changelog
+                  sed -i "1s/dgop ([^)]*/dgop (${VERSION}db1/" distro/debian/dgop/debian/changelog
                 fi
                 ;;
               ghostty)
@@ -271,7 +271,7 @@ jobs:
                 if [[ -n "$VERSION" ]]; then
                   echo "📦 Updating ghostty to version: $VERSION"
                   sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/ghostty.spec
-                  sed -i "1s/ghostty ([^)]*/ghostty (${VERSION}ppa1/" distro/debian/ghostty/debian/changelog
+                  sed -i "1s/ghostty ([^)]*/ghostty (${VERSION}db1/" distro/debian/ghostty/debian/changelog
                 fi
                 ;;
               cliphist)
@@ -279,7 +279,7 @@ jobs:
                 if [[ -n "$VERSION" ]]; then
                   echo "📦 Updating cliphist to version: $VERSION"
                   sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/cliphist.spec
-                  sed -i "1s/cliphist ([^)]*/cliphist (${VERSION}ppa1/" distro/debian/cliphist/debian/changelog
+                  sed -i "1s/cliphist ([^)]*/cliphist (${VERSION}db1/" distro/debian/cliphist/debian/changelog
                 fi
                 ;;
               matugen)
@@ -287,7 +287,7 @@ jobs:
                 if [[ -n "$VERSION" ]]; then
                   echo "📦 Updating matugen to version: $VERSION"
                   sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/matugen.spec
-                  sed -i "1s/matugen ([^)]*/matugen (${VERSION}ppa1/" distro/debian/matugen/debian/changelog
+                  sed -i "1s/matugen ([^)]*/matugen (${VERSION}db1/" distro/debian/matugen/debian/changelog
                 fi
                 ;;
               niri)
@@ -295,7 +295,7 @@ jobs:
                 if [[ -n "$VERSION" ]]; then
                   echo "📦 Updating niri to version: $VERSION"
                   sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/niri.spec
-                  sed -i "1s/niri ([^)]*/niri (${VERSION}ppa1/" distro/debian/niri/debian/changelog
+                  sed -i "1s/niri ([^)]*/niri (${VERSION}db1/" distro/debian/niri/debian/changelog
                 fi
                 ;;
               quickshell)
@@ -303,7 +303,7 @@ jobs:
                 if [[ -n "$VERSION" ]]; then
                   echo "📦 Updating quickshell to version: $VERSION"
                   sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/quickshell.spec
-                  sed -i "1s/quickshell ([^)]*/quickshell (${VERSION}ppa1/" distro/debian/quickshell/debian/changelog
+                  sed -i "1s/quickshell ([^)]*/quickshell (${VERSION}db1/" distro/debian/quickshell/debian/changelog
                 fi
                 ;;
               xwayland-satellite)
@@ -311,7 +311,7 @@ jobs:
                 if [[ -n "$VERSION" ]]; then
                   echo "📦 Updating xwayland-satellite to version: $VERSION"
                   sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/xwayland-satellite.spec
-                  sed -i "1s/xwayland-satellite ([^)]*/xwayland-satellite (${VERSION}ppa1/" distro/debian/xwayland-satellite/debian/changelog
+                  sed -i "1s/xwayland-satellite ([^)]*/xwayland-satellite (${VERSION}db1/" distro/debian/xwayland-satellite/debian/changelog
                 fi
                 ;;
               *-git)
@@ -372,7 +372,7 @@ jobs:
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo "Uploading $PKG to OBS..."
             if [[ -n "$REBUILD_RELEASE" ]]; then
-              echo "🔄 Using rebuild release number: ppa$REBUILD_RELEASE"
+              echo "🔄 Using rebuild release number: db$REBUILD_RELEASE"
             fi
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
@@ -402,7 +402,7 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
 
             if [[ -n "${{ github.event.inputs.rebuild_release }}" ]]; then
-              echo "**Rebuild Number:** ppa${{ github.event.inputs.rebuild_release }}" >> $GITHUB_STEP_SUMMARY
+              echo "**Rebuild Number:** db${{ github.event.inputs.rebuild_release }}" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
             fi
 
