@@ -11,8 +11,8 @@
 
 📦 Checking dgop...
    Current: 0.1.11
-   Latest:  0.1.11
-   ✓ Already up to date
+   Latest:  0.1.12
+   ✨ Update available: 0.1.11 → 0.1.12
 
 📦 Checking cliphist...
    Current: 0.7.0
@@ -50,4 +50,7 @@
    Skipping automatic updates for font file
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✓ All packages are up to date
+✅ Updated 1 package(s):
+   • dgop: 0.1.11 → 0.1.12
+
+📝 Changes staged for commit
