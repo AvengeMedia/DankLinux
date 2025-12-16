@@ -281,7 +281,10 @@ fi
 if [[ -n "$CHANGELOG_VERSION" ]]; then
     if [[ -z "$REBUILD_RELEASE" ]]; then
         if check_obs_version_exists "$OBS_PROJECT" "$PACKAGE" "$CHANGELOG_VERSION"; then
-            if [[ "$PACKAGE" == *"-git" ]]; then
+            if [[ -n "${GITHUB_ACTIONS:-}" ]] || [[ -n "${CI:-}" ]]; then
+                echo "==> Version $CHANGELOG_VERSION already exists in OBS, skipping upload in CI"
+                exit 0
+            elif [[ "$PACKAGE" == *"-git" ]]; then
                 echo "==> Error: This commit is already uploaded to OBS"
                 echo "    The same git commit ($(echo "$CHANGELOG_VERSION" | grep -oP '[a-f0-9]{8}' | tail -1)) already exists on OBS."
                 echo "    To rebuild the same commit, specify a rebuild number:"
@@ -289,14 +292,15 @@ if [[ -n "$CHANGELOG_VERSION" ]]; then
                 echo "      ./distro/scripts/obs-upload.sh $PACKAGE 3"
                 echo "    Or push a new commit first, then run:"
                 echo "      ./distro/scripts/obs-upload.sh $PACKAGE"
+                exit 1
             else
                 echo "==> Error: Version $CHANGELOG_VERSION already exists in OBS"
                 echo "    To rebuild with a different release number, try:"
                 echo "      ./distro/scripts/obs-upload.sh $PACKAGE --rebuild=2"
                 echo "    or positional syntax:"
                 echo "      ./distro/scripts/obs-upload.sh $PACKAGE 2"
+                exit 1
             fi
-            exit 1
         fi
     else
         # Rebuild number specified - check if this exact version already exists (exact mode)
@@ -825,12 +829,17 @@ CARGO_CONFIG_EOF
                 echo "  🔄 Using manual rebuild release number: $REBUILD_RELEASE"
                 sed -i "s/^Release:[[:space:]]*${NEW_RELEASE}%{?dist}/Release:        ${REBUILD_RELEASE}%{?dist}/" "$WORK_DIR/$PACKAGE.spec"
             elif [[ "$NEW_VERSION" == "$OLD_VERSION" ]]; then
-                echo "  - Error: Same version detected ($NEW_VERSION) but no rebuild number specified"
-                echo "    To rebuild, explicitly specify a rebuild number:"
-                echo "      ./distro/scripts/obs-upload.sh opensuse $PACKAGE 2"
-                echo "    or use flag syntax:"
-                echo "      ./distro/scripts/obs-upload.sh opensuse $PACKAGE --rebuild=2"
-                exit 1
+                if [[ -n "${GITHUB_ACTIONS:-}" ]] || [[ -n "${CI:-}" ]]; then
+                    echo "  - Same version detected in CI ($NEW_VERSION), skipping upload"
+                    exit 0
+                else
+                    echo "  - Error: Same version detected ($NEW_VERSION) but no rebuild number specified"
+                    echo "    To rebuild, explicitly specify a rebuild number:"
+                    echo "      ./distro/scripts/obs-upload.sh opensuse $PACKAGE 2"
+                    echo "    or use flag syntax:"
+                    echo "      ./distro/scripts/obs-upload.sh opensuse $PACKAGE --rebuild=2"
+                    exit 1
+                fi
             else
                 echo "  - New version detected: $OLD_VERSION -> $NEW_VERSION (keeping release $NEW_RELEASE)"
             fi
@@ -856,12 +865,17 @@ CARGO_CONFIG_EOF
                 echo "  🔄 Using manual rebuild release number: $REBUILD_RELEASE"
                 sed -i "s/^Release:[[:space:]]*${NEW_RELEASE}%{?dist}/Release:        ${REBUILD_RELEASE}%{?dist}/" "$WORK_DIR/$PACKAGE.spec"
             elif [[ "$NEW_VERSION" == "$OLD_VERSION" ]]; then
-                echo "  - Error: Same version detected ($NEW_VERSION) but no rebuild number specified"
-                echo "    To rebuild, explicitly specify a rebuild number:"
-                echo "      ./distro/scripts/obs-upload.sh opensuse $PACKAGE 2"
-                echo "    or use flag syntax:"
-                echo "      ./distro/scripts/obs-upload.sh opensuse $PACKAGE --rebuild=2"
-                exit 1
+                if [[ -n "${GITHUB_ACTIONS:-}" ]] || [[ -n "${CI:-}" ]]; then
+                    echo "  - Same version detected in CI ($NEW_VERSION), skipping upload"
+                    exit 0
+                else
+                    echo "  - Error: Same version detected ($NEW_VERSION) but no rebuild number specified"
+                    echo "    To rebuild, explicitly specify a rebuild number:"
+                    echo "      ./distro/scripts/obs-upload.sh opensuse $PACKAGE 2"
+                    echo "    or use flag syntax:"
+                    echo "      ./distro/scripts/obs-upload.sh opensuse $PACKAGE --rebuild=2"
+                    exit 1
+                fi
             else
                 echo "  - New version detected: $OLD_VERSION -> $NEW_VERSION (keeping release $NEW_RELEASE)"
             fi
@@ -1048,12 +1062,17 @@ EOF
                 echo "  🔄 Using manual rebuild release number: $REBUILD_RELEASE"
                 sed -i "s/^Release:[[:space:]]*${NEW_RELEASE}%{?dist}/Release:        ${REBUILD_RELEASE}%{?dist}/" "$WORK_DIR/$PACKAGE.spec"
             elif [[ "$NEW_VERSION" == "$OLD_VERSION" ]]; then
-                echo "  - Error: Same version detected ($NEW_VERSION) but no rebuild number specified"
-                echo "    To rebuild, explicitly specify a rebuild number:"
-                echo "      ./distro/scripts/obs-upload.sh opensuse $PACKAGE 2"
-                echo "    or use flag syntax:"
-                echo "      ./distro/scripts/obs-upload.sh opensuse $PACKAGE --rebuild=2"
-                exit 1
+                if [[ -n "${GITHUB_ACTIONS:-}" ]] || [[ -n "${CI:-}" ]]; then
+                    echo "  - Same version detected in CI ($NEW_VERSION), skipping upload"
+                    exit 0
+                else
+                    echo "  - Error: Same version detected ($NEW_VERSION) but no rebuild number specified"
+                    echo "    To rebuild, explicitly specify a rebuild number:"
+                    echo "      ./distro/scripts/obs-upload.sh opensuse $PACKAGE 2"
+                    echo "    or use flag syntax:"
+                    echo "      ./distro/scripts/obs-upload.sh opensuse $PACKAGE --rebuild=2"
+                    exit 1
+                fi
             else
                 echo "  - New version detected: $OLD_VERSION -> $NEW_VERSION (keeping release $NEW_RELEASE)"
             fi

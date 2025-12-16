@@ -250,47 +250,6 @@ jobs:
             echo "Packages to upload: $PACKAGES"
           fi
 
-      - name: Update git package versions inline
-        if: contains(steps.packages.outputs.packages, '-git') || steps.packages.outputs.packages == 'all'
-        run: |
-          # Update each -git package spec with current commit
-          for pkg in niri-git quickshell-git xwayland-satellite-git; do
-            if [[ "${{ steps.packages.outputs.packages }}" == *"$pkg"* ]] || [[ "${{ steps.packages.outputs.packages }}" == "all" ]]; then
-              if [[ -f "distro/opensuse/$pkg.spec" ]]; then
-                COMMIT_HASH=$(git rev-parse --short=8 HEAD)
-                COMMIT_COUNT=$(git rev-list --count HEAD)
-                BASE_VERSION=$(grep -oP '^Version:\s+\K[0-9.]+' distro/opensuse/${pkg%-git}.spec 2>/dev/null || grep -oP '^Version:\s+\K[0-9.]+' distro/opensuse/$pkg.spec | head -1)
-                NEW_VERSION="${BASE_VERSION}+git${COMMIT_COUNT}.${COMMIT_HASH}"
-
-                echo "📦 Updating $pkg spec to version: $NEW_VERSION"
-                sed -i "s/^Version:.*/Version:        $NEW_VERSION/" "distro/opensuse/$pkg.spec"
-
-                # Update changelog in spec
-                DATE_STR=$(date "+%a %b %d %Y")
-                LOCAL_SPEC_HEAD=$(sed -n '1,/%changelog/{ /%changelog/d; p }' "distro/opensuse/$pkg.spec")
-                {
-                  echo "$LOCAL_SPEC_HEAD"
-                  echo "%changelog"
-                  echo "* $DATE_STR Avenge Media <AvengeMedia.US@gmail.com> - ${NEW_VERSION}-1"
-                  echo "- Git snapshot (commit $COMMIT_COUNT: $COMMIT_HASH)"
-                } > "distro/opensuse/$pkg.spec"
-
-                # Update Debian changelog inline (no commit)
-                if [[ -f "distro/debian/$pkg/debian/changelog" ]]; then
-                  CHANGELOG_DATE=$(date -R)
-                  {
-                    echo "$pkg ($NEW_VERSION) nightly; urgency=medium"
-                    echo ""
-                    echo "  * Git snapshot (commit $COMMIT_COUNT: $COMMIT_HASH)"
-                    echo ""
-                    echo " -- Avenge Media <AvengeMedia.US@gmail.com>  $CHANGELOG_DATE"
-                  } > "distro/debian/$pkg/debian/changelog"
-                  echo "✓ Updated Debian changelog for $pkg"
-                fi
-              fi
-            fi
-          done
-
       - name: Install dependencies
         run: |
           sudo apt-get update
