@@ -90,21 +90,10 @@ jobs:
               return 0  # New package, needs upload
             fi
 
-            # For -git packages, check if commits differ
+            # For -git packages versioned by obs-upload
             if [[ "$package" == *"-git" ]]; then
-              # Get current git commit directly (NOT from spec file!)
-              local current_commit=$(git rev-parse --short=8 HEAD)
-
-              # Extract commit from OBS version via API
-              local obs_commit=$(echo "$obs_version" | grep -oP '\.([a-f0-9]{8})(ppa[0-9]+)?$' | grep -oP '[a-f0-9]{8}' | head -1 || echo "")
-
-              if [[ -n "$current_commit" && -n "$obs_commit" && "$current_commit" == "$obs_commit" ]]; then
-                echo "📋 $package: Commit $current_commit already on OBS"
-                return 1  # No update needed
-              else
-                echo "📋 $package: New commit $current_commit (OBS has ${obs_commit:-none})"
-                return 0  # Update needed
-              fi
+              echo "📋 $package: Git package - will check upstream during upload"
+              return 0  # Always attempt upload for git packages in scheduled runs
             fi
 
             # For stable packages, check upstream GitHub releases
@@ -249,6 +238,80 @@ jobs:
             echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
             echo "Packages to upload: $PACKAGES"
           fi
+
+      - name: Update spec files with latest versions
+        run: |
+          # Helper function to get latest version from GitHub
+          get_latest_version() {
+            local repo="$1"
+            curl -s "https://api.github.com/repos/$repo/releases/latest" | grep '"tag_name"' | sed 's/.*"tag_name": "v\?\([^"]*\)".*/\1/' || echo ""
+          }
+
+          # Update spec files for packages that need updates
+          for pkg in ${{ steps.packages.outputs.packages }}; do
+            case "$pkg" in
+              danksearch)
+                VERSION=$(get_latest_version "AvengeMedia/DankSearch")
+                if [[ -n "$VERSION" ]]; then
+                  echo "📦 Updating danksearch spec to version: $VERSION"
+                  sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/danksearch.spec
+                fi
+                ;;
+              dgop)
+                VERSION=$(get_latest_version "AvengeMedia/DGoP")
+                if [[ -n "$VERSION" ]]; then
+                  echo "📦 Updating dgop spec to version: $VERSION"
+                  sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/dgop.spec
+                fi
+                ;;
+              ghostty)
+                VERSION=$(get_latest_version "ghostty-org/ghostty")
+                if [[ -n "$VERSION" ]]; then
+                  echo "📦 Updating ghostty spec to version: $VERSION"
+                  sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/ghostty.spec
+                fi
+                ;;
+              cliphist)
+                VERSION=$(get_latest_version "sentriz/cliphist")
+                if [[ -n "$VERSION" ]]; then
+                  echo "📦 Updating cliphist spec to version: $VERSION"
+                  sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/cliphist.spec
+                fi
+                ;;
+              matugen)
+                VERSION=$(get_latest_version "InioX/matugen")
+                if [[ -n "$VERSION" ]]; then
+                  echo "📦 Updating matugen spec to version: $VERSION"
+                  sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/matugen.spec
+                fi
+                ;;
+              niri)
+                VERSION=$(get_latest_version "YaLTeR/niri")
+                if [[ -n "$VERSION" ]]; then
+                  echo "📦 Updating niri spec to version: $VERSION"
+                  sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/niri.spec
+                fi
+                ;;
+              quickshell)
+                VERSION=$(get_latest_version "outfoxxed/quickshell")
+                if [[ -n "$VERSION" ]]; then
+                  echo "📦 Updating quickshell spec to version: $VERSION"
+                  sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/quickshell.spec
+                fi
+                ;;
+              xwayland-satellite)
+                VERSION=$(get_latest_version "Supreeeme/xwayland-satellite")
+                if [[ -n "$VERSION" ]]; then
+                  echo "📦 Updating xwayland-satellite spec to version: $VERSION"
+                  sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/xwayland-satellite.spec
+                fi
+                ;;
+              *-git)
+                # Git packages are handled by obs-upload.sh (clones upstream repos)
+                echo "⏭️  Skipping $pkg - git packages fetch versions dynamically"
+                ;;
+            esac
+          done
 
       - name: Install dependencies
         run: |
