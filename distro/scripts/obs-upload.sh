@@ -278,7 +278,8 @@ if [[ -n "$REBUILD_RELEASE" ]] && [[ -n "$CHANGELOG_VERSION" ]]; then
 fi
 
 # Check if this version already exists in OBS (unless rebuild is specified)
-if [[ -n "$CHANGELOG_VERSION" ]]; then
+# Only check via spec file if package has OpenSUSE support (spec file exists locally)
+if [[ -n "$CHANGELOG_VERSION" ]] && [[ -f "distro/opensuse/$PACKAGE.spec" ]]; then
     if [[ -z "$REBUILD_RELEASE" ]]; then
         if check_obs_version_exists "$OBS_PROJECT" "$PACKAGE" "$CHANGELOG_VERSION"; then
             if [[ -n "${GITHUB_ACTIONS:-}" ]] || [[ -n "${CI:-}" ]]; then
@@ -1083,16 +1084,19 @@ EOF
 fi
 
 # Server-side cleanup via API
-echo "==> Cleaning old tarballs from OBS server (prevents downloading 100+ old versions)"
+echo "==> Cleaning old tarballs and .dsc files from OBS server (prevents downloading 100+ old versions)"
 OBS_FILES=$(osc api "/source/$OBS_PROJECT/$PACKAGE" 2>/dev/null || echo "")
 if [[ -n "$OBS_FILES" ]]; then
     DELETED_COUNT=0
     KEEP_CURRENT=""
+    KEEP_CURRENT_DSC=""
     if [[ -n "$CHANGELOG_VERSION" ]]; then
         KEEP_CURRENT="${PACKAGE}_${CHANGELOG_VERSION}.tar.gz"
-        echo "  Keeping only current version: ${KEEP_CURRENT}"
+        KEEP_CURRENT_DSC="${PACKAGE}.dsc"
+        echo "  Keeping only current version: ${KEEP_CURRENT} and ${KEEP_CURRENT_DSC}"
     fi
 
+    # Clean up old tarballs
     for old_file in $(echo "$OBS_FILES" | grep -oP '(?<=name=")[^"]*\.(tar\.gz|tar\.xz|tar\.bz2)(?=")' || true); do
         if [[ "$old_file" == "$KEEP_CURRENT" ]]; then
             echo "  - Keeping: $old_file"
@@ -1110,10 +1114,19 @@ if [[ -n "$OBS_FILES" ]]; then
             ((DELETED_COUNT++)) || true
         fi
     done
+
+    # Clean up old and delete .dsc files
+    for old_dsc in $(echo "$OBS_FILES" | grep -oP '(?<=name=")[^"]*\.dsc(?=")' || true); do
+        echo "  - Deleting old .dsc from server: $old_dsc (will be regenerated)"
+        if osc api -X DELETE "/source/$OBS_PROJECT/$PACKAGE/$old_dsc" 2>/dev/null; then
+            ((DELETED_COUNT++)) || true
+        fi
+    done
+
     if [[ $DELETED_COUNT -gt 0 ]]; then
-        echo "  ✓ Deleted $DELETED_COUNT old tarball(s) from server"
+        echo "  ✓ Deleted $DELETED_COUNT old file(s) from server"
     else
-        echo "  ✓ No old tarballs found on server (current version preserved)"
+        echo "  ✓ No old files found on server (current version preserved)"
     fi
 else
     echo "  ⚠️  Could not fetch file list from server, skipping cleanup"
