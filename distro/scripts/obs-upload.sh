@@ -223,6 +223,12 @@ if [[ ! -d "distro/debian/$PACKAGE" ]]; then
     exit 1
 fi
 
+# niri stable is Debian-only (OpenSUSE uses niri-git)
+if [[ "$PACKAGE" == "niri" && "$UPLOAD_OPENSUSE" == true ]]; then
+    echo "==> Note: niri stable is Debian-only (openSUSE builds niri-git)"
+    UPLOAD_OPENSUSE=false
+fi
+
 OBS_PROJECT="${OBS_BASE_PROJECT}:${PROJECT}"
 
 echo "==> Target: $OBS_PROJECT / $PACKAGE"
@@ -658,10 +664,6 @@ CARGO_CONFIG_EOF
     
     if [[ "$PACKAGE" != "matugen" ]]; then
         ORIGINAL_SOURCE_DIR="$SOURCE_DIR"
-    fi
-    if [[ "$PACKAGE" == "niri" && "$UPLOAD_OPENSUSE" == true ]]; then
-        echo "  - Note: niri stable is Debian-only (openSUSE builds niri-git)"
-        UPLOAD_OPENSUSE=false
     fi
 
     SKIP_OPENSUSE_TARBALL=false
