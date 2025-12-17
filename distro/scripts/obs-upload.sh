@@ -1105,9 +1105,9 @@ if [[ -n "$OBS_FILES" ]]; then
             continue
         fi
 
-        # Keep source tarballs (for packages like matugen that use separate source tarballs)
-        if [[ "$old_file" == "${PACKAGE}-source.tar.gz" ]]; then
-            echo "  - Keeping: $old_file (source tarball)"
+        # Keep source tarballs (for OpenSUSE packages - pattern: *-source.tar.*)
+        if [[ "$old_file" =~ -source\.tar\.(gz|xz|bz2)$ ]]; then
+            echo "  - Keeping: $old_file (source tarball for OpenSUSE)"
             continue
         fi
 

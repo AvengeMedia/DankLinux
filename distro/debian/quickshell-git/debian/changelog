@@ -1,8 +1,8 @@
-quickshell-git (0.2.1+git713.26531fc4db1) unstable; urgency=medium
+quickshell-git (0.2.1+git713.26531fc4db5db6db6) unstable; urgency=medium
 
   * Rebuild to fix repository metadata issues
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Mon, 15 Dec 2025 20:55:47 -0500
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Tue, 16 Dec 2025 23:53:22 -0500
 
 quickshell-git (0.2.1+git710.d24e8e97ppa1) unstable; urgency=medium
 
