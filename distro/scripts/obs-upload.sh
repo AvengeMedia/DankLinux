@@ -1085,41 +1085,42 @@ EOF
     fi
 fi
 
-# Server-side cleanup via API
-echo "==> Cleaning old tarballs and .dsc files from OBS server (prevents downloading 100+ old versions)"
+cd "$WORK_DIR"
+
+# Server-side cleanup via API (before osc up to prevent re-downloading old files)
+echo "==> Cleaning old tarballs and .dsc files from OBS server (prevents re-uploading old versions)"
 OBS_FILES=$(osc api "/source/$OBS_PROJECT/$PACKAGE" 2>/dev/null || echo "")
 if [[ -n "$OBS_FILES" ]]; then
     DELETED_COUNT=0
     KEEP_CURRENT=""
-    KEEP_CURRENT_DSC=""
     if [[ -n "$CHANGELOG_VERSION" ]]; then
         KEEP_CURRENT="${PACKAGE}_${CHANGELOG_VERSION}.tar.gz"
-        KEEP_CURRENT_DSC="${PACKAGE}.dsc"
-        echo "  Keeping only current version: ${KEEP_CURRENT} and ${KEEP_CURRENT_DSC}"
+        echo "  Keeping current version: ${KEEP_CURRENT}"
     fi
 
-    # Clean up old tarballs
+    # Clean up old tarballs (except current version and source tarballs)
     for old_file in $(echo "$OBS_FILES" | grep -oP '(?<=name=")[^"]*\.(tar\.gz|tar\.xz|tar\.bz2)(?=")' || true); do
         if [[ "$old_file" == "$KEEP_CURRENT" ]]; then
-            echo "  - Keeping: $old_file"
+            echo "  - Keeping: $old_file (current version)"
             continue
         fi
 
-        # Keep source tarballs (for binary-download packages)
+        # Keep source tarballs (for packages like matugen that use separate source tarballs)
         if [[ "$old_file" == "${PACKAGE}-source.tar.gz" ]]; then
-            echo "  - Keeping source tarball: $old_file"
+            echo "  - Keeping: $old_file (source tarball)"
             continue
         fi
 
-        echo "  - Deleting from server: $old_file"
+        echo "  - Deleting old tarball from server: $old_file"
         if osc api -X DELETE "/source/$OBS_PROJECT/$PACKAGE/$old_file" 2>/dev/null; then
             ((DELETED_COUNT++)) || true
         fi
     done
 
-    # Clean up old and delete .dsc files
+    # Clean up ALL .dsc files (they will be regenerated with correct tarball references)
+    # This prevents stale .dsc files from referencing missing tarballs
     for old_dsc in $(echo "$OBS_FILES" | grep -oP '(?<=name=")[^"]*\.dsc(?=")' || true); do
-        echo "  - Deleting old .dsc from server: $old_dsc (will be regenerated)"
+        echo "  - Deleting .dsc from server: $old_dsc (will be regenerated)"
         if osc api -X DELETE "/source/$OBS_PROJECT/$PACKAGE/$old_dsc" 2>/dev/null; then
             ((DELETED_COUNT++)) || true
         fi
@@ -1128,13 +1129,11 @@ if [[ -n "$OBS_FILES" ]]; then
     if [[ $DELETED_COUNT -gt 0 ]]; then
         echo "  ✓ Deleted $DELETED_COUNT old file(s) from server"
     else
-        echo "  ✓ No old files found on server (current version preserved)"
+        echo "  ✓ No old files to clean up"
     fi
 else
     echo "  ⚠️  Could not fetch file list from server, skipping cleanup"
 fi
-
-cd "$WORK_DIR"
 
 echo "==> Staging artifacts for potential recovery..."
 cp -a *.tar.gz *.tar.xz *.tar.bz2 *.tar *.spec *.dsc _service "$ARTIFACT_STAGING/" 2>/dev/null || true
