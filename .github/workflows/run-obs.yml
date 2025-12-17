@@ -376,7 +376,11 @@ jobs:
             fi
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-            bash distro/scripts/obs-upload.sh "$PKG" "$MESSAGE"
+            if [[ -n "$REBUILD_RELEASE" ]]; then
+              bash distro/scripts/obs-upload.sh "$PKG" "$MESSAGE" "$REBUILD_RELEASE"
+            else
+              bash distro/scripts/obs-upload.sh "$PKG" "$MESSAGE"
+            fi
           done
 
       - name: Summary
