@@ -1,0 +1,5 @@
+dgop (0.1.12ppa2) questing; urgency=medium
+
+  * Rebuild for packaging fixes (ppa2)
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Wed, 17 Dec 2025 22:47:49 -0500

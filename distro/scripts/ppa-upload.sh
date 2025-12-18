@@ -35,7 +35,7 @@ fi
 TEMP_DIR=$(mktemp -d "$TEMP_BASE/ppa_build_XXXXXX")
 trap "rm -rf $TEMP_DIR" EXIT
 
-AVAILABLE_PACKAGES=(cliphist ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git)
+AVAILABLE_PACKAGES=(cliphist danksearch dgop ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git)
 KEEP_BUILDS=false
 BUILD_ONLY=false
 REBUILD_RELEASE=""
@@ -53,7 +53,7 @@ for arg in "$@"; do
             REBUILD_NEXT=true
             ;;
         *)
-            if [[ -n "${REBUILD_NEXT:-}" ]]; then
+            if [[ "${REBUILD_NEXT:-false}" == "true" ]]; then
                 REBUILD_RELEASE="$arg"
                 REBUILD_NEXT=false
             else
@@ -62,6 +62,10 @@ for arg in "$@"; do
             ;;
     esac
 done
+
+PACKAGE="${POSITIONAL_ARGS[0]:-}"
+PPA_NAME="${POSITIONAL_ARGS[1]:-danklinux}"
+UBUNTU_SERIES="${POSITIONAL_ARGS[2]:-questing}"
 
 # Check if last positional argument is a number (rebuild release)
 if [[ ${#POSITIONAL_ARGS[@]} -gt 0 ]]; then
@@ -72,12 +76,12 @@ if [[ ${#POSITIONAL_ARGS[@]} -gt 0 ]]; then
         # Use it as rebuild release and remove from positional args
         REBUILD_RELEASE="$LAST_ARG"
         POSITIONAL_ARGS=("${POSITIONAL_ARGS[@]:0:$LAST_INDEX}")
+        # Re-assign variables after slicing array
+        PACKAGE="${POSITIONAL_ARGS[0]:-}"
+        PPA_NAME="${POSITIONAL_ARGS[1]:-danklinux}"
+        UBUNTU_SERIES="${POSITIONAL_ARGS[2]:-questing}"
     fi
 fi
-
-PACKAGE="${POSITIONAL_ARGS[0]:-}"
-PPA_NAME="${POSITIONAL_ARGS[1]:-danklinux}"
-UBUNTU_SERIES="${POSITIONAL_ARGS[2]:-questing}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -853,9 +857,35 @@ case "$PACKAGE_NAME" in
         fi
         ;;
     dgop)
-        # dgop binary should already be committed in the repo
-        if [ ! -f "dgop" ]; then
-            warn "dgop binary not found - should be committed to repo"
+        info "Downloading pre-built binaries for dgop..."
+        # Get version from changelog (remove ppa suffix for both quilt and native formats)
+        # Native: 0.1.12ppa1 -> 0.1.12, Quilt: 0.1.12-1ppa1 -> 0.1.12
+        VERSION=$(dpkg-parsechangelog -S Version | sed 's/-[^-]*$//' | sed 's/ppa[0-9]*$//')
+
+        # Download both amd64 and arm64 binaries (will be included in source package)
+        # Launchpad can't download during build, so we include both architectures
+        if [ ! -f "dgop-amd64" ]; then
+            info "Downloading dgop binary for amd64..."
+            if wget -O dgop-amd64.gz "https://github.com/AvengeMedia/dgop/releases/download/v${VERSION}/dgop-linux-amd64.gz"; then
+                gunzip dgop-amd64.gz
+                chmod +x dgop-amd64
+                success "amd64 binary downloaded"
+            else
+                error "Failed to download dgop-amd64.gz"
+                exit 1
+            fi
+        fi
+
+        if [ ! -f "dgop-arm64" ]; then
+            info "Downloading dgop binary for arm64..."
+            if wget -O dgop-arm64.gz "https://github.com/AvengeMedia/dgop/releases/download/v${VERSION}/dgop-linux-arm64.gz"; then
+                gunzip dgop-arm64.gz
+                chmod +x dgop-arm64
+                success "arm64 binary downloaded"
+            else
+                error "Failed to download dgop-arm64.gz"
+                exit 1
+            fi
         fi
         ;;
     cliphist)
