@@ -9,7 +9,7 @@ Vcs-Browser: https://github.com/AvengeMedia/danksearch
 Vcs-Git: https://github.com/AvengeMedia/danksearch.git
 
 Package: danksearch
-Architecture: amd64 arm64
+Architecture: any
 Depends: ${misc:Depends}
 Description: Fast file search utility for DMS
  DankSearch is a fast file search utility designed for DankMaterialShell.

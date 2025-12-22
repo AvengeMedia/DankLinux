@@ -25,7 +25,7 @@ Vcs-Browser: https://github.com/ghostty-org/ghostty
 Vcs-Git: https://github.com/ghostty-org/ghostty.git
 
 Package: ghostty
-Architecture: amd64 arm64
+Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends}
 Description: Fast, feature-rich, cross-platform terminal emulator

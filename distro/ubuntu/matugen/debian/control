@@ -12,7 +12,7 @@ Vcs-Browser: https://github.com/InioX/matugen
 Vcs-Git: https://github.com/InioX/matugen.git
 
 Package: matugen
-Architecture: amd64 arm64
+Architecture: any
 Depends: ${misc:Depends},
          libx11-6
 Description: Material You color generation tool
