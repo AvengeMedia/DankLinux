@@ -16,7 +16,8 @@ BuildRequires:  qt6-declarative-devel
 BuildRequires:  qt6-declarative-private-devel
 BuildRequires:  qt6-wayland-devel
 BuildRequires:  qt6-waylandclient-private-devel
-BuildRequires:  qt6-tools-devel
+BuildRequires:  qt6-linguist-devel
+BuildRequires:  qt6-tools-private-devel
 BuildRequires:  qt6-svg-devel
 BuildRequires:  qt6-shadertools-devel
 BuildRequires:  cli11-devel

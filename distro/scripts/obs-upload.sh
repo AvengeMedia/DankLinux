@@ -8,10 +8,18 @@
 #   ./distro/scripts/obs-upload.sh debian cliphist
 #   ./distro/scripts/obs-upload.sh opensuse niri
 #   ./distro/scripts/obs-upload.sh niri-git "Fix cargo vendor config"
-#   ./distro/scripts/obs-upload.sh debian niri-git 2    # Rebuild with db2 suffix
-#   ./distro/scripts/obs-upload.sh niri-git --rebuild=2 # Rebuild with db2 suffix (flag syntax)
+#   ./distro/scripts/obs-upload.sh debian niri-git 2    # Rebuild with .db2 suffix
+#   ./distro/scripts/obs-upload.sh niri-git --rebuild=2 # Rebuild with .db2 suffix (flag syntax)
 
 set -e
+
+# Function to strip all db suffixes (both old format db[0-9]+ and new format .db[0-9]+)
+strip_db_suffixes() {
+    local version="$1"
+    # Strip all db suffixes (both formats)
+    # This handles: db5db6db7, .db5.db6.db7, db5.db10, and any mixed combinations
+    echo "$version" | sed -E 's/(\.?db[0-9]+)+$//'
+}
 
 download_service_files() {
     local service_file="$1"
@@ -63,8 +71,11 @@ check_obs_version_exists() {
         OBS_VERSION=$(echo "$OBS_SPEC" | grep "^Version:" | awk '{print $2}' | xargs)
 
         if [[ "$CHECK_MODE" == "commit" ]] && [[ "$PACKAGE" == *"-git" ]]; then
-            OBS_COMMIT=$(echo "$OBS_VERSION" | grep -oP '\.([a-f0-9]{8})(db[0-9]+)?$' | grep -oP '[a-f0-9]{8}' || echo "")
-            NEW_COMMIT=$(echo "$VERSION" | grep -oP '\.([a-f0-9]{8})(db[0-9]+)?$' | grep -oP '[a-f0-9]{8}' || echo "")
+            # Strip db suffixes before extracting commit hashes to prevent false negatives
+            OBS_VERSION_CLEAN=$(strip_db_suffixes "$OBS_VERSION")
+            NEW_VERSION_CLEAN=$(strip_db_suffixes "$VERSION")
+            OBS_COMMIT=$(echo "$OBS_VERSION_CLEAN" | grep -oP '[a-f0-9]{8}$' || echo "")
+            NEW_COMMIT=$(echo "$NEW_VERSION_CLEAN" | grep -oP '[a-f0-9]{8}$' || echo "")
 
             if [[ -n "$OBS_COMMIT" && -n "$NEW_COMMIT" && "$OBS_COMMIT" == "$NEW_COMMIT" ]]; then
                 echo "⚠️  Commit $NEW_COMMIT already exists in OBS (current version: $OBS_VERSION)"
@@ -278,8 +289,9 @@ fi
 
 # Apply rebuild suffix if specified (must happen before API check)
 if [[ -n "$REBUILD_RELEASE" ]] && [[ -n "$CHANGELOG_VERSION" ]]; then
-    CHANGELOG_VERSION=$(echo "$CHANGELOG_VERSION" | sed 's/db[0-9]*$//')
-    CHANGELOG_VERSION="${CHANGELOG_VERSION}db${REBUILD_RELEASE}"
+    # Strip ALL db suffixes using the function
+    CHANGELOG_VERSION=$(strip_db_suffixes "$CHANGELOG_VERSION")
+    CHANGELOG_VERSION="${CHANGELOG_VERSION}.db${REBUILD_RELEASE}"
     echo "  - Applied rebuild suffix: $CHANGELOG_VERSION"
 fi
 
@@ -313,7 +325,7 @@ if [[ -n "$CHANGELOG_VERSION" ]] && [[ -f "distro/opensuse/$PACKAGE.spec" ]]; th
         # Rebuild number specified - check if this exact version already exists (exact mode)
         if check_obs_version_exists "$OBS_PROJECT" "$PACKAGE" "$CHANGELOG_VERSION" "exact"; then
             echo "==> Error: Version $CHANGELOG_VERSION already exists in OBS"
-            echo "    This exact version (including db${REBUILD_RELEASE}) is already uploaded."
+            echo "    This exact version (including .db${REBUILD_RELEASE}) is already uploaded."
             echo "    To rebuild with a different release number, try incrementing:"
             NEXT_NUM=$((REBUILD_RELEASE + 1))
             echo "      ./distro/scripts/obs-upload.sh $PACKAGE $NEXT_NUM"
@@ -1234,21 +1246,26 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
         fi
     fi
     
-    if [[ -n "$OLD_DSC_VERSION" ]] && [[ "$OLD_DSC_VERSION" == "$CHANGELOG_VERSION" ]]; then
-        # In CI without force_upload, skip if version unchanged (matching DB behavior)
-        if [[ -n "${GITHUB_ACTIONS:-}" ]] || [[ -n "${CI:-}" ]]; then
-            if [[ "${IS_FORCE_UPLOAD}" != "true" ]] && [[ "$IS_MANUAL" != "true" ]]; then
-                echo "==> Same version detected in CI (current: $OLD_DSC_VERSION), skipping upload"
-                echo "    Use force_upload=true or set rebuild_release to override"
-                exit 0
+    if [[ -n "$OLD_DSC_VERSION" ]]; then
+        # Strip db suffixes from OLD_DSC_VERSION for comparison (it might have old chained format)
+        OLD_DSC_CLEAN=$(strip_db_suffixes "$OLD_DSC_VERSION")
+        CHANGELOG_CLEAN=$(strip_db_suffixes "$CHANGELOG_VERSION")
+        
+        if [[ "$OLD_DSC_CLEAN" == "$CHANGELOG_CLEAN" ]]; then
+            # In CI without force_upload, skip if version unchanged (matching DB behavior)
+            if [[ -n "${GITHUB_ACTIONS:-}" ]] || [[ -n "${CI:-}" ]]; then
+                if [[ "${IS_FORCE_UPLOAD}" != "true" ]] && [[ "$IS_MANUAL" != "true" ]]; then
+                    echo "==> Same version detected in CI (current: $OLD_DSC_VERSION), skipping upload"
+                    echo "    Use force_upload=true or set rebuild_release to override"
+                    exit 0
+                fi
             fi
-        fi
 
-        # Only increment version when explicitly specified via REBUILD_RELEASE
-        if [[ -n "$REBUILD_RELEASE" ]]; then
-            echo "==> Using specified rebuild release: db$REBUILD_RELEASE"
-            USE_REBUILD_NUM="$REBUILD_RELEASE"
-        elif [[ -n "${GITHUB_ACTIONS:-}" ]] || [[ -n "${CI:-}" ]]; then
+            # Only increment version when explicitly specified via REBUILD_RELEASE
+            if [[ -n "$REBUILD_RELEASE" ]]; then
+                echo "==> Using specified rebuild release: .db$REBUILD_RELEASE"
+                USE_REBUILD_NUM="$REBUILD_RELEASE"
+            elif [[ -n "${GITHUB_ACTIONS:-}" ]] || [[ -n "${CI:-}" ]]; then
             # In CI without rebuild_release, skip cleanly
             echo "==> Same version detected in CI (current: $CHANGELOG_VERSION), skipping upload"
             echo "    Use force_upload=true or set rebuild_release to override"
@@ -1262,27 +1279,35 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
             exit 1
         fi
         
-        if [[ "$CHANGELOG_VERSION" =~ ^([0-9.]+)db([0-9]+)$ ]]; then
-            BASE_VERSION="${BASH_REMATCH[1]}"
-            NEW_VERSION="${BASE_VERSION}db${USE_REBUILD_NUM}"
+        # Strip ALL existing db suffixes using the function
+        BASE_VERSION_CLEAN=$(strip_db_suffixes "$CHANGELOG_VERSION")
+        
+        if [[ "$BASE_VERSION_CLEAN" =~ ^([0-9.]+)$ ]]; then
+            # Simple version like 0.2.1
+            NEW_VERSION="${BASE_VERSION_CLEAN}.db${USE_REBUILD_NUM}"
             echo "  Setting DB number to specified value: $CHANGELOG_VERSION -> $NEW_VERSION"
-        elif [[ "$CHANGELOG_VERSION" =~ ^([0-9.]+)\+git([0-9]+)(\.[a-f0-9]+)?(db([0-9]+))?$ ]]; then
+        elif [[ "$BASE_VERSION_CLEAN" =~ ^([0-9.]+)\+git([0-9]+)(\.[a-f0-9]+)?$ ]]; then
+            # Git version like 0.2.1+git713.26531fc4
             BASE_VERSION="${BASH_REMATCH[1]}"
             GIT_NUM="${BASH_REMATCH[2]}"
-            GIT_HASH="${BASH_REMATCH[3]}"
-            NEW_VERSION="${BASE_VERSION}+git${GIT_NUM}${GIT_HASH}db${USE_REBUILD_NUM}"
+            GIT_HASH="${BASH_REMATCH[3]:-.}"
+            NEW_VERSION="${BASE_VERSION}+git${GIT_NUM}${GIT_HASH}.db${USE_REBUILD_NUM}"
             echo "  Setting DB number to specified value: $CHANGELOG_VERSION -> $NEW_VERSION"
-        elif [[ "$CHANGELOG_VERSION" =~ ^([0-9.]+)\+gitdb([0-9]+)$ ]]; then
+        elif [[ "$BASE_VERSION_CLEAN" =~ ^([0-9.]+)\+git([0-9]+)$ ]]; then
+            # Git version without hash like 0.2.1+git713
             BASE_VERSION="${BASH_REMATCH[1]}"
-            NEW_VERSION="${BASE_VERSION}+gitdb${USE_REBUILD_NUM}"
+            GIT_NUM="${BASH_REMATCH[2]}"
+            NEW_VERSION="${BASE_VERSION}+git${GIT_NUM}.db${USE_REBUILD_NUM}"
             echo "  Setting DB number to specified value: $CHANGELOG_VERSION -> $NEW_VERSION"
-        elif [[ "$CHANGELOG_VERSION" =~ ^([0-9.]+)(-([0-9]+))?$ ]]; then
+        elif [[ "$BASE_VERSION_CLEAN" =~ ^([0-9.]+)(-([0-9]+))?$ ]]; then
+            # Debian format like 0.2.1-1
             BASE_VERSION="${BASH_REMATCH[1]}"
-            NEW_VERSION="${BASE_VERSION}db${USE_REBUILD_NUM}"
+            NEW_VERSION="${BASE_VERSION}.db${USE_REBUILD_NUM}"
             echo "  Warning: Native format cannot have Debian revision, converting to DB format: $CHANGELOG_VERSION -> $NEW_VERSION"
         else
-            NEW_VERSION="${CHANGELOG_VERSION}db${USE_REBUILD_NUM}"
-            echo "  Warning: Could not parse version format, appending db${USE_REBUILD_NUM}: $CHANGELOG_VERSION -> $NEW_VERSION"
+            # Fallback: just strip .db suffixes and add new one
+            NEW_VERSION="${BASE_VERSION_CLEAN}.db${USE_REBUILD_NUM}"
+            echo "  Setting DB number (stripped existing .db suffixes): $CHANGELOG_VERSION -> $NEW_VERSION"
         fi
         
         REPO_CHANGELOG="$REPO_ROOT/distro/debian/$PACKAGE/debian/changelog"
@@ -1521,8 +1546,9 @@ Files:
  $TARBALL_MD5 $TARBALL_SIZE $COMBINED_TARBALL
 EOF
         echo "  - Updated changelog and recreated tarball with version $NEW_VERSION"
-    fi
-fi
+        fi  # Close the if [[ "$OLD_DSC_CLEAN" == "$CHANGELOG_CLEAN" ]] block
+    fi  # Close the if [[ -n "$OLD_DSC_VERSION" ]] block
+fi  # Close the if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ -n "$OLD_DSC_FILE" ]] block
 
 find . -maxdepth 1 -type f \( -name "*.dsc" -o -name "*.spec" \) -exec grep -l "^<<<<<<< " {} \; 2>/dev/null | while read -r conflicted_file; do
     echo "  Removing conflicted text file: $conflicted_file"

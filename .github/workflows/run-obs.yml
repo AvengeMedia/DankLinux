@@ -255,7 +255,7 @@ jobs:
                 if [[ -n "$VERSION" ]]; then
                   echo "📦 Updating danksearch to version: $VERSION"
                   [[ -f distro/opensuse/danksearch.spec ]] && sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/danksearch.spec
-                  [[ -f distro/debian/danksearch/debian/changelog ]] && sed -i "1s/danksearch ([^)]*/danksearch (${VERSION}db1/" distro/debian/danksearch/debian/changelog
+                  [[ -f distro/debian/danksearch/debian/changelog ]] && sed -i "1s/danksearch ([^)]*/danksearch (${VERSION}.db1/" distro/debian/danksearch/debian/changelog
                 fi
                 ;;
               dgop)
@@ -263,7 +263,7 @@ jobs:
                 if [[ -n "$VERSION" ]]; then
                   echo "📦 Updating dgop to version: $VERSION"
                   [[ -f distro/opensuse/dgop.spec ]] && sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/dgop.spec
-                  [[ -f distro/debian/dgop/debian/changelog ]] && sed -i "1s/dgop ([^)]*/dgop (${VERSION}db1/" distro/debian/dgop/debian/changelog
+                  [[ -f distro/debian/dgop/debian/changelog ]] && sed -i "1s/dgop ([^)]*/dgop (${VERSION}.db1/" distro/debian/dgop/debian/changelog
                 fi
                 ;;
               ghostty)
@@ -271,7 +271,7 @@ jobs:
                 if [[ -n "$VERSION" ]]; then
                   echo "📦 Updating ghostty to version: $VERSION"
                   [[ -f distro/opensuse/ghostty.spec ]] && sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/ghostty.spec
-                  [[ -f distro/debian/ghostty/debian/changelog ]] && sed -i "1s/ghostty ([^)]*/ghostty (${VERSION}db1/" distro/debian/ghostty/debian/changelog
+                  [[ -f distro/debian/ghostty/debian/changelog ]] && sed -i "1s/ghostty ([^)]*/ghostty (${VERSION}.db1/" distro/debian/ghostty/debian/changelog
                 fi
                 ;;
               cliphist)
@@ -279,7 +279,7 @@ jobs:
                 if [[ -n "$VERSION" ]]; then
                   echo "📦 Updating cliphist to version: $VERSION"
                   [[ -f distro/opensuse/cliphist.spec ]] && sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/cliphist.spec
-                  [[ -f distro/debian/cliphist/debian/changelog ]] && sed -i "1s/cliphist ([^)]*/cliphist (${VERSION}db1/" distro/debian/cliphist/debian/changelog
+                  [[ -f distro/debian/cliphist/debian/changelog ]] && sed -i "1s/cliphist ([^)]*/cliphist (${VERSION}.db1/" distro/debian/cliphist/debian/changelog
                 fi
                 ;;
               matugen)
@@ -287,7 +287,7 @@ jobs:
                 if [[ -n "$VERSION" ]]; then
                   echo "📦 Updating matugen to version: $VERSION"
                   [[ -f distro/opensuse/matugen.spec ]] && sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/matugen.spec
-                  [[ -f distro/debian/matugen/debian/changelog ]] && sed -i "1s/matugen ([^)]*/matugen (${VERSION}db1/" distro/debian/matugen/debian/changelog
+                  [[ -f distro/debian/matugen/debian/changelog ]] && sed -i "1s/matugen ([^)]*/matugen (${VERSION}.db1/" distro/debian/matugen/debian/changelog
                 fi
                 ;;
               niri)
@@ -295,7 +295,7 @@ jobs:
                 VERSION=$(get_latest_version "YaLTeR/niri")
                 if [[ -n "$VERSION" ]]; then
                   echo "📦 Updating niri to version: $VERSION (Debian only - OpenSUSE uses niri-git)"
-                  [[ -f distro/debian/niri/debian/changelog ]] && sed -i "1s/niri ([^)]*/niri (${VERSION}db1/" distro/debian/niri/debian/changelog
+                  [[ -f distro/debian/niri/debian/changelog ]] && sed -i "1s/niri ([^)]*/niri (${VERSION}.db1/" distro/debian/niri/debian/changelog
                 fi
                 ;;
               quickshell)
@@ -303,7 +303,7 @@ jobs:
                 if [[ -n "$VERSION" ]]; then
                   echo "📦 Updating quickshell to version: $VERSION"
                   [[ -f distro/opensuse/quickshell.spec ]] && sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/quickshell.spec
-                  [[ -f distro/debian/quickshell/debian/changelog ]] && sed -i "1s/quickshell ([^)]*/quickshell (${VERSION}db1/" distro/debian/quickshell/debian/changelog
+                  [[ -f distro/debian/quickshell/debian/changelog ]] && sed -i "1s/quickshell ([^)]*/quickshell (${VERSION}.db1/" distro/debian/quickshell/debian/changelog
                 fi
                 ;;
               xwayland-satellite)
@@ -311,7 +311,7 @@ jobs:
                 if [[ -n "$VERSION" ]]; then
                   echo "📦 Updating xwayland-satellite to version: $VERSION"
                   [[ -f distro/opensuse/xwayland-satellite.spec ]] && sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/xwayland-satellite.spec
-                  [[ -f distro/debian/xwayland-satellite/debian/changelog ]] && sed -i "1s/xwayland-satellite ([^)]*/xwayland-satellite (${VERSION}db1/" distro/debian/xwayland-satellite/debian/changelog
+                  [[ -f distro/debian/xwayland-satellite/debian/changelog ]] && sed -i "1s/xwayland-satellite ([^)]*/xwayland-satellite (${VERSION}.db1/" distro/debian/xwayland-satellite/debian/changelog
                 fi
                 ;;
               *-git)

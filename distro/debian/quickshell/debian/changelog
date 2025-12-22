@@ -1,8 +1,8 @@
-quickshell (0.2.1.1+pin713.26531fc4db1) unstable; urgency=medium
+quickshell (0.2.1.1+pin713.26531fc4.db4) unstable; urgency=medium
 
-  * Pinned to commit 713 (26531fc4) - unreleased stable with latest features
+  * Rebuild to fix repository metadata issues
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 06 Dec 2025 06:41:23 +0000
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sun, 21 Dec 2025 19:09:24 -0500
 
 quickshell (0.2.1.1+pin713.26531fc-1) unstable; urgency=medium
 
