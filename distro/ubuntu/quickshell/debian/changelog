@@ -1,5 +1,6 @@
-quickshell (0.2.1.1+pin713.26531fcppa6) questing; urgency=medium
+quickshell (0.2.1.1+pin713.26531fcppa7) questing; urgency=medium
 
-  * Pinned to git commit 713 (26531fc) - unreleased stable with latest features
+  * Rebuild for packaging fixes (ppa7)
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Fri, 05 Dec 2025 22:30:00 +0000
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Mon, 22 Dec 2025 21:40:17 -0500
+

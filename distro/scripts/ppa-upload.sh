@@ -321,42 +321,23 @@ case "$PACKAGE_NAME" in
         GIT_REPO="AvengeMedia/dgop"
         ;;
     ghostty)
-        GIT_REPO="ghostty-org/ghostty"
-        # Skip auto-version detection for ghostty - manually managed in changelog
-        SKIP_VERSION_UPDATE=true
-        info "Downloading Zig compiler for ghostty build..."
-
+        FORCE_SA="true"
+        
+        # Handle version bumping for rebuilds
         CURRENT_VERSION=$(dpkg-parsechangelog -S Version 2>/dev/null || echo "")
-
-        if [ -n "$CURRENT_VERSION" ] && [ -z "${SKIP_GHOSTTY_PPA_BUMP:-}" ]; then
-            VERSION=$(echo "$CURRENT_VERSION" | sed 's/ppa[0-9]*$//')
-            PPA_NUM=1
-
-            if [[ "$CURRENT_VERSION" =~ ppa([0-9]+)$ ]]; then
-                CURRENT_PPA_NUM=${BASH_REMATCH[1]}
-                if [ -n "${REBUILD_RELEASE:-}" ]; then
-                    PPA_NUM=$REBUILD_RELEASE
-                    info "🔄 Using manual rebuild release number: ppa$PPA_NUM"
-                elif [ -n "${GITHUB_ACTIONS:-}" ] || [ -n "${CI:-}" ]; then
-                    # In CI, skip if same version (no changes needed)
-                    info "Same version detected in CI (current: $CURRENT_VERSION), skipping build"
-                    exit 0
-                else
-                    error "Same version detected ($CURRENT_VERSION) but no rebuild number specified"
-                    error "To rebuild, explicitly specify a rebuild number:"
-                    error "  ./distro/scripts/ppa-upload.sh $PACKAGE_NAME 2"
-                    error "or use flag syntax:"
-                    error "  ./distro/scripts/ppa-upload.sh $PACKAGE_NAME --rebuild=2"
-                    exit 1
-                fi
-
-                NEW_VERSION="${VERSION}ppa${PPA_NUM}"
-                info "Updating changelog: $CURRENT_VERSION -> $NEW_VERSION"
-
+        if [ -n "${REBUILD_RELEASE:-}" ] && [ -n "$CURRENT_VERSION" ]; then
+            # Extract base version (everything before ppa)
+            BASE_VERSION=$(echo "$CURRENT_VERSION" | sed 's/ppa[0-9]*$//')
+            NEW_VERSION="${BASE_VERSION}ppa${REBUILD_RELEASE}"
+            
+            if [ "$CURRENT_VERSION" != "$NEW_VERSION" ]; then
+                info "Updating version: $CURRENT_VERSION -> $NEW_VERSION"
+                
+                # Update changelog
                 TIMESTAMP=$(date -R)
                 MAINTAINER=$(dpkg-parsechangelog -S Maintainer)
                 DISTRIBUTION=$(dpkg-parsechangelog -S Distribution)
-
+                
                 cat > debian/changelog.new << EOF
 $PACKAGE_NAME ($NEW_VERSION) $DISTRIBUTION; urgency=medium
 
@@ -367,180 +348,36 @@ $PACKAGE_NAME ($NEW_VERSION) $DISTRIBUTION; urgency=medium
 EOF
                 cat debian/changelog >> debian/changelog.new
                 mv debian/changelog.new debian/changelog
-
-                CURRENT_VERSION=$NEW_VERSION
-                success "Changelog updated to version $NEW_VERSION"
-            else
-                info "First build of version $CURRENT_VERSION, using existing changelog entry"
-            fi
-        else
-            CURRENT_VERSION=$(dpkg-parsechangelog -S Version 2>/dev/null || echo "")
-            info "Skipping ghostty auto PPA bump (SKIP_GHOSTTY_PPA_BUMP set or no changelog version)"
-        fi
-
-        VERSION=$(echo "$CURRENT_VERSION" | sed 's/ppa[0-9]*$//')
-
-        ZIG_VERSION="0.14.0"
-
-        # Always use x86_64 Zig (can cross-compile with -Dcpu=baseline)
-        # Most PPA builders are x86_64, and Zig supports cross-compilation
-        ZIG_ARCH="x86_64"
-
-        if [ ! -d "zig" ]; then
-            info "Downloading Zig $ZIG_VERSION for $ZIG_ARCH..."
-            if wget -O zig.tar.xz "https://ziglang.org/download/$ZIG_VERSION/zig-linux-$ZIG_ARCH-$ZIG_VERSION.tar.xz"; then
-                tar -xJf zig.tar.xz
-                mv zig-linux-* zig
-                rm zig.tar.xz
-                success "Zig compiler downloaded and extracted"
-            else
-                error "Failed to download Zig compiler"
-                exit 1
-            fi
-        fi
-
-        # Download and extract Ghostty source if not already extracted
-        if [ ! -f "build.zig" ]; then
-            if [ ! -f "ghostty-source.tar.gz" ]; then
-                info "Downloading Ghostty source v${VERSION}..."
-                if wget -O ghostty-source.tar.gz "https://release.files.ghostty.org/${VERSION}/ghostty-${VERSION}.tar.gz"; then
-                    success "Ghostty source downloaded"
-                else
-                    error "Failed to download Ghostty source"
-                    exit 1
-                fi
-            fi
-
-            # Extract source files to current directory
-            info "Extracting Ghostty source..."
-            if tar -xzf ghostty-source.tar.gz --strip-components=1; then
-                success "Ghostty source extracted"
-            else
-                error "Failed to extract Ghostty source"
-                exit 1
-            fi
-        fi
-
-        # Pre-fetch Zig dependencies (including transitive deps) if not already fetched
-        if [ ! -d "zig-deps" ]; then
-            info "Pre-fetching Zig dependencies (including transitive deps)..."
-            export ZIG_GLOBAL_CACHE_DIR="$(pwd)/zig-deps"
-
-            # Try using official fetch script first (if available and build.zig.zon.txt exists)
-            FETCH_SUCCESS=false
-            if [ -f "nix/build-support/fetch-zig-cache.sh" ] && [ -f "build.zig.zon.txt" ]; then
-                info "Using official fetch-zig-cache.sh script"
-                # Add bundled zig to PATH for the script
-                export PATH="$(pwd)/zig:$PATH"
-                if bash nix/build-support/fetch-zig-cache.sh; then
-                    success "Zig dependencies fetched using official script"
-                    FETCH_SUCCESS=true
-                else
-                    warn "Official script failed, will try manual fetch"
-                fi
-                export PATH="${PATH#$(pwd)/zig:}"
-            fi
-
-            # Fallback to manual fetching from dependency list
-            if [ "$FETCH_SUCCESS" = false ] && [ -f "build.zig.zon.txt" ]; then
-                info "Using manual dependency fetching from build.zig.zon.txt"
-                FETCH_FAILED_COUNT=0
-                while IFS= read -r url; do
-                    # Skip empty lines and comments
-                    [ -z "$url" ] || [[ "$url" =~ ^[[:space:]]*# ]] && continue
-                    info "Fetching: $url"
-                    if ! ./zig/zig fetch "$url" >/dev/null 2>&1; then
-                        warn "Failed to fetch (may be optional): $url"
-                        FETCH_FAILED_COUNT=$((FETCH_FAILED_COUNT + 1))
-                    fi
-                done < "build.zig.zon.txt"
-                if [ $FETCH_FAILED_COUNT -gt 0 ]; then
-                    warn "$FETCH_FAILED_COUNT dependencies failed to fetch (may be optional)"
-                fi
-                success "Dependency fetch completed"
-                FETCH_SUCCESS=true
-            fi
-
-            unset ZIG_GLOBAL_CACHE_DIR
-
-            # Check if we have dependencies now
-            if [ ! -d "zig-deps/p" ]; then
-                error "zig-deps/p directory not created after fetch attempts"
-                error "Tried: official script, manual fetch"
-                exit 1
-            fi
-
-            # Count dependencies for verification
-            DEP_COUNT=$(find zig-deps/p -maxdepth 1 -type d 2>/dev/null | wc -l)
-            if [ $DEP_COUNT -le 1 ]; then
-                error "zig-deps/p/ appears empty (only $((DEP_COUNT - 1)) dependencies found)"
-                exit 1
-            fi
-            success "Fetched $((DEP_COUNT - 1)) dependencies to zig-deps/p/"
-        else
-            info "zig-deps/ already exists, skipping dependency fetch"
-            DEP_COUNT=$(find zig-deps/p -maxdepth 1 -type d 2>/dev/null | wc -l)
-            if [ $DEP_COUNT -le 1 ]; then
-                warn "zig-deps/p/ exists but appears empty (only $((DEP_COUNT - 1)) deps)"
-                warn "Removing and re-fetching..."
-                rm -rf zig-deps
-                # Will be fetched on next build attempt
-            else
-                info "Using existing zig-deps/ with $((DEP_COUNT - 1)) dependencies"
-            fi
-        fi
-
-        # Vendor ghostty-themes (using /latest/ redirect to avoid stale pinned URLs)
-        info "Ensuring ghostty-themes is in zig-deps..."
-        THEMES_URL="https://github.com/mbadolato/iTerm2-Color-Schemes/releases/latest/download/ghostty-themes.tgz"
-        THEME_HASH=$(grep -A2 "iterm2_themes" build.zig.zon | grep hash | sed 's/.*"\(.*\)".*/\1/' | head -1)
-        
-        if [ -n "$THEME_HASH" ]; then
-            if [ ! -d "zig-deps/p/$THEME_HASH" ]; then
-                info "Downloading ghostty-themes and injecting into zig-deps..."
-                THEMES_TMP=$(mktemp "$TEMP_BASE/ppa_themes_XXXXXX")
-                THEMES_DL=false
-                for url in "$THEMES_URL" "https://ghproxy.com/$THEMES_URL" "https://github.moeyy.xyz/$THEMES_URL"; do
-                    if curl -L -f -s -o "$THEMES_TMP" "$url" 2>/dev/null || \
-                       wget -q -O "$THEMES_TMP" "$url" 2>/dev/null; then
-                        THEMES_DL=true
-                        break
-                    fi
-                done
                 
-                if [ "$THEMES_DL" = true ]; then
-                    mkdir -p "zig-deps/p/$THEME_HASH"
-                    tar -xzf "$THEMES_TMP" -C "zig-deps/p/$THEME_HASH"
-                    rm -f "$THEMES_TMP"
-                    success "Injected ghostty-themes into zig-deps/p/$THEME_HASH"
-                else
-                    rm -f "$THEMES_TMP"
-                    error "Failed to download ghostty-themes.tgz"
-                    exit 1
-                fi
-            else
-                success "ghostty-themes already present in zig-deps"
+                success "Changelog updated to version $NEW_VERSION"
             fi
-        else
-            warn "Could not determine iterm2_themes hash from build.zig.zon; themes may be missing"
         fi
-
-        info "Verifying critical dependencies..."
-        CRITICAL_DEPS=("vaxis" "ziglyph" "libxev" "z2d" "zf")
-        MISSING_DEPS=()
-
-        for dep in "${CRITICAL_DEPS[@]}"; do
-            if ! find zig-deps/p -maxdepth 1 -type d -name "*${dep}*" 2>/dev/null | grep -q .; then
-                MISSING_DEPS+=("$dep")
+        
+        info "Running Ghostty source update script..."
+        VERSION=$(dpkg-parsechangelog -S Version | sed 's/-[^-]*$//' | sed 's/ppa[0-9]*$//')
+        if "$PACKAGE_DIR/update-source.sh" "$VERSION"; then
+            success "Ghostty source updated"
+            
+            # Copy generated orig tarball to temp dir where build happens
+            # update-source.sh places it in PACKAGE_DIR/..
+            ORIG_TARBALL="${PACKAGE_NAME}_${VERSION}.orig.tar.xz"
+            if [ -f "$PACKAGE_DIR/../$ORIG_TARBALL" ]; then
+                cp "$PACKAGE_DIR/../$ORIG_TARBALL" "$TEMP_DIR/"
+                success "Copied $ORIG_TARBALL to build directory"
+                
+                # For native format, extract the source into the build directory
+                # Native packages the entire build dir, not a separate tarball
+                info "Extracting source for native format packaging..."
+                cd "$BUILD_DIR"
+                tar -xf "$TEMP_DIR/$ORIG_TARBALL" --strip-components=1
+                success "Source extracted to build directory"
+            else
+                error "Generated tarball not found at $PACKAGE_DIR/../$ORIG_TARBALL"
+                exit 1
             fi
-        done
-
-        if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
-            error "Missing critical dependencies: ${MISSING_DEPS[*]}"
-            error "Cache may be incomplete. Dependency fetch may have failed."
-            exit 1
         else
-            success "All critical dependencies verified in cache"
+            error "Failed to update Ghostty source"
+            exit 1
         fi
         ;;
 esac
@@ -936,15 +773,61 @@ case "$PACKAGE_NAME" in
             fi
         fi
 
-        # Download source for arm64 (to build with cargo)
-        if [ ! -f "matugen-source.tar.gz" ]; then
+        # Download and vendor source for arm64 (Launchpad has no internet access)
+        if [ ! -d "matugen-${VERSION}/vendor" ]; then
             info "Downloading matugen source for arm64..."
-            if wget -O matugen-source.tar.gz "https://github.com/InioX/matugen/archive/refs/tags/v${VERSION}.tar.gz"; then
-                success "arm64 source downloaded"
+            if wget -O matugen-download.tar.gz "https://github.com/InioX/matugen/archive/refs/tags/v${VERSION}.tar.gz"; then
+                info "Extracting and vendoring Rust dependencies..."
+                rm -rf "matugen-${VERSION}"
+                tar -xzf matugen-download.tar.gz
+                rm -f matugen-download.tar.gz
+                
+                EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "matugen-*" | grep -v "\.tar\.gz" | head -1)
+                if [ -n "$EXTRACTED_DIR" ]; then
+                    EXTRACTED_DIR=$(echo "$EXTRACTED_DIR" | sed 's|^\./||')
+                    if [ "$EXTRACTED_DIR" != "matugen-${VERSION}" ]; then
+                        mv "$EXTRACTED_DIR" "matugen-${VERSION}"
+                    fi
+                else
+                    error "Could not find extracted matugen directory"
+                    exit 1
+                fi
+                
+                cd "matugen-${VERSION}"
+                if [ -f Cargo.toml ]; then
+                    rm -rf vendor .cargo
+                    find . -type f -name "*.orig" -exec rm -f {} + || true
+                    
+                    mkdir -p .cargo
+                    cargo vendor 2>&1 | awk '
+                        /^\[source\.crates-io\]/ { printing=1 }
+                        printing { print }
+                        /^directory = "vendor"$/ { exit }
+                    ' > .cargo/config.toml
+                    
+                    if [ ! -d "vendor" ]; then
+                        error "Failed to vendor dependencies"
+                        exit 1
+                    fi
+                    
+                    find vendor -type f -name "*.orig" -exec rm -fv {} + || true
+                    find vendor -type f -name "*.rej" -exec rm -fv {} + || true
+                    success "Rust dependencies vendored"
+                else
+                    error "Cargo.toml not found in matugen-${VERSION}"
+                    exit 1
+                fi
+                cd ..
+                
+                tar -czf matugen-source.tar.gz "matugen-${VERSION}"
+                success "Source tarball created with vendored dependencies"
             else
-                error "Failed to download matugen-source.tar.gz"
+                error "Failed to download matugen source"
                 exit 1
             fi
+        else
+            info "Vendored source already exists, repackaging..."
+            tar -czf matugen-source.tar.gz "matugen-${VERSION}"
         fi
         ;;
     niri)
@@ -1010,6 +893,45 @@ case "$PACKAGE_NAME" in
         if [[ "$FULL_VERSION" =~ \+pin([0-9]+)\.([a-f0-9]+) ]] || [[ "$FULL_VERSION" =~ ~pin([0-9]+)\.([a-f0-9]+) ]]; then
             PINNED_COMMIT="${BASH_REMATCH[2]}"
             info "Detected pinned version with commit: $PINNED_COMMIT"
+
+            # Handle rebuild number for pinned versions
+            if [ -n "${REBUILD_RELEASE:-}" ]; then
+                BASE_VERSION=$(echo "$FULL_VERSION" | sed 's/ppa[0-9]*$//')
+                NEW_VERSION="${BASE_VERSION}ppa${REBUILD_RELEASE}"
+                
+                if [ "$FULL_VERSION" != "$NEW_VERSION" ]; then
+                    info "Updating pinned version rebuild number: $FULL_VERSION -> $NEW_VERSION"
+                    
+                    TIMESTAMP=$(date -R)
+                    MAINTAINER=$(dpkg-parsechangelog -S Maintainer)
+                    DISTRIBUTION=$(dpkg-parsechangelog -S Distribution)
+                    SOURCE_NAME=$(dpkg-parsechangelog -S Source)
+                    
+                    OLD_ENTRY_START=$(grep -n "^${SOURCE_NAME} (" debian/changelog | sed -n '2p' | cut -d: -f1)
+                    if [ -n "$OLD_ENTRY_START" ]; then
+                        CHANGELOG_CONTENT=$(tail -n +$OLD_ENTRY_START debian/changelog)
+                    else
+                        CHANGELOG_CONTENT=""
+                    fi
+                    
+                    cat > debian/changelog.new << EOF
+${SOURCE_NAME} (${NEW_VERSION}) ${DISTRIBUTION}; urgency=medium
+
+  * Rebuild for packaging fixes (ppa${REBUILD_RELEASE})
+
+ -- ${MAINTAINER}  ${TIMESTAMP}
+
+EOF
+                    if [ -n "$CHANGELOG_CONTENT" ]; then
+                        echo "" >> debian/changelog.new
+                        echo "$CHANGELOG_CONTENT" >> debian/changelog.new
+                    fi
+                    mv debian/changelog.new debian/changelog
+                    cp debian/changelog "$PACKAGE_DIR/debian/changelog"
+                    FULL_VERSION="$NEW_VERSION"
+                    success "Changelog updated to version $NEW_VERSION"
+                fi
+            fi
 
             # Extract base version (0.2.1.1+pin713.26531fcppa5 -> 0.2.1.1)
             BASE_VERSION=$(echo "$FULL_VERSION" | sed 's/[+~]pin.*//' | sed 's/ppa[0-9]*$//')
@@ -1131,7 +1053,10 @@ echo
 
 # Determine if we need to include orig tarball (-sa) or just debian changes (-sd)
 ORIG_TARBALL="${PACKAGE_NAME}_${VERSION%.ppa*}.orig.tar.xz"
-if [ -f "$TEMP_DIR/$ORIG_TARBALL" ]; then
+if [ "${FORCE_SA:-false}" = "true" ]; then
+    info "Forcing full source upload (-sa)"
+    DEBUILD_SOURCE_FLAG="-sa"
+elif [ -f "$TEMP_DIR/$ORIG_TARBALL" ]; then
     info "Found existing orig tarball, using -sd (debian changes only)"
     DEBUILD_SOURCE_FLAG="-sd"
 else
@@ -1144,10 +1069,9 @@ if yes | DEBIAN_FRONTEND=noninteractive debuild -S $DEBUILD_SOURCE_FLAG -d; then
     echo
     success "Source package built successfully!"
 
-    # Verify zig-deps was included in source tarball for ghostty
     if [ "$PACKAGE_NAME" = "ghostty" ]; then
         info "Verifying zig-deps/ inclusion in source tarball..."
-        TARBALL=$(find "$TEMP_DIR" -name "${PACKAGE_NAME}_*.tar.xz" -type f | sort -V | tail -1)
+        TARBALL=$(find "$TEMP_DIR" -name "${PACKAGE_NAME}_*.orig.tar.xz" -type f | head -1)
         if [ -n "$TARBALL" ]; then
             if tar -tf "$TARBALL" 2>/dev/null | grep -q "zig-deps/p/"; then
                 success "Verified: zig-deps/p/ included in source tarball"
@@ -1192,17 +1116,22 @@ if yes | DEBIAN_FRONTEND=noninteractive debuild -S $DEBUILD_SOURCE_FLAG -d; then
         # Get file paths
         CHANGES_BASENAME=$(basename "$CHANGES_FILE")
         DSC_FILE="${CHANGES_BASENAME/_source.changes/.dsc}"
-        TARBALL="${CHANGES_BASENAME/_source.changes/.tar.xz}"
-        TARBALL_GZ="${CHANGES_BASENAME/_source.changes/.tar.gz}"
         BUILDINFO="${CHANGES_BASENAME/_source.changes/_source.buildinfo}"
         
-        # Check for tarball (could be .tar.xz or .tar.gz)
-        if [ -f "$TEMP_DIR/$TARBALL" ]; then
-            UPLOAD_TARBALL="$TARBALL"
-        elif [ -f "$TEMP_DIR/$TARBALL_GZ" ]; then
-            UPLOAD_TARBALL="$TARBALL_GZ"
+        # For quilt format packages, the tarball is .orig.tar.xz with only upstream version
+        # Extract upstream version (everything before the dash in debian version)
+        UPSTREAM_VERSION=$(echo "$FINAL_VERSION" | sed 's/-[^-]*$//')
+        ORIG_TARBALL="${PACKAGE_NAME}_${UPSTREAM_VERSION}.orig.tar.xz"
+        
+        # Check for tarball (quilt .orig.tar.xz, native .tar.xz, or .tar.gz)
+        if [ -f "$TEMP_DIR/$ORIG_TARBALL" ]; then
+            UPLOAD_TARBALL="$ORIG_TARBALL"
+        elif [ -f "$TEMP_DIR/${CHANGES_BASENAME/_source.changes/.tar.xz}" ]; then
+            UPLOAD_TARBALL="${CHANGES_BASENAME/_source.changes/.tar.xz}"
+        elif [ -f "$TEMP_DIR/${CHANGES_BASENAME/_source.changes/.tar.gz}" ]; then
+            UPLOAD_TARBALL="${CHANGES_BASENAME/_source.changes/.tar.gz}"
         else
-            error "Source tarball not found"
+            error "Source tarball not found (tried: $ORIG_TARBALL, ${CHANGES_BASENAME/_source.changes/.tar.xz})"
             exit 1
         fi
         
@@ -1210,20 +1139,35 @@ if yes | DEBIAN_FRONTEND=noninteractive debuild -S $DEBUILD_SOURCE_FLAG -d; then
         info "  - $CHANGES_BASENAME"
         info "  - $DSC_FILE"
         info "  - $UPLOAD_TARBALL"
+        
+        # For quilt packages, also need to upload the debian tarball
+        DEBIAN_TARBALL="${PACKAGE_NAME}_${FINAL_VERSION}.debian.tar.xz"
+        if [ -f "$TEMP_DIR/$DEBIAN_TARBALL" ]; then
+            info "  - $DEBIAN_TARBALL"
+        fi
         info "  - $BUILDINFO"
         echo
         
         # Use lftp for upload (works on Fedora where dput is broken)
         LFTP_SCRIPT=$(mktemp "$TEMP_BASE/ppa_lftp_XXXXXX")
-        cat > "$LFTP_SCRIPT" <<EOF
-cd ~avengemedia/ubuntu/$PPA_NAME/
+        
+        # Build upload commands
+        UPLOAD_COMMANDS="cd ~avengemedia/ubuntu/$PPA_NAME/
 lcd $TEMP_DIR
 mput $CHANGES_BASENAME
 mput $DSC_FILE
-mput $UPLOAD_TARBALL
+mput $UPLOAD_TARBALL"
+
+        if [ -f "$TEMP_DIR/$DEBIAN_TARBALL" ]; then
+            UPLOAD_COMMANDS="$UPLOAD_COMMANDS
+mput $DEBIAN_TARBALL"
+        fi
+        
+        UPLOAD_COMMANDS="$UPLOAD_COMMANDS
 mput $BUILDINFO
-bye
-EOF
+bye"
+        
+        echo "$UPLOAD_COMMANDS" > "$LFTP_SCRIPT"
         
         if lftp -d ftp://anonymous:@ppa.launchpad.net < "$LFTP_SCRIPT"; then
             rm -f "$LFTP_SCRIPT"

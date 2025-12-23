@@ -7,9 +7,25 @@ UPSTREAM_VERSION := $(shell echo $(DEB_VERSION) | sed 's/ppa[0-9]*$$//')
 %:
 	dh $@
 
+DEB_HOST_ARCH_CPU ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_CPU)
+
+# Select Zig binary based on architecture
+ifeq ($(DEB_HOST_ARCH_CPU),amd64)
+	ZIG_BIN = ./zig/x86_64/zig
+	ZIG_ARCH = x86_64
+else ifeq ($(DEB_HOST_ARCH_CPU),arm64)
+	ZIG_BIN = ./zig/aarch64/zig
+	ZIG_ARCH = aarch64
+else
+	$(error Unsupported architecture: $(DEB_HOST_ARCH_CPU))
+endif
+
 override_dh_auto_build:
 	# Build with vendored Zig deps (offline)
-	ZIG_GLOBAL_CACHE_DIR=$(CURDIR)/zig-deps DESTDIR=$(CURDIR)/debian/ghostty ./zig/zig build \
+	# --system flag tells Zig to use pre-fetched packages from zig-deps/p/
+	ZIG_GLOBAL_CACHE_DIR=$(CURDIR)/zig-deps \
+	DESTDIR=$(CURDIR)/debian/ghostty \
+	./zig/$(ZIG_ARCH)/zig build \
 		--prefix /usr \
 		--system $(CURDIR)/zig-deps/p \
 		-Dversion-string=$(UPSTREAM_VERSION) \
@@ -19,7 +35,7 @@ override_dh_auto_build:
 
 override_dh_auto_install:
 	ZIG_GLOBAL_CACHE_DIR=$(CURDIR)/zig-deps \
-	DESTDIR=$(CURDIR)/debian/ghostty ./zig/zig build install \
+	DESTDIR=$(CURDIR)/debian/ghostty $(ZIG_BIN) build install \
 		--prefix /usr \
 		--system $(CURDIR)/zig-deps/p \
 		-Doptimize=ReleaseFast \

@@ -1,4 +1,4 @@
-ghostty (1.2.3ppa34) questing; urgency=medium
+ghostty (1.2.3ppa37) questing; urgency=medium
 
   * Initial PPA packaging for Ubuntu
   * Offline build with vendored Zig toolchain and dependencies

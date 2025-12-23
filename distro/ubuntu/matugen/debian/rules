@@ -27,7 +27,18 @@ else ifeq ($(DEB_HOST_ARCH),arm64)
 	# Launchpad build environment has no internet access
 	test -f matugen-source.tar.gz || (echo "ERROR: matugen-source.tar.gz not found!" && exit 1)
 	tar -xzf matugen-source.tar.gz
-	cd matugen-$(UPSTREAM_VERSION) && cargo build --release
+	
+	# Fix vendor checksums: preserve package hash, clear file-level checksums
+	# This allows Cargo to work even if .orig/.rej files are present or removed
+	for checksum in matugen-$(UPSTREAM_VERSION)/vendor/*/.cargo-checksum.json; do \
+		if [ -f "$$checksum" ]; then \
+			pkg=$$(cat "$$checksum" | grep -o '"package":"[^"]*"' | cut -d'"' -f4); \
+			echo "{\"files\":{},\"package\":\"$$pkg\"}" > "$$checksum"; \
+		fi; \
+	done
+	
+	# Build with cargo using vendored dependencies (no internet access on Launchpad)
+	cd matugen-$(UPSTREAM_VERSION) && cargo build --offline --release
 endif
 
 override_dh_auto_install:
@@ -52,3 +63,8 @@ override_dh_auto_clean:
 	rm -rf matugen-$(UPSTREAM_VERSION)
 	rm -rf .cargo
 	dh_auto_clean
+
+# Prevent dh_clean from removing .orig files in vendor directories
+# This is critical for Rust packages with vendored dependencies
+override_dh_clean:
+	dh_clean -XCargo.toml.orig -X.orig
