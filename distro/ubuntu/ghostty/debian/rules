@@ -20,6 +20,15 @@ else
 	$(error Unsupported architecture: $(DEB_HOST_ARCH_CPU))
 endif
 
+override_dh_auto_configure:
+	# Rewrite theme URL to local tarball and update hash (themes are vendored in source package)
+	test -f ghostty-themes.tgz || (echo "ERROR: ghostty-themes.tgz not found!" && exit 1)
+	# Update URL to file:// 
+	sed -i "s#https://github.com/mbadolato[^\"]*ghostty-themes.tgz#file://$(CURDIR)/ghostty-themes.tgz#g" build.zig.zon build.zig.zon.json 2>/dev/null || true
+	# Update hash to match the fixed themes tarball (required for file:// URLs)
+	sed -i '/\.iterm2_themes/,/}/ s|\.hash = "[^"]*"|.hash = "N-V-__8AANFEAwCzzNzNs3Gaq8pzGNl2BbeyFBwTyO5iZJL-"|' build.zig.zon 2>/dev/null || true
+	dh_auto_configure
+
 override_dh_auto_build:
 	# Build with vendored Zig deps (offline)
 	# --system flag tells Zig to use pre-fetched packages from zig-deps/p/

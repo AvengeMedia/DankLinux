@@ -102,7 +102,7 @@ if [ -f "build.zig.zon" ]; then
         if wget -q -O ghostty-themes.tgz "$FIXED_URL"; then
             mkdir -p "zig-deps/p/$THEME_HASH"
             tar -xzf ghostty-themes.tgz -C "zig-deps/p/$THEME_HASH"
-            rm -f ghostty-themes.tgz
+            # Keep tarball in source root - Themes are also in zig-deps for --system mode fallback
             echo "Themes dependency injected successfully"
         else
             echo "ERROR: Failed to download themes tarball from $FIXED_URL"

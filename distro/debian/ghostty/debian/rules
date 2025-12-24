@@ -2,9 +2,11 @@
 
 export HOME = $(CURDIR)
 DEB_VERSION := $(shell dpkg-parsechangelog -S Version)
-UPSTREAM_VERSION := $(shell echo $(DEB_VERSION) | sed 's/ppa[0-9]*$$//')
+# Extract upstream version: remove Debian suffixes (.db[0-9] or db[0-9]) and ppa suffixes, then trim trailing dots/dashes
+UPSTREAM_VERSION := $(shell echo $(DEB_VERSION) | sed -E 's/(\\.db|db)[0-9]+$$//' | sed 's/ppa[0-9]*$$//' | sed 's/[.-]$$//')
 ZIG_VERSION := 0.14.0
 DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
+THEME_HASH := N-V-__8AANFEAwCzzNzNs3Gaq8pzGNl2BbeyFBwTyO5iZJL-
 
 # Map Debian architectures to Zig architectures
 ifeq ($(DEB_HOST_ARCH),amd64)
@@ -28,9 +30,18 @@ override_dh_auto_configure:
 		tar -xJf "$$TARBALL"; \
 		mv $$(find . -maxdepth 1 -type d -name "zig-linux-*" | head -1) zig; \
 	fi
-	# Rewrite theme URL to vendored tarball
-	test -f ghostty-themes.tgz || exit 1; \
+	# Rewrite theme URL to local tarball and update hash (themes are vendored in source package)
+	test -f ghostty-themes.tgz || (echo "ERROR: ghostty-themes.tgz not found!" && exit 1)
+	# Update URL to file://
 	sed -i "s#https://github.com/mbadolato[^\"]*ghostty-themes.tgz#file://$(CURDIR)/ghostty-themes.tgz#g" build.zig.zon build.zig.zon.json 2>/dev/null || true
+	# Update hash to match the fixed themes tarball (required for file:// URLs)
+	sed -i '/\.iterm2_themes/,/}/ s|\.hash = "[^"]*"|.hash = "$(THEME_HASH)"|' build.zig.zon 2>/dev/null || true
+	sed -i '/"iterm2_themes"/,/\}/ s|"hash": "[^"]*"|"hash": "$(THEME_HASH)"|' build.zig.zon.json 2>/dev/null || true
+	# Ensure vendored themes are extracted for offline builds
+	mkdir -p "$(CURDIR)/zig-deps/p/$(THEME_HASH)"
+	if [ -z "$$(ls -A "$(CURDIR)/zig-deps/p/$(THEME_HASH)" 2>/dev/null)" ]; then \
+		tar -xzf ghostty-themes.tgz -C "$(CURDIR)/zig-deps/p/$(THEME_HASH)"; \
+	fi
 	dh_auto_configure
 
 override_dh_auto_build:
@@ -53,6 +64,11 @@ override_dh_auto_install:
 		--system $(CURDIR)/zig-deps/p \
 		-Doptimize=ReleaseFast \
 		-Dcpu=baseline
+	# Flatten themes directory so files live directly under share/ghostty/themes
+	if [ -d "$(CURDIR)/debian/ghostty/usr/share/ghostty/themes/ghostty" ]; then \
+		mv "$(CURDIR)/debian/ghostty/usr/share/ghostty/themes/ghostty/"* $(CURDIR)/debian/ghostty/usr/share/ghostty/themes/ && \
+		rmdir "$(CURDIR)/debian/ghostty/usr/share/ghostty/themes/ghostty"; \
+	fi
 	# Remove terminfo file that conflicts with ncurses-term (Ubuntu 25.04+)
 	rm -f $(CURDIR)/debian/ghostty/usr/share/terminfo/g/ghostty
 

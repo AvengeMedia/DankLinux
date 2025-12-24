@@ -411,21 +411,82 @@ if [[ "$SOURCE_FORMAT" == *"native"* ]]; then
                 cd "$REPO_ROOT"
                 echo "    Zig compilers downloaded (tarballs for OBS, extracted x86_64 for deps)"
 
+                # Download and vendor ghostty-themes - https://github.com/ghostty-org/ghostty/issues/6026
+                echo "    Downloading ghostty-themes..."
+                THEMES_URL="https://deps.files.ghostty.org/ghostty-themes-release-20251201-150531-bfb3ee1.tgz"
+                # Use the NEW hash that matches the fixed themes tarball
+                THEME_HASH="N-V-__8AANFEAwCzzNzNs3Gaq8pzGNl2BbeyFBwTyO5iZJL-"
+                THEMES_SRC="$REPO_ROOT/distro/debian/ghostty/ghostty-themes.tgz"
+                if [ -f "$THEMES_SRC" ]; then
+                    cp "$THEMES_SRC" "$SOURCE_DIR/ghostty-themes.tgz"
+                    THEMES_DL=true
+                else
+                    THEMES_DL=false
+                    for url in "$THEMES_URL" "https://ghproxy.com/$THEMES_URL" "https://github.moeyy.xyz/$THEMES_URL"; do
+                        if curl -L -f -s -o "$SOURCE_DIR/ghostty-themes.tgz" "$url" 2>/dev/null || \
+                           wget -q -O "$SOURCE_DIR/ghostty-themes.tgz" "$url" 2>/dev/null; then
+                            THEMES_DL=true
+                            break
+                        fi
+                    done
+                    if [ "$THEMES_DL" = false ]; then
+                        echo "    Error: failed to download ghostty-themes.tgz from $THEMES_URL (and mirrors)"
+                        exit 1
+                    fi
+                fi
+
+                # Inject themes into zig-deps using the NEW hash
+                mkdir -p "$SOURCE_DIR/zig-deps/p/$THEME_HASH"
+                tar -xzf "$SOURCE_DIR/ghostty-themes.tgz" -C "$SOURCE_DIR/zig-deps/p/$THEME_HASH"
+                if [[ ! -f "$SOURCE_DIR/ghostty-themes.tgz" ]]; then
+                    echo "    Error: ghostty-themes.tgz missing after vendoring"
+                    exit 1
+                fi
+                if [[ ! -d "$SOURCE_DIR/zig-deps/p/$THEME_HASH" ]] || [[ -z "$(ls -A "$SOURCE_DIR/zig-deps/p/$THEME_HASH" 2>/dev/null)" ]]; then
+                    echo "    Error: vendored themes missing in zig-deps/p/$THEME_HASH"
+                    exit 1
+                fi
+                echo "    Injected themes into zig-deps/p/$THEME_HASH"
+
                 # Fetch Zig dependencies
                 echo "    Fetching Zig dependencies..."
                 cd "$SOURCE_DIR"
                 export ZIG_GLOBAL_CACHE_DIR="$SOURCE_DIR/zig-deps"
+                mkdir -p "$ZIG_GLOBAL_CACHE_DIR"
+                OLD_PATH="$PATH"
+                export PATH="$SOURCE_DIR/zig:$PATH"
+                
+                # Try multiple methods to ensure all dependencies are fetched
+                FETCH_SUCCESS=false
+                
+                # 1: Use official fetch-zig-cache.sh script
                 if [ -f "nix/build-support/fetch-zig-cache.sh" ] && [ -f "build.zig.zon.txt" ]; then
                     echo "    Using official fetch-zig-cache.sh script"
-                    export PATH="$SOURCE_DIR/zig:$PATH"
-                    bash nix/build-support/fetch-zig-cache.sh 2>&1 | grep -E "Fetching:|Failed" || true
-                elif [ -f "build.zig.zon.txt" ]; then
-                    echo "    Using manual dependency fetching from build.zig.zon.txt"
+                    if bash nix/build-support/fetch-zig-cache.sh 2>&1 | grep -E "Fetching:|Failed" || true; then
+                        FETCH_SUCCESS=true
+                    fi
+                fi
+                
+                # Use 'zig build --fetch' to fetch all transitive dependencies
+                echo "    Attempting to fetch all dependencies with 'zig build --fetch'..."
+                if "$SOURCE_DIR/zig/zig" build --fetch 2>&1 | grep -v "^$" | tail -5 || true; then
+                    echo "    'zig build --fetch' completed"
+                    FETCH_SUCCESS=true
+                fi
+                
+                # Manual fetching from build.zig.zon.txt as fallback
+                if [ -f "build.zig.zon.txt" ]; then
+                    echo "    Supplementing with manual dependency fetching from build.zig.zon.txt"
                     while IFS= read -r url; do
                         [ -z "$url" ] || [[ "$url" =~ ^[[:space:]]*# ]] && continue
+                        case "$url" in
+                            *ghostty-themes.tgz) continue;;
+                        esac
                         "$SOURCE_DIR/zig/zig" fetch "$url" >/dev/null 2>&1 || true
                     done < "build.zig.zon.txt"
+                    FETCH_SUCCESS=true
                 fi
+                
                 DEP_COUNT=$(find zig-deps/p -maxdepth 1 -type d 2>/dev/null | wc -l)
                 if [ $DEP_COUNT -gt 1 ]; then
                     echo "    Fetched $((DEP_COUNT - 1)) Zig dependencies"
@@ -433,6 +494,7 @@ if [[ "$SOURCE_FORMAT" == *"native"* ]]; then
                     echo "    Warning: No Zig dependencies found in zig-deps/p/"
                 fi
                 unset ZIG_GLOBAL_CACHE_DIR
+                export PATH="$OLD_PATH"
 
                 # Remove extracted Zig (OBS will extract from tarballs per-arch during build)
                 # Keep the Zig tarballs in source for debian/rules to use
@@ -1386,8 +1448,10 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
             done
             cd "$PKG_DIR"
 
-            # Vendor ghostty-themes (using /latest/ redirect to avoid stale pinned URLs)
-            THEMES_URL="https://github.com/mbadolato/iTerm2-Color-Schemes/releases/latest/download/ghostty-themes.tgz"
+            # Vendor ghostty-themes (use fixed URL for Ghostty 1.2.3 - see https://github.com/ghostty-org/ghostty/issues/6026)
+            THEMES_URL="https://deps.files.ghostty.org/ghostty-themes-release-20251201-150531-bfb3ee1.tgz"
+            # Use the NEW hash that matches the fixed themes tarball
+            THEME_HASH="N-V-__8AANFEAwCzzNzNs3Gaq8pzGNl2BbeyFBwTyO5iZJL-"
             THEMES_SRC="$REPO_ROOT/distro/debian/ghostty/ghostty-themes.tgz"
             if [ -f "$THEMES_SRC" ]; then
                 cp "$THEMES_SRC" "$PKG_DIR/ghostty-themes.tgz"
@@ -1407,20 +1471,30 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
                 fi
             fi
 
-            # Inject themes into zig-deps
-            THEME_HASH=$(grep -A2 "iterm2_themes" "$PKG_DIR/build.zig.zon" | grep hash | sed 's/.*"\(.*\)".*/\1/' | head -1)
-            if [ -n "$THEME_HASH" ]; then
-                mkdir -p "$PKG_DIR/zig-deps/p/$THEME_HASH"
-                tar -xzf "$PKG_DIR/ghostty-themes.tgz" -C "$PKG_DIR/zig-deps/p/$THEME_HASH"
-            else
-                echo "    Warning: could not determine iterm2_themes hash; theme may be missing in zig-deps"
+            # Inject themes into zig-deps using the NEW hash (matches what debian/rules will set)
+            mkdir -p "$PKG_DIR/zig-deps/p/$THEME_HASH"
+            tar -xzf "$PKG_DIR/ghostty-themes.tgz" -C "$PKG_DIR/zig-deps/p/$THEME_HASH"
+            if [[ ! -f "$PKG_DIR/ghostty-themes.tgz" ]]; then
+                echo "    Error: ghostty-themes.tgz missing after vendoring"
+                exit 1
+            fi
+            if [[ ! -d "$PKG_DIR/zig-deps/p/$THEME_HASH" ]] || [[ -z "$(ls -A "$PKG_DIR/zig-deps/p/$THEME_HASH" 2>/dev/null)" ]]; then
+                echo "    Error: vendored themes missing in zig-deps/p/$THEME_HASH"
+                exit 1
             fi
 
             # Fetch zig-deps
             export ZIG_GLOBAL_CACHE_DIR="$PKG_DIR/zig-deps"
+            mkdir -p "$ZIG_GLOBAL_CACHE_DIR"
+            OLD_PATH="$PATH"
+            export PATH="$PKG_DIR/zig:$PATH"
+            
             FETCH_LOG="$TEMP_DIR/zig-fetch.log"
+            FETCH_SUCCESS=false
+            
+            # Use official fetch-zig-cache.sh script
             if [ -f "nix/build-support/fetch-zig-cache.sh" ] && [ -f "build.zig.zon.txt" ]; then
-                export PATH="$PKG_DIR/zig:$PATH"
+                echo "    Using official fetch-zig-cache.sh script"
                 bash nix/build-support/fetch-zig-cache.sh >"$FETCH_LOG" 2>&1 || true
                 grep -E "Fetching:|Failed" "$FETCH_LOG" || true
                 FAILED_URLS=$(grep -E "Failed to fetch:" "$FETCH_LOG" | sed 's/.*Failed to fetch: //')
@@ -1435,10 +1509,20 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
                         exit 1
                     fi
                 done
+                FETCH_SUCCESS=true
             fi
-
+            
+            # Use 'zig build --fetch' to fetch all transitive dependencies
+            echo "    Attempting to fetch all dependencies with 'zig build --fetch'..."
+            cd "$PKG_DIR"
+            if "$PKG_DIR/zig/zig" build --fetch 2>&1 | grep -v "^$" | tail -5 || true; then
+                echo "    'zig build --fetch' completed"
+                FETCH_SUCCESS=true
+            fi
+            
             # Always run a manual fetch pass to ensure lazy deps are present
             if [ -f "build.zig.zon.txt" ]; then
+                echo "    Supplementing with manual dependency fetching from build.zig.zon.txt"
                 while IFS= read -r url; do
                     [ -z "$url" ] || [[ "$url" =~ ^[[:space:]]*# ]] && continue
                     case "$url" in
@@ -1446,7 +1530,11 @@ if [[ "$UPLOAD_DEBIAN" == true ]] && [[ "$SOURCE_FORMAT" == *"native"* ]] && [[ 
                     esac
                     "$PKG_DIR/zig/zig" fetch "$url" >/dev/null 2>&1 || true
                 done < "build.zig.zon.txt"
+                FETCH_SUCCESS=true
             fi
+            
+            # Restore PATH
+            export PATH="$OLD_PATH"
 
             DEP_COUNT=$(find "$PKG_DIR/zig-deps/p" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | wc -l)
             if [ "$DEP_COUNT" -lt 5 ]; then
