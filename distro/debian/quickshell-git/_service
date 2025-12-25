@@ -1,12 +1,12 @@
 <services>
-  <!-- Pull full git repository for master branch -->
-  <service name="tar_scm">
+  <!-- Pull full git repository for master branch (disabled - using pre-built tarballs) -->
+  <service name="tar_scm" mode="disabled">
     <param name="scm">git</param>
     <param name="url">https://github.com/quickshell-mirror/quickshell.git</param>
     <param name="revision">master</param>
     <param name="filename">quickshell-source</param>
   </service>
-  <service name="recompress">
+  <service name="recompress" mode="disabled">
     <param name="file">*.tar</param>
     <param name="compression">gz</param>
   </service>

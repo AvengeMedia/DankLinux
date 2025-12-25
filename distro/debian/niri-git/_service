@@ -1,6 +1,6 @@
 <services>
-  <!-- Use obs_scm for git builds -->
-  <service name="obs_scm">
+  <!-- Use obs_scm for git builds (disabled - using pre-built tarballs) -->
+  <service name="obs_scm" mode="disabled">
     <param name="url">https://github.com/YaLTeR/niri.git</param>
     <param name="scm">git</param>
     <param name="revision">main</param>
@@ -9,12 +9,12 @@
     <param name="versionrewrite-replacement">\1</param>
     <param name="changesgenerate">disable</param>
   </service>
-  <service name="tar" mode="buildtime"/>
-  <service name="recompress" mode="buildtime">
+  <service name="tar" mode="disabled"/>
+  <service name="recompress" mode="disabled">
     <param name="file">*.tar</param>
     <param name="compression">gz</param>
   </service>
-  <service name="cargo_vendor" mode="buildtime">
+  <service name="cargo_vendor" mode="disabled">
     <param name="srcdir">niri</param>
     <param name="update">true</param>
   </service>
