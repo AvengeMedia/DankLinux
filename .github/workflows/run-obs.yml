@@ -72,6 +72,33 @@ jobs:
             echo "$version"
           }
 
+          # Helper function to extract git commit from changelog
+          get_changelog_commit() {
+            local package="$1"
+            local changelog_file="distro/debian/$package/debian/changelog"
+
+            if [[ ! -f "$changelog_file" ]]; then
+              echo ""
+              return 1
+            fi
+
+            # Extract commit hash (8 chars) from version like "niri-git (25.11+git2576.7c089857.db1-1)" or "(25.11+git2576.7c089857db1)"
+            local commit=$(grep -m1 "^$package" "$changelog_file" | grep -oP '\+git\d+\.\K[a-f0-9]{8}(?=\.?db|\)|\.)' || echo "")
+            echo "$commit"
+          }
+
+          # Helper function to get latest upstream commit for git packages
+          get_latest_git_commit() {
+            local repo="$1"
+
+            # First, get the default branch (use -L to follow redirects for moved repos)
+            local default_branch=$(curl -sL "https://api.github.com/repos/$repo" | grep -oP '"default_branch":\s*"\K[^"]+' || echo "master")
+
+            # Get the latest commit SHA from the default branch (first 8 chars, -L to follow redirects)
+            local commit=$(curl -sL "https://api.github.com/repos/$repo/commits/$default_branch" | grep -oP '"sha":\s*"\K[a-f0-9]{40}' | head -c 8 || echo "")
+            echo "$commit"
+          }
+
           # Helper function to check if package needs update
           needs_update() {
             local package="$1"
@@ -90,10 +117,47 @@ jobs:
               return 0  # New package, needs upload
             fi
 
-            # For -git packages versioned by obs-upload
+            # For -git packages, check upstream commit
             if [[ "$package" == *"-git" ]]; then
-              echo "📋 $package: Git package - will check upstream during upload"
-              return 0  # Always attempt upload for git packages in scheduled runs
+              local upstream_repo=""
+              case "$package" in
+                niri-git)
+                  upstream_repo="YaLTeR/niri"
+                  ;;
+                quickshell-git)
+                  upstream_repo="outfoxxed/quickshell"
+                  ;;
+                xwayland-satellite-git)
+                  upstream_repo="Supreeeme/xwayland-satellite"
+                  ;;
+                *)
+                  echo "⚠️  $package: No upstream repo configured for git package"
+                  return 1
+                  ;;
+              esac
+
+              # Get current commit from changelog
+              local current_commit=$(get_changelog_commit "$package")
+              if [[ -z "$current_commit" ]]; then
+                echo "📋 $package: No changelog found (new package)"
+                return 0  # New package, needs upload
+              fi
+
+              # Get latest upstream commit
+              local latest_commit=$(get_latest_git_commit "$upstream_repo")
+              if [[ -z "$latest_commit" ]]; then
+                echo "⚠️  $package: Failed to fetch upstream commit"
+                return 1
+              fi
+
+              # Compare commits
+              if [[ "$current_commit" != "$latest_commit" ]]; then
+                echo "📋 $package: New commit $latest_commit (current: $current_commit)"
+                return 0  # Update needed
+              fi
+
+              echo "📋 $package: Commit $current_commit already up to date"
+              return 1  # No update needed
             fi
 
             # For stable packages, check upstream GitHub releases
@@ -238,6 +302,80 @@ jobs:
             echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
             echo "Packages to upload: $PACKAGES"
           fi
+
+      - name: Update git package versions dynamically
+        run: |
+          # Helper function to update git package spec and changelog
+          update_git_package() {
+            local package="$1"
+            local repo="$2"
+
+            # Get default branch and latest commit
+            local default_branch=$(curl -sL "https://api.github.com/repos/$repo" | grep -oP '"default_branch":\s*"\K[^"]+' || echo "master")
+            local commit_hash=$(curl -sL "https://api.github.com/repos/$repo/commits/$default_branch" | grep -oP '"sha":\s*"\K[a-f0-9]{40}' | head -c 8 || echo "")
+
+            if [[ -z "$commit_hash" ]]; then
+              echo "⚠️  Failed to fetch commit for $package from $repo"
+              return 1
+            fi
+
+            # Get commit count and base version
+            local temp_dir=$(mktemp -d)
+            git clone --bare "https://github.com/$repo.git" "$temp_dir/$package-repo" 2>/dev/null
+            local commit_count=$(git -C "$temp_dir/$package-repo" rev-list --count HEAD || echo "0")
+            rm -rf "$temp_dir"
+
+            # Determine base version from the stable package changelog or use a default
+            local base_version=""
+            case "$package" in
+              niri-git)
+                base_version=$(grep -m1 "^niri" distro/debian/niri/debian/changelog 2>/dev/null | grep -oP '\(\K[0-9.]+(?=db)' || echo "25.11")
+                ;;
+              quickshell-git)
+                base_version=$(grep -m1 "^quickshell" distro/debian/quickshell/debian/changelog 2>/dev/null | grep -oP '\(\K[0-9.]+(?=db)' || echo "0.2.1")
+                ;;
+              xwayland-satellite-git)
+                base_version=$(grep -m1 "^xwayland-satellite" distro/debian/xwayland-satellite/debian/changelog 2>/dev/null | grep -oP '\(\K[0-9.]+(?=db)' || echo "0.8")
+                ;;
+            esac
+
+            local new_version="${base_version}+git${commit_count}.${commit_hash}"
+            echo "📦 Updating $package to version: $new_version"
+
+            # Update OpenSUSE spec file if it exists
+            if [[ -f "distro/opensuse/${package}.spec" ]]; then
+              sed -i "s/^Version:.*/Version:        $new_version/" "distro/opensuse/${package}.spec"
+              echo "  ✓ Updated distro/opensuse/${package}.spec"
+            fi
+
+            # Update Debian changelog
+            if [[ -f "distro/debian/${package}/debian/changelog" ]]; then
+              local changelog_date=$(date -R)
+              {
+                echo "${package} (${new_version}db1) unstable; urgency=medium"
+                echo ""
+                echo "  * Git snapshot (commit $commit_count: $commit_hash)"
+                echo ""
+                echo " -- Avenge Media <AvengeMedia.US@gmail.com>  $changelog_date"
+              } > "distro/debian/${package}/debian/changelog"
+              echo "  ✓ Updated distro/debian/${package}/debian/changelog"
+            fi
+          }
+
+          # Update each git package that needs updating
+          for pkg in ${{ steps.packages.outputs.packages }}; do
+            case "$pkg" in
+              niri-git)
+                update_git_package "niri-git" "YaLTeR/niri"
+                ;;
+              quickshell-git)
+                update_git_package "quickshell-git" "outfoxxed/quickshell"
+                ;;
+              xwayland-satellite-git)
+                update_git_package "xwayland-satellite-git" "Supreeeme/xwayland-satellite"
+                ;;
+            esac
+          done
 
       - name: Update spec files with latest versions
         run: |
