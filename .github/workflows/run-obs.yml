@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       package:
-        description: "Package to update (cliphist, ghostty, matugen, niri, niri-git, quickshell, quickshell-git, xwayland-satellite, xwayland-satellite-git, danksearch, dgop, or all)"
+        description: "Package(s) to update: single (niri-git), multiple space-separated (niri-git quickshell-git), or 'all'"
         required: false
         default: "all"
       rebuild_release:
@@ -263,13 +263,22 @@ jobs:
                 echo "✓ All packages up to date"
               fi
             else
-              # Check specific package
-              if needs_update "$MANUAL_PKG"; then
-                echo "packages=$MANUAL_PKG" >> $GITHUB_OUTPUT
+              # Check specific package(s) - can be space-separated list
+              PACKAGES_TO_UPDATE=()
+              for pkg in $MANUAL_PKG; do
+                if needs_update "$pkg"; then
+                  PACKAGES_TO_UPDATE+=("$pkg")
+                fi
+              done
+
+              if [[ ${#PACKAGES_TO_UPDATE[@]} -gt 0 ]]; then
+                echo "packages=${PACKAGES_TO_UPDATE[*]}" >> $GITHUB_OUTPUT
                 echo "has_updates=true" >> $GITHUB_OUTPUT
+                echo "✓ Packages to update: ${PACKAGES_TO_UPDATE[*]}"
               else
                 echo "packages=" >> $GITHUB_OUTPUT
                 echo "has_updates=false" >> $GITHUB_OUTPUT
+                echo "✓ All specified packages up to date"
               fi
             fi
           else
