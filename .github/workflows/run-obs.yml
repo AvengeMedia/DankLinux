@@ -117,7 +117,7 @@ jobs:
               return 0  # New package, needs upload
             fi
 
-            # For -git packages, check upstream commit
+            # For -git packages, check upstream commit vs OBS commit
             if [[ "$package" == *"-git" ]]; then
               local upstream_repo=""
               case "$package" in
@@ -136,13 +136,6 @@ jobs:
                   ;;
               esac
 
-              # Get current commit from changelog
-              local current_commit=$(get_changelog_commit "$package")
-              if [[ -z "$current_commit" ]]; then
-                echo "📋 $package: No changelog found (new package)"
-                return 0  # New package, needs upload
-              fi
-
               # Get latest upstream commit
               local latest_commit=$(get_latest_git_commit "$upstream_repo")
               if [[ -z "$latest_commit" ]]; then
@@ -150,13 +143,22 @@ jobs:
                 return 1
               fi
 
+              # Extract commit from OBS version (strip db suffix first)
+              local obs_version_clean=$(echo "$obs_version" | sed -E 's/(\.?db[0-9]+)+$//')
+              local obs_commit=$(echo "$obs_version_clean" | grep -oP '[a-f0-9]{8}$' || echo "")
+
+              if [[ -z "$obs_commit" ]]; then
+                echo "📋 $package: No commit found in OBS version, needs upload"
+                return 0  # New package or invalid version
+              fi
+
               # Compare commits
-              if [[ "$current_commit" != "$latest_commit" ]]; then
-                echo "📋 $package: New commit $latest_commit (current: $current_commit)"
+              if [[ "$obs_commit" != "$latest_commit" ]]; then
+                echo "📋 $package: New commit $latest_commit (OBS has: $obs_commit)"
                 return 0  # Update needed
               fi
 
-              echo "📋 $package: Commit $current_commit already up to date"
+              echo "📋 $package: Commit $latest_commit already on OBS"
               return 1  # No update needed
             fi
 
