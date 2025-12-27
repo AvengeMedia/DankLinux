@@ -17,9 +17,7 @@ Build-Depends: debhelper-compat (= 13),
                libinput-dev,
                libgbm-dev,
                libxkbcommon-dev,
-               libharfbuzz0b,
-               libharfbuzz-bin,
-               libfreetype6
+               libharfbuzz-dev
 Standards-Version: 4.6.2
 Homepage: https://github.com/YaLTeR/niri
 Vcs-Browser: https://github.com/YaLTeR/niri

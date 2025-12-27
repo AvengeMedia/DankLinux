@@ -20,9 +20,7 @@ Build-Depends: debhelper-compat (= 13),
                libwayland-dev,
                wayland-protocols,
                zlib1g-dev,
-               libharfbuzz0b,
-               libharfbuzz-bin,
-               libfreetype6
+               libharfbuzz-dev
 Standards-Version: 4.6.2
 Homepage: https://github.com/ghostty-org/ghostty
 Vcs-Browser: https://github.com/ghostty-org/ghostty
