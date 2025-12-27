@@ -27,7 +27,8 @@ Build-Depends: debhelper-compat (= 13),
                libgbm-dev,
                libegl1-mesa-dev,
                libpolkit-agent-1-dev,
-               libjemalloc-dev
+               libjemalloc-dev,
+               libharfbuzz0b
 Standards-Version: 4.6.2
 Homepage: https://github.com/quickshell-mirror/quickshell
 Vcs-Browser: https://github.com/quickshell-mirror/quickshell

@@ -25,7 +25,11 @@ override_dh_auto_configure:
 	if [ ! -f zig/zig ]; then \
 		TARBALL="zig-linux-$(ZIG_ARCH)-$(ZIG_VERSION).tar.xz"; \
 		if [ ! -f "$$TARBALL" ]; then \
-			wget -q "https://ziglang.org/download/$(ZIG_VERSION)/$$TARBALL" || exit 1; \
+			if [ -f "../$$TARBALL" ]; then \
+				cp "../$$TARBALL" .; \
+			else \
+				wget -q "https://ziglang.org/download/$(ZIG_VERSION)/$$TARBALL" || exit 1; \
+			fi; \
 		fi; \
 		tar -xJf "$$TARBALL"; \
 		mv $$(find . -maxdepth 1 -type d -name "zig-linux-*" | head -1) zig; \
