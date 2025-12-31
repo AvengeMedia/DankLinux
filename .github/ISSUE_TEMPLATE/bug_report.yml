@@ -1,0 +1,104 @@
+name: Bug Report
+description: Crashes or unexpected behaviors
+labels:
+  - bug
+body:
+  - type: checkboxes
+    id: compositor
+    attributes:
+      label: Compositor
+      description: Which compositor(s) are you using?
+      options:
+        - label: niri
+        - label: Hyprland
+        - label: dwl (MangoWC)
+        - label: sway
+        - label: Other (specify below)
+    validations:
+      required: true
+  - type: checkboxes
+    id: distribution
+    attributes:
+      label: Distribution
+      description: Which Linux distribution(s) are you using?
+      options:
+        - label: Arch Linux
+        - label: Fedora
+        - label: Debian
+        - label: Ubuntu
+        - label: openSUSE
+        - label: Other (specify below)
+    validations:
+      required: true
+  - type: checkboxes
+    id: package
+    attributes:
+      label: Package
+      description: Which package(s) does this bug report concern?
+      options:
+        - label: all
+        - label: cliphist
+        - label: danksearch
+        - label: dgop
+        - label: dms
+        - label: dms-greeter
+        - label: ghostty
+        - label: matugen
+        - label: niri
+        - label: quickshell
+        - label: xwayland
+        - label: Other (specify below)
+    validations:
+      required: true
+  - type: input
+    id: dms_version
+    attributes:
+      label: dms version
+      description: Output of dms version command
+      placeholder: e.g., 1.2.3
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Brief description of the issue
+      placeholder: What happened?
+    validations:
+      required: false
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: Describe the expected behavior
+    validations:
+      required: false
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Please provide detailed steps to reproduce the issue
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Messages/Logs
+      description: Please include any error messages, stack traces, or relevant logs
+      placeholder: |
+        Paste error messages or logs here
+    validations:
+      required: false
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots/Recordings
+      description: If applicable, add screenshots or screen recordings
+      placeholder: Attach images or videos here
+    validations:
+      required: false
