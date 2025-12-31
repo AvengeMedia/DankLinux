@@ -3,6 +3,10 @@ description: Suggest a new package, repository, or packaging improvement
 labels:
   - enhancement
 body:
+  - type: markdown
+    attributes:
+      value: |
+        ## The Dank Linux Repository Feature Request
   - type: textarea
     id: feature
     attributes:

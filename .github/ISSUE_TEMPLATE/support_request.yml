@@ -3,6 +3,10 @@ description: Help with installation, usage, or general questions about packages 
 labels:
   - support
 body:
+  - type: markdown
+    attributes:
+      value: |
+        ## The Dank Linux Repository Support Request
   - type: checkboxes
     id: distribution
     attributes:
