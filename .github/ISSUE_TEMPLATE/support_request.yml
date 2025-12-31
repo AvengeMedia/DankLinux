@@ -1,0 +1,78 @@
+name: Support Request
+description: Help with installation, usage, or general questions about packages or repositories
+labels:
+  - support
+body:
+  - type: checkboxes
+    id: distribution
+    attributes:
+      label: Distribution
+      description: Which Linux distribution(s) or repositories are you using?
+      options:
+        - label: Arch Linux
+        - label: Fedora
+        - label: Debian
+        - label: Ubuntu
+        - label: CentOS
+        - label: openSUSE
+        - label: Other (specify below)
+    validations:
+      required: true
+  - type: checkboxes
+    id: package
+    attributes:
+      label: Package(s)
+      description: Which package(s) do you need help with?
+      options:
+        - label: cliphist
+        - label: danksearch
+        - label: dgop
+        - label: dms-greeter
+        - label: ghostty
+        - label: matugen
+        - label: niri
+        - label: quickshell
+        - label: xwayland
+        - label: Other (specify below)
+    validations:
+      required: true
+  - type: input
+    id: package_version
+    attributes:
+      label: Package Version
+      description: Version of the package you need help with (if applicable)
+      placeholder: e.g., 1.2.3
+    validations:
+      required: false
+  - type: textarea
+    id: description
+    attributes:
+      label: Description of Support Needed
+      description: Briefly describe the packaging, installation, or repository support you need
+      placeholder: Describe your issue or question
+    validations:
+      required: true
+  - type: textarea
+    id: solutions_tried
+    attributes:
+      label: Solutions Tried
+      description: Describe what you've tried so far (commands, documentation, etc.)
+      placeholder: List steps or resources you've already tried
+    validations:
+      required: false
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Configuration Details
+      description: Include any relevant configuration or environment details
+      placeholder: Add configuration or environment info
+    validations:
+      required: false
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots/Recordings
+      description: If applicable, add screenshots or screen recordings
+      placeholder: Attach images or videos here
+    validations:
+      required: false

@@ -3,16 +3,20 @@ description: Crashes or unexpected behaviors
 labels:
   - bug
 body:
+  - type: markdown
+    attributes:
+      value: |
+        # The Dank Linux Repository
+        Please fill out the required fields below.
   - type: checkboxes
     id: compositor
     attributes:
       label: Compositor
-      description: Which compositor(s) are you using?
       options:
-        - label: niri
+        - label: Niri
         - label: Hyprland
-        - label: dwl (MangoWC)
-        - label: sway
+        - label: MangoWC (dwl)
+        - label: Sway
         - label: Other (specify below)
     validations:
       required: true
@@ -20,13 +24,12 @@ body:
     id: distribution
     attributes:
       label: Distribution
-      description: Which Linux distribution(s) are you using?
       options:
         - label: Arch Linux
         - label: Fedora
         - label: Debian
         - label: Ubuntu
-        - label: openSUSE
+        - label: OpenSUSE
         - label: Other (specify below)
     validations:
       required: true
@@ -34,7 +37,6 @@ body:
     id: package
     attributes:
       label: Package
-      description: Which package(s) does this bug report concern?
       options:
         - label: all
         - label: cliphist
@@ -65,7 +67,7 @@ body:
       description: Brief description of the issue
       placeholder: What happened?
     validations:
-      required: false
+      required: true
   - type: textarea
     id: expected_behavior
     attributes:

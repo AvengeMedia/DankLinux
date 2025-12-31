@@ -1,0 +1,70 @@
+name: Feature Request
+description: Suggest a new package, repository, or packaging improvement
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: feature
+    attributes:
+      label: Package/Repository Feature Request
+      description: Briefly describe the packaging or distribution feature you are requesting (e.g., new package, repository support, packaging improvement, etc.)
+      placeholder: Describe the feature or improvement
+    validations:
+      required: true
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use Case
+      description: Why is this packaging/distribution feature useful or needed?
+      placeholder: Explain the use case
+    validations:
+      required: false
+  - type: checkboxes
+    id: distribution
+    attributes:
+      label: Target Distribution(s)
+      description: Which Linux distribution(s) or repositories does this request concern?
+      options:
+        - label: Arch Linux
+        - label: Fedora
+        - label: Debian
+        - label: Ubuntu
+        - label: CentOS
+        - label: openSUSE
+        - label: Other (specify below)
+    validations:
+      required: false
+  - type: checkboxes
+    id: package
+    attributes:
+      label: Package(s)
+      description: Which package(s) does this request concern?
+      options:
+        - label: cliphist
+        - label: danksearch
+        - label: dgop
+        - label: dms-greeter
+        - label: ghostty
+        - label: matugen
+        - label: niri
+        - label: quickshell
+        - label: xwayland
+        - label: Other (specify below)
+    validations:
+      required: false
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution
+      description: If you have any ideas for how this could be implemented, please share!
+      placeholder: Suggest a solution or approach
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives/Existing Solutions
+      description: Include any similar or pre-existing packaging/distribution solutions that address this need
+      placeholder: List alternatives or existing solutions
+    validations:
+      required: false
