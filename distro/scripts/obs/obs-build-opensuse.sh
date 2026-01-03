@@ -53,16 +53,11 @@ EOF
 
 # Parse arguments
 REBUILD_NUM=""
-DRY_RUN=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --rebuild=*)
             REBUILD_NUM="${1#*=}"
-            shift
-            ;;
-        --dry-run)
-            DRY_RUN=true
             shift
             ;;
         --verbose|-v)
@@ -424,12 +419,6 @@ SERVICE_FILE="$REPO_ROOT/distro/opensuse/_service"
 if [[ -f "$SERVICE_FILE" ]]; then
     cp "$SERVICE_FILE" "$OUTPUT_DIR/"
     log_debug "Copied _service file"
-fi
-
-if [[ "$DRY_RUN" == "true" ]]; then
-    log_warn "Dry-run mode: Build preparation complete"
-    log_info "Output directory: $OUTPUT_DIR"
-    exit 0
 fi
 
 # List output files

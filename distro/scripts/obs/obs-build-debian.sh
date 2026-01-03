@@ -53,16 +53,11 @@ EOF
 
 # Parse arguments
 REBUILD_NUM=""
-DRY_RUN=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --rebuild=*)
             REBUILD_NUM="${1#*=}"
-            shift
-            ;;
-        --dry-run)
-            DRY_RUN=true
             shift
             ;;
         --verbose|-v)
@@ -358,12 +353,6 @@ log_success "Changelog updated"
 log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 log_info "Building Debian source package"
 log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-if [[ "$DRY_RUN" == "true" ]]; then
-    log_warn "Dry-run mode: Skipping actual build"
-    log_info "Source prepared at: $SOURCE_DIR"
-    exit 0
-fi
 
 cd "$SOURCE_DIR"
 

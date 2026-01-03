@@ -127,8 +127,11 @@ Same source, incremented `.db` suffix. Use for packaging fixes, dependency updat
 ## Testing
 
 ```bash
-./obs-check-updates.sh --dry-run all
-./obs-orchestrator.sh --dry-run --verbose niri-git
+# Check for updates without building
+./obs-check-updates.sh all
+
+# Check with verbose output
+./obs-check-updates.sh --verbose niri-git
 ```
 
 ## Migration

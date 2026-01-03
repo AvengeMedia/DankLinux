@@ -33,7 +33,6 @@ ARGUMENTS:
 OPTIONS:
   --message=MSG   Commit message
   --check-only    Only check for updates, don't build
-  --dry-run       Prepare but don't upload
   --verbose       Enable verbose output
   -h, --help      Show this help message
 
@@ -64,7 +63,6 @@ REBUILD_NUM=""
 TARGET_DISTRO="both"
 COMMIT_MESSAGE=""
 CHECK_ONLY=false
-DRY_RUN=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -74,10 +72,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --check-only)
             CHECK_ONLY=true
-            shift
-            ;;
-        --dry-run)
-            DRY_RUN=true
             shift
             ;;
         --verbose|-v)
@@ -259,11 +253,11 @@ build_package() {
     # Upload to OBS
     log_info "Uploading to OBS..."
 
-    local upload_flags="--distro=$TARGET_DISTRO"
-    [[ -n "$COMMIT_MESSAGE" ]] && upload_flags="$upload_flags --message=\"$COMMIT_MESSAGE\""
-    [[ "$DRY_RUN" == "true" ]] && upload_flags="$upload_flags --dry-run"
+    local upload_cmd=("$SCRIPT_DIR/obs-upload.sh" "--distro=$TARGET_DISTRO")
+    [[ -n "$COMMIT_MESSAGE" ]] && upload_cmd+=("--message=$COMMIT_MESSAGE")
+    upload_cmd+=("$pkg" "$artifacts_dir")
 
-    if ! bash "$SCRIPT_DIR/obs-upload.sh" $upload_flags "$pkg" "$artifacts_dir"; then
+    if ! bash "${upload_cmd[@]}"; then
         log_error "Upload failed for $pkg"
         rm -rf "$build_dir"
         return 1

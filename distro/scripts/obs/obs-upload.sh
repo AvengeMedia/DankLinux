@@ -33,7 +33,6 @@ ARGUMENTS:
 OPTIONS:
   --distro=DIST   Target distro: debian, opensuse, or both (default: both)
   --message=MSG   Commit message (default: "Automated update")
-  --dry-run       Prepare but don't upload
   --verbose       Enable verbose output
   -h, --help      Show this help message
 
@@ -49,7 +48,6 @@ EOF
 # Parse arguments
 TARGET_DISTRO="both"
 COMMIT_MESSAGE="Automated update from OBS automation"
-DRY_RUN=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -59,10 +57,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --message=*)
             COMMIT_MESSAGE="${1#*=}"
-            shift
-            ;;
-        --dry-run)
-            DRY_RUN=true
             shift
             ;;
         --verbose|-v)
@@ -273,13 +267,6 @@ osc addremove
 # Check status
 log_info "Checking status..."
 osc status
-
-if [[ "$DRY_RUN" == "true" ]]; then
-    log_warn "Dry-run mode: Not committing changes"
-    log_info "Files prepared in: $PKG_DIR"
-    log_info "Review changes with: cd $PKG_DIR && osc diff"
-    exit 0
-fi
 
 # Commit changes
 log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
