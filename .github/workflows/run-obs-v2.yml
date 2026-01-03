@@ -39,95 +39,9 @@ on:
     - cron: "0 */6 * * *" # Every 6 hours for git packages
 
 jobs:
-  check-updates:
-    name: Check for package updates
-    runs-on: ubuntu-latest
-    outputs:
-      packages_json: ${{ steps.check.outputs.packages_json }}
-      has_updates: ${{ steps.check.outputs.has_updates }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq curl
-
-          # Install yq for reading config files
-          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-          sudo chmod +x /usr/local/bin/yq
-
-      - name: Check for updates
-        id: check
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OBS_USERNAME: ${{ secrets.OBS_USERNAME }}
-          OBS_PASSWORD: ${{ secrets.OBS_PASSWORD }}
-        run: |
-          # Determine which packages to check
-          if [[ "${{ github.event_name }}" == "schedule" ]]; then
-            # Scheduled: check ALL packages (stable + git)
-            PACKAGES="all"
-          elif [[ -n "${{ github.event.inputs.package }}" ]]; then
-            # Manual: use specified packages
-            PACKAGES="${{ github.event.inputs.package }}"
-          else
-            # Default: all packages
-            PACKAGES="all"
-          fi
-
-          REBUILD="${{ github.event.inputs.rebuild_number }}"
-
-          echo "Checking packages: $PACKAGES"
-          echo "Rebuild number: ${REBUILD:-none}"
-
-          # For rebuilds, skip version check and rebuild release
-          if [[ -n "$REBUILD" ]]; then
-            echo "Rebuild mode: skipping version check, will rebuild package..."
-            
-            # Create mock result for rebuild
-            RESULT='[{"package":"'"$PACKAGES"'","needs_update":true,"reason":"rebuild","upstream_version":"rebuild.'"$REBUILD"'","obs_version":null}]'
-          else
-            # Normal mode: check for actual updates
-            echo "Checking for version updates..."
-            RESULT=$(bash distro/scripts/obs/obs-check-updates.sh --json $PACKAGES)
-          fi
-
-          echo "Update check result:"
-          echo "$RESULT" | jq .
-
-          # Filter packages that need updates
-          PACKAGES_TO_UPDATE=$(echo "$RESULT" | jq -c '[.[] | select(.needs_update == true)]')
-
-          # Check if any packages need updates
-          UPDATE_COUNT=$(echo "$PACKAGES_TO_UPDATE" | jq 'length')
-
-          if [[ "$UPDATE_COUNT" -gt 0 ]]; then
-            echo "has_updates=true" >> $GITHUB_OUTPUT
-            echo "packages_json=$PACKAGES_TO_UPDATE" >> $GITHUB_OUTPUT
-
-            echo "Packages needing updates ($UPDATE_COUNT):"
-            echo "$PACKAGES_TO_UPDATE" | jq -r '.[] | "  - \(.package): \(.upstream_version)"'
-          else
-            echo "has_updates=false" >> $GITHUB_OUTPUT
-            echo "packages_json=[]" >> $GITHUB_OUTPUT
-            echo "All packages are up to date"
-          fi
-
   build-and-upload:
     name: Build and upload packages
-    needs: check-updates
-    if: needs.check-updates.outputs.has_updates == 'true'
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      max-parallel: 3
-      matrix:
-        package_info: ${{ fromJson(needs.check-updates.outputs.packages_json) }}
 
     steps:
       - name: Checkout repository
@@ -158,58 +72,60 @@ jobs:
 
       - name: Install language-specific dependencies
         run: |
-          PACKAGE="${{ matrix.package_info.package }}"
+          # Install Rust
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source "$HOME/.cargo/env"
 
-          # Install Rust for Rust packages
-          if [[ "$PACKAGE" =~ ^(niri|niri-git|xwayland-satellite|xwayland-satellite-git|matugen)$ ]]; then
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-            source "$HOME/.cargo/env"
-          fi
+          # Install Go
+          sudo snap install go --classic
 
-          # Install Go for Go packages
-          if [[ "$PACKAGE" =~ ^(cliphist|danksearch|dgop)$ ]]; then
-            sudo snap install go --classic
-          fi
+          # Install CMake/Qt6
+          sudo apt-get install -y cmake qt6-base-dev
 
-          # Install CMake/Qt6 for C++ packages
-          if [[ "$PACKAGE" =~ ^(quickshell|quickshell-git)$ ]]; then
-            sudo apt-get install -y cmake qt6-base-dev
-          fi
-
-      - name: Build and upload package
+      - name: Determine packages to build
+        id: packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OBS_USERNAME: ${{ secrets.OBS_USERNAME }}
           OBS_PASSWORD: ${{ secrets.OBS_PASSWORD }}
-          PACKAGE: ${{ matrix.package_info.package }}
-          VERSION: ${{ matrix.package_info.upstream_version }}
+        run: |
+          # Determine which packages to build
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            PACKAGES="all"
+          elif [[ -n "${{ github.event.inputs.package }}" ]]; then
+            PACKAGES="${{ github.event.inputs.package }}"
+          else
+            PACKAGES="all"
+          fi
+
+          echo "Packages to process: $PACKAGES"
+          echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
+
+      - name: Build and upload packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OBS_USERNAME: ${{ secrets.OBS_USERNAME }}
+          OBS_PASSWORD: ${{ secrets.OBS_PASSWORD }}
+          PACKAGES: ${{ steps.packages.outputs.packages }}
           REBUILD_NUMBER: ${{ github.event.inputs.rebuild_number }}
           DISTRO: ${{ github.event.inputs.distro || 'both' }}
         run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "Building: $PACKAGE"
-          echo "Version: $VERSION"
-          echo "Distro: $DISTRO"
-          [[ -n "$REBUILD_NUMBER" ]] && echo "Rebuild: .db$REBUILD_NUMBER"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
           # Build and upload with orchestrator
-          # Distro is passed as positional argument (3rd arg)
           if [[ -n "$REBUILD_NUMBER" ]]; then
             bash distro/scripts/obs/obs-orchestrator.sh \
               --message="Automated update from GitHub Actions (rebuild $REBUILD_NUMBER)" \
-              "$PACKAGE" "$REBUILD_NUMBER" "$DISTRO"
+              "$PACKAGES" "$REBUILD_NUMBER" "$DISTRO"
           else
             bash distro/scripts/obs/obs-orchestrator.sh \
               --message="Automated update from GitHub Actions" \
-              "$PACKAGE" "" "$DISTRO"
+              "$PACKAGES" "" "$DISTRO"
           fi
 
       - name: Upload build logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: build-logs-${{ matrix.package_info.package }}
+          name: build-logs
           path: |
             /tmp/obs-build-*/build.log
             /tmp/osc-*.log
@@ -217,16 +133,12 @@ jobs:
 
   summary:
     name: Build summary
-    needs: [check-updates, build-and-upload]
+    needs: build-and-upload
     if: always()
     runs-on: ubuntu-latest
 
     steps:
       - name: Generate summary
-        env:
-          HAS_UPDATES: ${{ needs.check-updates.outputs.has_updates }}
-          PACKAGES_JSON: ${{ needs.check-updates.outputs.packages_json }}
-          BUILD_RESULT: ${{ needs.build-and-upload.result }}
         run: |
           echo "# OBS Package Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -234,37 +146,13 @@ jobs:
           echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [[ "$HAS_UPDATES" != "true" ]]; then
-            echo "**Status:** ✅ All packages up to date" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "No updates were needed. All packages are current." >> $GITHUB_STEP_SUMMARY
-            exit 0
-          fi
-
-          echo "**Packages Processed:**" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          # Parse package list
-          echo "$PACKAGES_JSON" | jq -r '.[] | "- **\(.package)**: `\(.upstream_version)` → [View builds](https://build.opensuse.org/package/show/home:AvengeMedia:danklinux/\(.package))"' >> $GITHUB_STEP_SUMMARY
-
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          # Check build status
-          if [[ "$BUILD_RESULT" == "success" ]]; then
-            echo "**Build Status:** ✅ All builds completed successfully" >> $GITHUB_STEP_SUMMARY
-          elif [[ "$BUILD_RESULT" == "failure" ]]; then
-            echo "**Build Status:** ❌ Some builds failed (check logs above)" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ needs.build-and-upload.result }}" == "success" ]]; then
+            echo "**Status:** ✅ Build completed" >> $GITHUB_STEP_SUMMARY
           else
-            echo "**Build Status:** ⚠️ Builds were skipped or cancelled" >> $GITHUB_STEP_SUMMARY
+            echo "**Status:** ❌ Build failed" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [[ -n "${{ github.event.inputs.rebuild_number }}" ]]; then
-            echo "**Rebuild Number:** \`.db${{ github.event.inputs.rebuild_number }}\`" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-          fi
-
           echo "---" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "📊 [View OBS Project](https://build.opensuse.org/project/show/home:AvengeMedia:danklinux)" >> $GITHUB_STEP_SUMMARY
