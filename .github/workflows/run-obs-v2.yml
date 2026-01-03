@@ -85,12 +85,15 @@ jobs:
           echo "Checking packages: $PACKAGES"
           echo "Rebuild number: ${REBUILD:-none}"
 
-          # Run update checker
+          # For rebuilds, skip version check and rebuild release
           if [[ -n "$REBUILD" ]]; then
-            # Rebuild mode: force update check
-            RESULT=$(bash distro/scripts/obs/obs-check-updates.sh --json --force $PACKAGES)
+            echo "Rebuild mode: skipping version check, will rebuild package..."
+            
+            # Create mock result for rebuild
+            RESULT='[{"package":"'"$PACKAGES"'","needs_update":true,"reason":"rebuild","upstream_version":"rebuild.'"$REBUILD"'","obs_version":null}]'
           else
             # Normal mode: check for actual updates
+            echo "Checking for version updates..."
             RESULT=$(bash distro/scripts/obs/obs-check-updates.sh --json $PACKAGES)
           fi
 
