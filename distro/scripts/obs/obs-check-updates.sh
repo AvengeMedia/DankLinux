@@ -184,8 +184,8 @@ check_package_updates() {
             log_info "  Base version (fallback): $base_version"
         fi
 
-        # Build git version string with .db1 suffix
-        upstream_version=$(build_git_version "$base_version" "$commit_count" "$upstream_commit" "1")
+        # Build git version string (without .db suffix - only add that when building)
+        upstream_version="${base_version}+git${commit_count}.${upstream_commit}"
         log_info "  Upstream version: $upstream_version"
 
     else
@@ -238,8 +238,8 @@ EOF
             log_info "  Latest release: $upstream_version"
         fi
 
-        # Apply .db1 suffix to stable version
-        upstream_version=$(build_stable_version "$upstream_version" "1")
+        # Don't add .db suffix yet - only add it when building/uploading
+        # For version comparison, keep it clean
     fi
 
     # Get OBS version
