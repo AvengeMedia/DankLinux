@@ -4,16 +4,36 @@ on:
   workflow_dispatch:
     inputs:
       package:
-        description: "Package(s) to update: single (niri-git), multiple space-separated, 'all', or 'all-git'"
+        description: "Package to update"
         required: false
+        type: choice
+        options:
+          - all
+          - all-git
+          - cliphist
+          - danksearch
+          - dgop
+          - ghostty
+          - matugen
+          - niri
+          - niri-git
+          - quickshell
+          - quickshell-git
+          - xwayland-satellite
+          - xwayland-satellite-git
         default: "all"
       rebuild_number:
         description: "Rebuild number for .db suffix (e.g., 2, 3, 4)"
         required: false
         default: ""
       distro:
-        description: "Target distro: debian, opensuse, or both"
+        description: "Target distro"
         required: false
+        type: choice
+        options:
+          - both
+          - debian
+          - opensuse
         default: "both"
   schedule:
     - cron: "0 */6 * * *" # Every 6 hours for git packages
@@ -171,17 +191,15 @@ jobs:
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
           # Build and upload with orchestrator
+          # Distro is passed as positional argument (3rd arg)
           if [[ -n "$REBUILD_NUMBER" ]]; then
             bash distro/scripts/obs/obs-orchestrator.sh \
-              --rebuild="$REBUILD_NUMBER" \
-              --distro="$DISTRO" \
               --message="Automated update from GitHub Actions (rebuild $REBUILD_NUMBER)" \
-              "$PACKAGE" "$VERSION"
+              "$PACKAGE" "$REBUILD_NUMBER" "$DISTRO"
           else
             bash distro/scripts/obs/obs-orchestrator.sh \
-              --distro="$DISTRO" \
               --message="Automated update from GitHub Actions" \
-              "$PACKAGE" "$VERSION"
+              "$PACKAGE" "" "$DISTRO"
           fi
 
       - name: Upload build logs on failure
