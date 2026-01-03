@@ -1,0 +1,317 @@
+# OBS Package Configuration for DankLinux packages
+
+schema_version: "1.0"
+
+# Package definitions
+packages:
+  # ============================================================================
+  # STABLE PACKAGES
+  # ============================================================================
+
+  cliphist:
+    type: stable
+    upstream:
+      repo: sentriz/cliphist
+      source_type: github_release
+    distros:
+      - debian
+      - opensuse
+    build:
+      language: go
+      go_version: "1.24"
+    tarball:
+      directory_name: "cliphist-{version}"
+      compression: gz
+    checksums:
+      verify: true
+      algorithm: sha256
+
+  danksearch:
+    type: stable
+    upstream:
+      repo: AvengeMedia/DankSearch
+      source_type: github_release
+    distros:
+      - debian
+      - opensuse
+    build:
+      language: go
+      go_version: "1.24"
+      binary_release: true
+    tarball:
+      directory_name: "danksearch-{version}"
+      compression: gz
+
+  dgop:
+    type: stable
+    upstream:
+      repo: AvengeMedia/DGoP
+      source_type: github_release
+    distros:
+      - debian
+      - opensuse
+    build:
+      language: go
+      go_version: "1.24"
+      binary_release: true
+    tarball:
+      directory_name: "dgop-{version}"
+      compression: gz
+
+  ghostty:
+    type: stable
+    upstream:
+      repo: ghostty-org/ghostty
+      source_type: custom
+      url_template: "https://release.files.ghostty.org/{version}/ghostty-{version}.tar.gz"
+    distros:
+      - debian
+      - opensuse
+    build:
+      language: zig
+      zig_version: "0.14.0"
+    tarball:
+      directory_name: "ghostty-{version}"
+      compression: xz
+    checksums:
+      verify: true
+      algorithm: sha256
+
+  matugen:
+    type: stable
+    upstream:
+      repo: InioX/matugen
+      source_type: github_release
+    distros:
+      - debian
+      - opensuse
+    build:
+      language: rust
+      rust_version: stable
+      vendor_deps: true
+    tarball:
+      directory_name: "matugen-{version}"
+      compression: gz
+    sources:
+      opensuse:
+        - name: "Source0"
+          type: binary
+          url_template: "{release_url}/matugen-linux-x86_64.tar.gz"
+        - name: "Source1"
+          type: source
+          directory_name: "matugen-source"
+
+  niri:
+    type: stable
+    upstream:
+      repo: YaLTeR/niri
+      source_type: github_release
+    distros:
+      - debian  # OpenSUSE uses niri-git only
+    build:
+      language: rust
+      rust_version: stable
+      vendor_deps: true
+    tarball:
+      directory_name: "niri-v{version}"
+      compression: xz
+    checksums:
+      verify: true
+      algorithm: sha256
+
+  quickshell:
+    type: stable
+    upstream:
+      repo: quickshell-mirror/quickshell
+      source_type: github_release
+    distros:
+      - debian
+      - opensuse
+    build:
+      language: cpp
+      requires:
+        - cmake
+        - qt6
+    tarball:
+      directory_name: "quickshell-source"
+      compression: gz
+    base_version:
+      from_pins: true  # Check pins.yaml first
+
+  xwayland-satellite:
+    type: stable
+    upstream:
+      repo: Supreeeme/xwayland-satellite
+      source_type: github_release
+    distros:
+      - debian
+      - opensuse
+    build:
+      language: rust
+      rust_version: stable
+      vendor_deps: true
+    tarball:
+      directory_name: "xwayland-satellite-source"
+      compression: gz
+
+  # ============================================================================
+  # GIT PACKAGES (Nightly builds from latest commits)
+  # ============================================================================
+
+  niri-git:
+    type: git
+    upstream:
+      repo: YaLTeR/niri
+      branch: main
+    base_version:
+      from_stable: niri
+      fallback: "25.11"
+    distros:
+      - debian
+      - opensuse
+    build:
+      language: rust
+      rust_version: stable
+      vendor_deps: true
+    tarball:
+      directory_name: "niri"
+      compression: none  # .tar only (no compression)
+
+  quickshell-git:
+    type: git
+    upstream:
+      repo: quickshell-mirror/quickshell
+      branch: master
+    base_version:
+      from_pins: true  # Check pins.yaml first for quickshell stable pin
+      from_stable: quickshell
+      fallback: "0.2.1"
+    distros:
+      - debian
+      - opensuse
+    build:
+      language: cpp
+      requires:
+        - cmake
+        - qt6
+    tarball:
+      directory_name: "quickshell-source"
+      compression: gz
+    cmake_flags:
+      - "-DGIT_REVISION={commit_hash}"
+
+  xwayland-satellite-git:
+    type: git
+    upstream:
+      repo: Supreeeme/xwayland-satellite
+      branch: main
+    base_version:
+      from_stable: xwayland-satellite
+      fallback: "0.8"
+    distros:
+      - debian
+      - opensuse
+    build:
+      language: rust
+      rust_version: stable
+      vendor_deps: true
+    tarball:
+      directory_name: "xwayland-satellite-source"
+      compression: gz
+
+# ============================================================================
+# BUILD SYSTEM DEFAULTS
+# ============================================================================
+
+defaults:
+  # API retry configuration
+  retry:
+    api_calls: 3
+    backoff_seconds: [2, 4, 8]
+
+  # Temporary directory template
+  temp_dir: /tmp/obs-build-$$
+
+  # Cache TTL (seconds)
+  cache_ttl: 900  # 15 minutes
+
+  # Default tarball options for reproducible builds
+  tarball:
+    options: "--sort=name --mtime=2000-01-01 --owner=0 --group=0"
+    compression: gz
+
+  # OBS project configuration
+  obs:
+    project: "home:AvengeMedia:danklinux"
+    repositories:
+      - "Debian_13"
+      - "openSUSE_Tumbleweed"
+      - "openSUSE_Slowroll"
+      - "16.0"
+    architectures:
+      - "x86_64"
+      - "aarch64"
+
+  # Version prefix configuration
+  version:
+    initial_db_suffix: 1
+    debian_format: "{base}.db{suffix}"
+    opensuse_release_format: "{suffix}%{{?dist}}"
+
+# ============================================================================
+# PACKAGE GROUPS
+# ============================================================================
+
+groups:
+  all-stable:
+    - cliphist
+    - danksearch
+    - dgop
+    - ghostty
+    - matugen
+    - niri
+    - quickshell
+    - xwayland-satellite
+
+  all-git:
+    - niri-git
+    - quickshell-git
+    - xwayland-satellite-git
+
+  all:
+    - cliphist
+    - danksearch
+    - dgop
+    - ghostty
+    - matugen
+    - niri
+    - niri-git
+    - quickshell
+    - quickshell-git
+    - xwayland-satellite
+    - xwayland-satellite-git
+
+  debian-only:
+    - niri  # niri stable is Debian-only; OpenSUSE uses niri-git
+
+  opensuse-only: []
+
+  rust-packages:
+    - matugen
+    - niri
+    - niri-git
+    - xwayland-satellite
+    - xwayland-satellite-git
+
+  go-packages:
+    - cliphist
+    - danksearch
+    - dgop
+
+  cpp-packages:
+    - quickshell
+    - quickshell-git
+
+  binary-releases:
+    - danksearch
+    - dgop
