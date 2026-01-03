@@ -7,36 +7,26 @@ NCPU := $(shell nproc)
 	dh $@
 
 override_dh_auto_build:
-	if [ -f vendor.tar.gz ]; then \
-		tar -xzf vendor.tar.gz; \
-	elif [ -f vendor.tar ]; then \
-		tar -xf vendor.tar; \
-	fi
-
+	# Ensure .cargo/config.toml exists for vendored dependencies
 	if [ ! -f .cargo/config.toml ] && [ -d vendor ]; then \
 		mkdir -p .cargo; \
-		if command -v cargo >/dev/null 2>&1; then \
-			cargo vendor --versioned-dirs 2>&1 | awk '/^\[source\./ { printing=1 } printing { print }' > .cargo/config.toml; \
-			if [ ! -s .cargo/config.toml ]; then \
-				echo '[source.crates-io]' > .cargo/config.toml; \
-				echo 'replace-with = "vendored-sources"' >> .cargo/config.toml; \
-				echo '' >> .cargo/config.toml; \
-				echo '[source.vendored-sources]' >> .cargo/config.toml; \
-				echo 'directory = "vendor"' >> .cargo/config.toml; \
-			fi; \
-		else \
-			echo '[source.crates-io]' > .cargo/config.toml; \
-			echo 'replace-with = "vendored-sources"' >> .cargo/config.toml; \
-			echo '' >> .cargo/config.toml; \
-			echo '[source.vendored-sources]' >> .cargo/config.toml; \
-			echo 'directory = "vendor"' >> .cargo/config.toml; \
-		fi; \
+		echo '[source.crates-io]' > .cargo/config.toml; \
+		echo 'replace-with = "vendored-sources"' >> .cargo/config.toml; \
+		echo '' >> .cargo/config.toml; \
+		echo '[source.vendored-sources]' >> .cargo/config.toml; \
+		echo 'directory = "vendor"' >> .cargo/config.toml; \
 	fi
 
-	sed -i 's/< 0\.3\.0/< 0.4.0/g' vendor/libdisplay-info-sys-*/build.rs vendor/libdisplay-info-sys-*/Cargo.toml 2>/dev/null || true
-	for f in vendor/libdisplay-info-sys-*/.cargo-checksum.json; do \
-		[ -f "$$f" ] && echo '{"files":{}}' > "$$f"; \
+	# Fix checksums for all vendored crates (handles missing .gitignore files)
+	for checksum in vendor/*/.cargo-checksum.json; do \
+		if [ -f "$$checksum" ]; then \
+			pkg=$$(cat "$$checksum" | grep -o '"package":"[^"]*"' | cut -d'"' -f4); \
+			echo "{\"files\":{},\"package\":\"$$pkg\"}" > "$$checksum"; \
+		fi; \
 	done
+
+	# Apply libdisplay-info patches
+	sed -i 's/< 0\.3\.0/< 0.4.0/g' vendor/libdisplay-info-sys-*/build.rs vendor/libdisplay-info-sys-*/Cargo.toml 2>/dev/null || true
 	sed -i '/name = "libdisplay-info-sys"/,/^$$/{/^checksum/d}' Cargo.lock 2>/dev/null || true
 
 	cargo build --offline --release --features default -j$(NCPU)

@@ -10,10 +10,16 @@ BASE_VERSION := $(shell echo $(UPSTREAM_VERSION) | sed 's/ppa[0-9]*$$//')
 	dh $@
 
 override_dh_auto_build:
-	sed -i 's/< 0\.3\.0/< 0.4.0/g' vendor/libdisplay-info-sys-*/build.rs vendor/libdisplay-info-sys-*/Cargo.toml 2>/dev/null || true
-	for f in vendor/libdisplay-info-sys-*/.cargo-checksum.json; do \
-		[ -f "$$f" ] && echo '{"files":{}}' > "$$f"; \
+	# Fix checksums for all vendored crates (handles missing .gitignore files)
+	for checksum in vendor/*/.cargo-checksum.json; do \
+		if [ -f "$$checksum" ]; then \
+			pkg=$$(cat "$$checksum" | grep -o '"package":"[^"]*"' | cut -d'"' -f4); \
+			echo "{\"files\":{},\"package\":\"$$pkg\"}" > "$$checksum"; \
+		fi; \
 	done
+
+	# Apply libdisplay-info patches
+	sed -i 's/< 0\.3\.0/< 0.4.0/g' vendor/libdisplay-info-sys-*/build.rs vendor/libdisplay-info-sys-*/Cargo.toml 2>/dev/null || true
 	sed -i '/name = "libdisplay-info-sys"/,/^$$/{/^checksum/d}' Cargo.lock 2>/dev/null || true
 
 	if [ ! -f .cargo/config.toml ] && [ -d vendor ]; then \

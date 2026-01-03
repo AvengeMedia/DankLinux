@@ -1,40 +1,25 @@
 #!/usr/bin/make -f
 
 DEB_VERSION := $(shell dpkg-parsechangelog -S Version)
-UPSTREAM_VERSION := $(shell echo $(DEB_VERSION) | sed 's/ppa[0-9]*$$//')
+UPSTREAM_VERSION := $(shell echo $(DEB_VERSION) | sed -E 's/[.]?(ppa|db)[0-9]*$$//')
 DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
 
 %:
 	dh $@
 
 override_dh_auto_build:
-ifeq ($(DEB_HOST_ARCH),amd64)
-	if [ -f matugen-amd64.tar.gz ]; then \
-		tar -xzf matugen-amd64.tar.gz; \
-	elif [ -f ../SOURCES/matugen-amd64.tar.gz ]; then \
-		tar -xzf ../SOURCES/matugen-amd64.tar.gz; \
-	else \
-		echo "ERROR: matugen-amd64.tar.gz not found!" && exit 1; \
-	fi
-else ifeq ($(DEB_HOST_ARCH),arm64)
-	# Source with vendored dependencies is in matugen-source directory
-	if [ ! -d "matugen-source" ]; then \
-		echo "ERROR: matugen-source directory not found!"; \
-		ls -la; \
-		exit 1; \
-	fi
+	# Source with vendored dependencies is in current directory
 	# Ensure .cargo/config.toml exists for vendored dependencies
-	if [ ! -f "matugen-source/.cargo/config.toml" ]; then \
+	if [ ! -f ".cargo/config.toml" ]; then \
 		echo "Creating .cargo/config.toml for vendored sources"; \
-		mkdir -p "matugen-source/.cargo"; \
-		echo '[source.crates-io]' > "matugen-source/.cargo/config.toml"; \
-		echo 'replace-with = "vendored-sources"' >> "matugen-source/.cargo/config.toml"; \
-		echo '' >> "matugen-source/.cargo/config.toml"; \
-		echo '[source.vendored-sources]' >> "matugen-source/.cargo/config.toml"; \
-		echo 'directory = "vendor"' >> "matugen-source/.cargo/config.toml"; \
+		mkdir -p ".cargo"; \
+		echo '[source.crates-io]' > ".cargo/config.toml"; \
+		echo 'replace-with = "vendored-sources"' >> ".cargo/config.toml"; \
+		echo '' >> ".cargo/config.toml"; \
+		echo '[source.vendored-sources]' >> ".cargo/config.toml"; \
+		echo 'directory = "vendor"' >> ".cargo/config.toml"; \
 	fi
 	# Fix vendor checksums for offline build
-	cd matugen-source && \
 	for checksum in vendor/*/.cargo-checksum.json; do \
 		if [ -f "$$checksum" ]; then \
 			pkg=$$(cat "$$checksum" | grep -o '"package":"[^"]*"' | cut -d'"' -f4); \
@@ -42,25 +27,13 @@ else ifeq ($(DEB_HOST_ARCH),arm64)
 		fi; \
 	done && \
 	cargo build --offline --release
-endif
 
 override_dh_auto_install:
-ifeq ($(DEB_HOST_ARCH),amd64)
-	if [ -f matugen ]; then \
-		install -Dm755 matugen debian/matugen/usr/bin/matugen; \
-	elif [ -f matugen-*/matugen ]; then \
-		install -Dm755 matugen-*/matugen debian/matugen/usr/bin/matugen; \
-	else \
-		echo "Error: Cannot find matugen binary" && exit 1; \
-	fi
-else ifeq ($(DEB_HOST_ARCH),arm64)
-	install -Dm755 matugen-source/target/release/matugen \
+	install -Dm755 target/release/matugen \
 		debian/matugen/usr/bin/matugen
-endif
 
 override_dh_auto_clean:
-	# Don't remove matugen-source - it contains vendored deps needed for arm64 build
+	# Don't remove vendor - it contains vendored deps needed for arm64 build
 	# Only clean build artifacts inside it
-	rm -rf matugen-source/target
-	rm -rf matugen-$(UPSTREAM_VERSION)
+	rm -rf target
 	dh_auto_clean
