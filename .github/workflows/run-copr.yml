@@ -26,9 +26,9 @@ on:
       - master
     paths:
       - '.github/workflows/run-copr.yml'
-      - 'distro/scripts/copr-update.sh'
-      - 'distro/scripts/fetch-version.sh'
-      - 'distro/scripts/copr-trigger.sh'
+      - 'distro/scripts/copr/copr-update.sh'
+      - 'distro/scripts/common/fetch-version.sh'
+      - 'distro/scripts/copr/copr-trigger.sh'
       - 'distro/pins.yaml'
       - 'distro/fedora/**/*.spec'
 
@@ -67,8 +67,8 @@ jobs:
       - name: Run update script
         id: update
         run: |
-          chmod +x distro/scripts/*.sh
-          distro/scripts/copr-update.sh | tee update-log.txt
+          chmod +x distro/scripts/copr/*.sh distro/scripts/common/*.sh
+          distro/scripts/copr/copr-update.sh | tee update-log.txt
 
           # Check if there are any changes - use git diff --exit-code for reliability
           if git diff --exit-code >/dev/null 2>&1; then
@@ -214,8 +214,8 @@ jobs:
         env:
           MANUAL_PACKAGE: ${{ github.event.inputs.package }}
         run: |
-          chmod +x distro/scripts/*.sh
-          distro/scripts/copr-trigger.sh
+          chmod +x distro/scripts/copr/*.sh distro/scripts/common/*.sh
+          distro/scripts/copr/copr-trigger.sh
 
       - name: Build summary
         run: |

@@ -27,7 +27,7 @@ if [ -f "$REPO_ROOT/distro/pins.yaml" ]; then
             PIN_BASE=$(yq eval '.quickshell.base_version' "$REPO_ROOT/distro/pins.yaml")
 
             # Fetch latest release to check if it's newer than pin base
-            LATEST_TAG=$("$SCRIPT_DIR/fetch-version.sh" "$UPSTREAM_REPO" "release")
+            LATEST_TAG=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "release")
             LATEST_VERSION="${LATEST_TAG#v}"
 
             # Compare versions - if latest > pin_base, override pin
@@ -88,7 +88,7 @@ else
     echo "   Current: $CURRENT_VERSION"
 
     # Fetch latest release tag
-    LATEST_TAG=$("$SCRIPT_DIR/fetch-version.sh" "$UPSTREAM_REPO" "release")
+    LATEST_TAG=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "release")
     LATEST_VERSION="${LATEST_TAG#v}"  # Remove 'v' prefix
 
     if [[ -n "$LATEST_VERSION" ]]; then
@@ -146,7 +146,7 @@ CURRENT_SNAPDATE=$(grep -oP '^%global snapdate\s+\K[0-9]+' "$SPEC_FILE" || echo 
 echo "   Current commit: ${CURRENT_COMMIT:0:7} (date: $CURRENT_SNAPDATE)"
 
 # Fetch latest commit info
-COMMIT_INFO=$("$SCRIPT_DIR/fetch-version.sh" "$UPSTREAM_REPO" "commit")
+COMMIT_INFO=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "commit")
 IFS='|' read -r LATEST_COMMIT LATEST_SHORT_COMMIT LATEST_SNAPDATE <<< "$COMMIT_INFO"
 
 if [[ -n "$LATEST_COMMIT" ]]; then
@@ -191,7 +191,7 @@ CURRENT_VERSION=$(grep -oP '^Version:\s+\K[0-9.]+' "$SPEC_FILE" || echo "unknown
 echo "   Current: $CURRENT_VERSION"
 
 # Fetch latest release tag
-LATEST_TAG=$("$SCRIPT_DIR/fetch-version.sh" "$UPSTREAM_REPO" "release")
+LATEST_TAG=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "release")
 LATEST_VERSION="${LATEST_TAG#v}"
 
 if [[ -n "$LATEST_VERSION" ]]; then
@@ -226,7 +226,7 @@ CURRENT_VERSION=$(grep -oP '^Version:\s+\K[0-9.]+' "$SPEC_FILE" || echo "unknown
 echo "   Current: $CURRENT_VERSION"
 
 # Fetch latest release tag
-LATEST_TAG=$("$SCRIPT_DIR/fetch-version.sh" "$UPSTREAM_REPO" "release")
+LATEST_TAG=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "release")
 LATEST_VERSION="${LATEST_TAG#v}"
 
 if [[ -n "$LATEST_VERSION" ]]; then
@@ -261,7 +261,7 @@ CURRENT_VERSION=$(grep -oP '^Version:\s+\K[0-9.]+' "$SPEC_FILE" || echo "unknown
 echo "   Current: $CURRENT_VERSION"
 
 # Fetch latest release tag
-LATEST_TAG=$("$SCRIPT_DIR/fetch-version.sh" "$UPSTREAM_REPO" "release")
+LATEST_TAG=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "release")
 LATEST_VERSION="${LATEST_TAG#v}"
 
 if [[ -n "$LATEST_VERSION" ]]; then
@@ -296,7 +296,7 @@ CURRENT_VERSION=$(grep -oP '^Version:\s+\K[0-9.]+' "$SPEC_FILE" || echo "unknown
 echo "   Current: $CURRENT_VERSION"
 
 # Note: Breakpad uses commit-based releases, checking latest tag
-LATEST_TAG=$("$SCRIPT_DIR/fetch-version.sh" "$UPSTREAM_REPO" "release" 2>/dev/null || echo "")
+LATEST_TAG=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "release" 2>/dev/null || echo "")
 LATEST_VERSION="${LATEST_TAG#v}"
 
 if [[ -n "$LATEST_VERSION" ]]; then
@@ -332,7 +332,7 @@ CURRENT_VERSION=$(grep -oP '^Version:\s+\K[0-9.]+' "$SPEC_FILE" || echo "unknown
 echo "   Current: $CURRENT_VERSION"
 
 # Fetch latest release tag
-LATEST_TAG=$("$SCRIPT_DIR/fetch-version.sh" "$UPSTREAM_REPO" "release")
+LATEST_TAG=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "release")
 LATEST_VERSION="${LATEST_TAG#v}"
 
 if [[ -n "$LATEST_VERSION" ]]; then
@@ -367,7 +367,7 @@ CURRENT_VERSION=$(grep -oP '^Version:\s+\K[0-9.]+' "$SPEC_FILE" || echo "unknown
 echo "   Current: $CURRENT_VERSION"
 
 # Fetch latest release tag
-LATEST_TAG=$("$SCRIPT_DIR/fetch-version.sh" "$UPSTREAM_REPO" "release")
+LATEST_TAG=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "release")
 LATEST_VERSION="${LATEST_TAG#v}"
 
 if [[ -n "$LATEST_VERSION" ]]; then

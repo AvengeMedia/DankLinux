@@ -54,10 +54,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          chmod +x distro/scripts/*.sh
+          chmod +x distro/scripts/ppa/*.sh distro/scripts/common/*.sh
           
           # Check for updates (PPA uses distro/ubuntu by default)
-          UPDATED=$(distro/scripts/debian-update.sh 2>&1 | tee /dev/stderr | tail -1)
+          UPDATED=$(distro/scripts/ppa/debian-update.sh 2>&1 | tee /dev/stderr | tail -1)
           
           if [ -n "$UPDATED" ] && [ "$UPDATED" != " " ]; then
             echo "has_updates=true" >> $GITHUB_OUTPUT
@@ -186,7 +186,7 @@ jobs:
               echo "🔄 Using rebuild release number: ppa$REBUILD_RELEASE"
             fi
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            bash distro/scripts/ppa-upload.sh "$pkg" danklinux questing || echo "⚠️ Failed to upload $pkg"
+            bash distro/scripts/ppa/ppa-upload.sh "$pkg" danklinux questing || echo "⚠️ Failed to upload $pkg"
           done
       
       - name: Get changed packages

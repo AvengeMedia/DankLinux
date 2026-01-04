@@ -61,7 +61,7 @@ get_latest_tag() {
     local repo="$1"
     local tag
     # Use centralized fetch script with retry/token support
-    tag=$("$SCRIPT_DIR/fetch-version.sh" "$repo" "release")
+    tag=$("$SCRIPT_DIR/../common/fetch-version.sh" "$repo" "release")
     
     echo "${tag#v}"
 }
