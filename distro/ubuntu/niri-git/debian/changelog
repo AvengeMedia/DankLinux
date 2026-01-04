@@ -1,8 +1,8 @@
-niri-git (25.11+git2610.cf0b4bc0ppa1) questing; urgency=medium
+niri-git (25.11+git2612.3158f5a9ppa1) questing; urgency=medium
 
-  * Git snapshot (commit 2610: cf0b4bc0)
+  * Git snapshot (commit 2612: 3158f5a9)
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Wed, 31 Dec 2025 06:22:52 +0000
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sun, 04 Jan 2026 01:13:13 +0000
 
 niri-git (25.11+git2566.f874b2fcppa1) questing; urgency=medium
 
