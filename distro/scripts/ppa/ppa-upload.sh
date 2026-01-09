@@ -84,7 +84,7 @@ if [[ ${#POSITIONAL_ARGS[@]} -gt 0 ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 if [[ ! -d "$REPO_ROOT/distro/ubuntu" ]]; then
     error "Cannot find distro/ubuntu directory. Run from repository root."

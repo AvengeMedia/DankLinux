@@ -23,7 +23,7 @@ for arg in "$@"; do
 done
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 # Default base directory
 if [ -z "$BASE_DIR" ]; then

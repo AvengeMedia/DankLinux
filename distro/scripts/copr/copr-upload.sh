@@ -8,7 +8,7 @@ set -euo pipefail
 COPR_OWNER="avengemedia"
 COPR_PROJECT="danklinux"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 # Colors
 RED='\033[0;31m'
