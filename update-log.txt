@@ -5,15 +5,14 @@
    ✓ Already at pinned commit
 
 📦 Checking quickshell-git (development)...
-   Current commit: bcc3d42 (date: 20260110)
+   Current commit: db37dc5 (date: 20260112)
    Latest commit:  db37dc5 (date: 20260112)
-   ✨ Update available: bcc3d42 → db37dc5
-   Commit count: 723
+   ✓ Already up to date
 
 📦 Checking dgop...
    Current: 0.1.12
-   Latest:  0.1.12
-   ✓ Already up to date
+   Latest:  0.1.13
+   ✨ Update available: 0.1.12 → 0.1.13
 
 📦 Checking cliphist...
    Current: 0.7.0
@@ -52,6 +51,6 @@
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ Updated 1 package(s):
-   • quickshell-git: bcc3d42 → db37dc5
+   • dgop: 0.1.12 → 0.1.13
 
 📝 Changes staged for commit
