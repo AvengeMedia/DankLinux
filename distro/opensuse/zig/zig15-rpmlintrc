@@ -1,0 +1,12 @@
+# rpmlint configuration for zig15
+# Suppress false positives for Zig stdlib files
+
+# Zig bundles its standard library including C headers and C++ sources
+# These are intentionally included as part of the toolchain
+addFilter("zig15.* devel-file-in-non-devel-package .*/zig-0.15.2/lib/")
+
+# Zig stdlib is stripped for release builds
+addFilter("zig15.* unstripped-binary-or-object .*/zig-0.15.2/zig")
+
+# Binary is not PIE, but this is upstream's choice
+addFilter("zig15.* position-independent-executable-suggested .*/zig-0.15.2/zig")

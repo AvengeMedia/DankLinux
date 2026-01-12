@@ -317,6 +317,68 @@ fi
 
 log_success "Source prepared: $(du -sh "$SOURCE_DIR" | cut -f1)"
 
+# Special handling for Ghostty: vendor Zig dependencies
+if [[ "$PACKAGE" == "ghostty" ]]; then
+    log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    log_info "Vendoring Ghostty Zig dependencies"
+    log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+    cd "$SOURCE_DIR"
+
+    # Download ghostty-themes.tgz
+    THEME_URL="https://github.com/mbadolato/iTerm2-Color-Schemes/releases/download/release-20251201-150531-bfb3ee1/ghostty-themes.tgz"
+    log_info "Downloading ghostty-themes.tgz..."
+    if ! download_file_with_retry "$THEME_URL" "ghostty-themes.tgz"; then
+        log_error "Failed to download ghostty-themes.tgz"
+        exit $ERR_NETWORK
+    fi
+    log_success "Downloaded ghostty-themes.tgz"
+
+    # Patch build.zig.zon to use the downloaded themes using Dec 2025 release
+    log_info "Patching build.zig.zon to use local themes..."
+    THEMES_FILE="file://$SOURCE_DIR/ghostty-themes.tgz"
+    sed -i "s|https://github.com/mbadolato/iTerm2-Color-Schemes/releases/download/.\+/ghostty-themes.tgz|${THEMES_FILE}|" "$SOURCE_DIR/build.zig.zon"
+    sed -i '/\.iterm2_themes/,/}/ s|\.hash = "[^"]\+"|.hash = "N-V-__8AANFEAwCzzNzNs3Gaq8pzGNl2BbeyFBwTyO5iZJL-"|' "$SOURCE_DIR/build.zig.zon"
+
+    # Vendor Zig dependencies by running a fetch-only build
+    log_info "Fetching Zig dependencies..."
+    mkdir -p zig-deps/p
+    export ZIG_GLOBAL_CACHE_DIR="$SOURCE_DIR/zig-deps"
+
+    # Use zig to fetch dependencies (must use Zig 0.14 for compatibility with OBS builds)
+    ZIG_BIN=""
+    if command -v zig-0.14 &> /dev/null; then
+        ZIG_BIN="zig-0.14"
+    elif command -v /usr/bin/zig-0.14 &> /dev/null; then
+        ZIG_BIN="/usr/bin/zig-0.14"
+    elif [ -x "/tmp/zig-linux-x86_64-0.14.0/zig" ]; then
+        ZIG_BIN="/tmp/zig-linux-x86_64-0.14.0/zig"
+    fi
+
+    if [ -z "$ZIG_BIN" ]; then
+        log_info "Zig 0.14 not found - downloading to /tmp..."
+        cd /tmp
+        if ! curl -LO https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz; then
+            log_error "Failed to download Zig 0.14.0"
+            exit $ERR_BUILD_FAILURE
+        fi
+        if ! tar -xJf zig-linux-x86_64-0.14.0.tar.xz; then
+            log_error "Failed to extract Zig 0.14.0"
+            exit $ERR_BUILD_FAILURE
+        fi
+        ZIG_BIN="/tmp/zig-linux-x86_64-0.14.0/zig"
+        cd "$SOURCE_DIR"
+        log_success "Downloaded and extracted Zig 0.14.0 to /tmp"
+    fi
+
+    log_info "Using $ZIG_BIN to vendor dependencies..."
+    # Run build to populate cache with ALL dependencies (deps are cached)
+    $ZIG_BIN build -Doptimize=ReleaseFast 2>&1 | grep -v "^info:" || true
+    log_success "Vendored Zig dependencies: $(du -sh zig-deps | cut -f1)"
+
+    cd "$WORK_DIR"
+fi
+
 # Copy debian/ directory into source
 log_info "Copying debian/ packaging..."
 cp -r "$DEBIAN_SRC_DIR/debian" "$SOURCE_DIR/"

@@ -4,7 +4,7 @@ Section: x11
 Priority: optional
 Build-Depends: debhelper-compat (= 13),
                pkg-config,
-               wget,
+               zig14,
                pandoc,
                libfontconfig-dev,
                libfreetype-dev,

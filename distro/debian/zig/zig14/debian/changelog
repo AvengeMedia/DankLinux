@@ -1,0 +1,9 @@
+zig14 (0.14.0-1) unstable; urgency=medium
+
+  * Initial release of zig14 package for danklinux
+  * Binary repackaging of official Zig 0.14.0 release
+  * Required for Ghostty 1.2.3 builds
+  * Installs to /usr/lib/zig-0.14.0 with /usr/bin/zig-0.14 symlink
+  * Can coexist with other Zig versions
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Fri, 10 Jan 2026 13:00:00 -0500

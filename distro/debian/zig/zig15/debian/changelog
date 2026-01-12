@@ -1,0 +1,9 @@
+zig15 (0.15.2-1) unstable; urgency=medium
+
+  * Initial release of zig15 package for danklinux
+  * Binary repackaging of official Zig 0.15.2 release
+  * For future Ghostty versions and other Zig projects
+  * Installs to /usr/lib/zig-0.15.2 with /usr/bin/zig-0.15 symlink
+  * Can coexist with zig14 and other Zig versions
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Fri, 10 Jan 2026 14:00:00 -0500

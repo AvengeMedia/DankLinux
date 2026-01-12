@@ -4,36 +4,12 @@ export HOME = $(CURDIR)
 DEB_VERSION := $(shell dpkg-parsechangelog -S Version)
 # Extract upstream version: remove Debian suffixes (.db[0-9] or db[0-9]) and ppa suffixes, then trim trailing dots/dashes
 UPSTREAM_VERSION := $(shell echo $(DEB_VERSION) | sed -E 's/(\\.db|db)[0-9]+$$//' | sed 's/ppa[0-9]*$$//' | sed 's/[.-]$$//')
-ZIG_VERSION := 0.14.0
-DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
 THEME_HASH := N-V-__8AANFEAwCzzNzNs3Gaq8pzGNl2BbeyFBwTyO5iZJL-
-
-# Map Debian architectures to Zig architectures
-ifeq ($(DEB_HOST_ARCH),amd64)
-    ZIG_ARCH := x86_64
-else ifeq ($(DEB_HOST_ARCH),arm64)
-    ZIG_ARCH := aarch64
-else
-    $(error Unsupported architecture: $(DEB_HOST_ARCH))
-endif
 
 %:
 	dh $@
 
 override_dh_auto_configure:
-	# Extract Zig toolchain (downloaded by OBS per-arch)
-	if [ ! -f zig/zig ]; then \
-		TARBALL="zig-linux-$(ZIG_ARCH)-$(ZIG_VERSION).tar.xz"; \
-		if [ ! -f "$$TARBALL" ]; then \
-			if [ -f "../$$TARBALL" ]; then \
-				cp "../$$TARBALL" .; \
-			else \
-				wget -q "https://ziglang.org/download/$(ZIG_VERSION)/$$TARBALL" || exit 1; \
-			fi; \
-		fi; \
-		tar -xJf "$$TARBALL"; \
-		mv $$(find . -maxdepth 1 -type d -name "zig-linux-*" | head -1) zig; \
-	fi
 	# Rewrite theme URL to local tarball and update hash (themes are vendored in source package)
 	test -f ghostty-themes.tgz || (echo "ERROR: ghostty-themes.tgz not found!" && exit 1)
 	# Update URL to file://
@@ -49,12 +25,11 @@ override_dh_auto_configure:
 	dh_auto_configure
 
 override_dh_auto_build:
-	# Build with vendored Zig deps (offline)
+	# Build using zig14 package with vendored dependencies
 	ZIG_GLOBAL_CACHE_DIR=$(CURDIR)/zig-deps \
 	DESTDIR=$(CURDIR)/debian/ghostty \
-	./zig/zig build \
+	/usr/bin/zig-0.14 build \
 		--prefix /usr \
-		--system $(CURDIR)/zig-deps/p \
 		-Dversion-string=$(UPSTREAM_VERSION) \
 		-Doptimize=ReleaseFast \
 		-Dcpu=baseline \
@@ -63,9 +38,8 @@ override_dh_auto_build:
 override_dh_auto_install:
 	ZIG_GLOBAL_CACHE_DIR=$(CURDIR)/zig-deps \
 	DESTDIR=$(CURDIR)/debian/ghostty \
-	./zig/zig build install \
+	/usr/bin/zig-0.14 build install \
 		--prefix /usr \
-		--system $(CURDIR)/zig-deps/p \
 		-Doptimize=ReleaseFast \
 		-Dcpu=baseline
 	# Flatten themes directory so files live directly under share/ghostty/themes
@@ -77,5 +51,5 @@ override_dh_auto_install:
 	rm -f $(CURDIR)/debian/ghostty/usr/share/terminfo/g/ghostty
 
 override_dh_auto_clean:
-	rm -rf zig zig-cache zig-out .zig-cache
+	rm -rf zig-cache zig-out .zig-cache
 	dh_auto_clean

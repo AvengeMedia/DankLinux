@@ -1,0 +1,21 @@
+Source: zig15
+Section: devel
+Priority: optional
+Maintainer: Avenge Media <AvengeMedia.US@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               xz-utils
+Standards-Version: 4.6.2
+Homepage: https://ziglang.org/
+Vcs-Browser: https://github.com/ziglang/zig
+Vcs-Git: https://github.com/ziglang/zig.git
+
+Package: zig15
+Architecture: amd64 arm64
+Depends: ${misc:Depends}
+Description: Zig programming language compiler version 0.15
+ Zig is a general-purpose programming language and toolchain for maintaining
+ robust, optimal, and reusable software.
+ .
+ This package provides Zig version 0.15.2, which can coexist with other Zig
+ versions on the same system. The compiler is installed as /usr/bin/zig-0.15
+ with libraries in /usr/lib/zig-0.15.2/.
