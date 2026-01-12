@@ -317,6 +317,31 @@ fi
 
 log_success "Source prepared: $(du -sh "$SOURCE_DIR" | cut -f1)"
 
+# Handling for binary release packages: download prebuilt binaries
+if is_binary_release "$PACKAGE"; then
+    log_info "Downloading prebuilt binaries for $PACKAGE..."
+    
+    cd "$SOURCE_DIR"
+    
+    # Download amd64 binary
+    AMD64_URL="https://github.com/$UPSTREAM_REPO/releases/download/v${BASE_VERSION}/${PACKAGE}-linux-amd64.gz"
+    if ! download_file_with_retry "$AMD64_URL" "${PACKAGE}-linux-amd64.gz"; then
+        log_error "Failed to download amd64 binary"
+        exit $ERR_NETWORK
+    fi
+    log_success "Downloaded ${PACKAGE}-linux-amd64.gz"
+    
+    # Download arm64 binary
+    ARM64_URL="https://github.com/$UPSTREAM_REPO/releases/download/v${BASE_VERSION}/${PACKAGE}-linux-arm64.gz"
+    if ! download_file_with_retry "$ARM64_URL" "${PACKAGE}-linux-arm64.gz"; then
+        log_error "Failed to download arm64 binary"
+        exit $ERR_NETWORK
+    fi
+    log_success "Downloaded ${PACKAGE}-linux-arm64.gz"
+    
+    cd "$WORK_DIR"
+fi
+
 # Special handling for Ghostty: vendor Zig dependencies
 if [[ "$PACKAGE" == "ghostty" ]]; then
     log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

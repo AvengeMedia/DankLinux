@@ -52,7 +52,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y osc jq curl dpkg-dev debhelper
+          sudo apt-get install -y osc jq curl dpkg-dev debhelper libglib2.0-dev
 
           # Install yq
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
@@ -69,6 +69,16 @@ jobs:
           pass = ${{ secrets.OBS_PASSWORD }}
           EOF
           chmod 600 ~/.config/osc/oscrc
+
+      - name: Test OBS authentication
+        run: |
+          echo "Testing OBS credentials..."
+          if ! osc api /about > /dev/null 2>&1; then
+            echo "❌ ERROR: OBS authentication failed!"
+            echo "Please check that OBS_USERNAME and OBS_PASSWORD secrets are correctly set."
+            exit 1
+          fi
+          echo "✅ OBS authentication successful"
 
       - name: Install language-specific dependencies
         run: |

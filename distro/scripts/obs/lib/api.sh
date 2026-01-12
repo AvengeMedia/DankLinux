@@ -266,21 +266,51 @@ get_obs_version() {
     fi
 
     # Try .spec file first (OpenSUSE packages)
-    local spec_content=$(osc api "/source/$project/$package/${package}.spec" 2>/dev/null)
+    local spec_error=$(mktemp)
+    local spec_content=$(osc api "/source/$project/$package/${package}.spec" 2>"$spec_error")
+    local spec_exit=$?
+    
+    # Check for auth errors
+    if [[ $spec_exit -ne 0 ]] && grep -q "401\|Unauthorized" "$spec_error" 2>/dev/null; then
+        log_error "OBS authentication failed - please check OBS credentials"
+        rm -f "$spec_error"
+        return 1
+    fi
+    rm -f "$spec_error"
+    
     local version=""
 
-    if [[ $? -eq 0 && -n "$spec_content" ]]; then
+    if [[ $spec_exit -eq 0 && -n "$spec_content" ]]; then
         # Extract Version: field from spec file
         version=$(echo "$spec_content" | grep -m1 "^Version:" | awk '{print $2}' | tr -d ' ')
     else
         # Try .dsc file (Debian-only packages like ghostty, niri stable)
         log_debug "No .spec file found, trying .dsc file for $package"
-        local dsc_content=$(osc api "/source/$project/$package/${package}.dsc" 2>/dev/null)
+        local dsc_error=$(mktemp)
+        local dsc_content=$(osc api "/source/$project/$package/${package}.dsc" 2>"$dsc_error")
+        local dsc_exit=$?
+        
+        # Check for auth errors
+        if [[ $dsc_exit -ne 0 ]] && grep -q "401\|Unauthorized" "$dsc_error" 2>/dev/null; then
+            log_error "OBS authentication failed - please check OBS credentials"
+            rm -f "$dsc_error"
+            return 1
+        fi
+        rm -f "$dsc_error"
 
-        if [[ $? -ne 0 || -z "$dsc_content" ]]; then
+        if [[ $dsc_exit -ne 0 || -z "$dsc_content" ]]; then
             # .dsc file with exact package name not found, try to find versioned .dsc
             log_debug "No ${package}.dsc found, searching for versioned .dsc file"
-            local dsc_file=$(osc api "/source/$project/$package" 2>/dev/null | grep -o 'name="[^"]*\.dsc"' | head -1 | cut -d'"' -f2)
+            local list_error=$(mktemp)
+            local dsc_file=$(osc api "/source/$project/$package" 2>"$list_error" | grep -o 'name="[^"]*\.dsc"' | head -1 | cut -d'"' -f2)
+            
+            # Check for auth errors
+            if grep -q "401\|Unauthorized" "$list_error" 2>/dev/null; then
+                log_error "OBS authentication failed - please check OBS credentials"
+                rm -f "$list_error"
+                return 1
+            fi
+            rm -f "$list_error"
 
             if [[ -z "$dsc_file" ]]; then
                 log_debug "Package $package not found on OBS (new package)"
@@ -288,9 +318,19 @@ get_obs_version() {
             fi
 
             log_debug "Found .dsc file: $dsc_file"
-            dsc_content=$(osc api "/source/$project/$package/$dsc_file" 2>/dev/null)
+            local dsc_fetch_error=$(mktemp)
+            dsc_content=$(osc api "/source/$project/$package/$dsc_file" 2>"$dsc_fetch_error")
+            local dsc_fetch_exit=$?
+            
+            # Check for auth errors
+            if [[ $dsc_fetch_exit -ne 0 ]] && grep -q "401\|Unauthorized" "$dsc_fetch_error" 2>/dev/null; then
+                log_error "OBS authentication failed - please check OBS credentials"
+                rm -f "$dsc_fetch_error"
+                return 1
+            fi
+            rm -f "$dsc_fetch_error"
 
-            if [[ $? -ne 0 || -z "$dsc_content" ]]; then
+            if [[ $dsc_fetch_exit -ne 0 || -z "$dsc_content" ]]; then
                 log_debug "Failed to fetch $dsc_file"
                 return 1
             fi
