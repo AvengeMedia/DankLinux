@@ -152,7 +152,10 @@ if [[ -d "$PKG_DIR" ]]; then
 else
     log_info "Checking out package for the first time..."
 
-    if ! osc co "$OBS_PROJECT" "$PACKAGE" 2>&1; then
+    osc co "$OBS_PROJECT" "$PACKAGE" 2>&1 || true
+    
+    # Check if checkout actually succeeded by checking if directory exists
+    if [[ ! -d "$PKG_DIR" ]]; then
         log_warn "Package does not exist on OBS, will be created"
 
         # Create package directory structure
