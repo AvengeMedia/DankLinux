@@ -327,6 +327,11 @@ if is_binary_release "$PACKAGE"; then
         exit $ERR_NETWORK
     fi
     log_success "Downloaded ${PACKAGE}-linux-arm64.gz"
+    
+    # Copy binaries to output directory (needed as separate Source files for spec)
+    cp "${PACKAGE}-linux-amd64.gz" "$OUTPUT_DIR/"
+    cp "${PACKAGE}-linux-arm64.gz" "$OUTPUT_DIR/"
+    log_debug "Copied binaries to output directory"
 fi
 
 # Special handling for Ghostty: vendor Zig dependencies

@@ -27,5 +27,8 @@ override_dh_auto_install:
 	install -Dm755 danksearch debian/danksearch/usr/bin/danksearch
 	ln -s danksearch debian/danksearch/usr/bin/dsearch
 
+override_dh_auto_test:
+	# Skip tests for binary release packages
+
 override_dh_auto_clean:
 	dh_auto_clean

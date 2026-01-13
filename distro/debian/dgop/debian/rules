@@ -26,6 +26,9 @@ override_dh_auto_build:
 override_dh_auto_install:
 	install -Dm755 dgop debian/dgop/usr/bin/dgop
 
+override_dh_auto_test:
+	# Skip tests for binary release packages
+
 override_dh_auto_clean:
 	rm -f dgop
 	dh_auto_clean
