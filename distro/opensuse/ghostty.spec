@@ -51,6 +51,11 @@ THEMES_FILE="file://$PWD/ghostty-themes.tgz"
 sed -i "s|https://github.com/mbadolato/iTerm2-Color-Schemes/releases/download/.\+/ghostty-themes.tgz|${THEMES_FILE}|" build.zig.zon
 sed -i '/\.iterm2_themes/,/}/ s|\.hash = "[^"]\+"|.hash = "N-V-__8AANFEAwCzzNzNs3Gaq8pzGNl2BbeyFBwTyO5iZJL-"|' build.zig.zon
 
+# Wayland dependencies included in source tarball
+sed -i "s|https://deps.files.ghostty.org/wayland-9cb3d7aa9dc995ffafdbdef7ab86a949d0fb0e7d.tar.gz|file://$PWD/wayland.tar.gz|" build.zig.zon
+sed -i "s|https://deps.files.ghostty.org/wayland-protocols-258d8f88f2c8c25a830c6316f87d23ce1a0f12d9.tar.gz|file://$PWD/wayland-protocols.tar.gz|" build.zig.zon
+sed -i "s|https://deps.files.ghostty.org/plasma_wayland_protocols-12207e0851c12acdeee0991e893e0132fc87bb763969a585dc16ecca33e88334c566.tar.gz|file://$PWD/plasma_wayland_protocols.tar.gz|" build.zig.zon
+
 %build
 # zig14 package provides /usr/bin/zig-0.14
 # Use vendored Zig dependencies from source tarball

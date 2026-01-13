@@ -22,6 +22,13 @@ override_dh_auto_configure:
 	if [ -z "$$(ls -A "$(CURDIR)/zig-deps/p/$(THEME_HASH)" 2>/dev/null)" ]; then \
 		tar -xzf ghostty-themes.tgz -C "$(CURDIR)/zig-deps/p/$(THEME_HASH)"; \
 	fi
+	# Rewrite wayland dependency URLs to local files (vendored in source package)
+	test -f wayland.tar.gz || (echo "ERROR: wayland.tar.gz not found!" && exit 1)
+	test -f wayland-protocols.tar.gz || (echo "ERROR: wayland-protocols.tar.gz not found!" && exit 1)
+	test -f plasma_wayland_protocols.tar.gz || (echo "ERROR: plasma_wayland_protocols.tar.gz not found!" && exit 1)
+	sed -i "s#https://deps.files.ghostty.org/wayland-9cb3d7aa9dc995ffafdbdef7ab86a949d0fb0e7d.tar.gz#file://$(CURDIR)/wayland.tar.gz#g" build.zig.zon 2>/dev/null || true
+	sed -i "s#https://deps.files.ghostty.org/wayland-protocols-258d8f88f2c8c25a830c6316f87d23ce1a0f12d9.tar.gz#file://$(CURDIR)/wayland-protocols.tar.gz#g" build.zig.zon 2>/dev/null || true
+	sed -i "s#https://deps.files.ghostty.org/plasma_wayland_protocols-12207e0851c12acdeee0991e893e0132fc87bb763969a585dc16ecca33e88334c566.tar.gz#file://$(CURDIR)/plasma_wayland_protocols.tar.gz#g" build.zig.zon 2>/dev/null || true
 	dh_auto_configure
 
 override_dh_auto_build:

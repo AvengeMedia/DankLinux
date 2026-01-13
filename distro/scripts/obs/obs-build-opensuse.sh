@@ -351,11 +351,37 @@ if [[ "$PACKAGE" == "ghostty" ]]; then
     fi
     log_success "Downloaded ghostty-themes.tgz"
 
+    # Download wayland dependencies that will be needed for offline builds
+    log_info "Downloading wayland dependencies..."
+    
+    declare -A WAYLAND_DEPS=(
+        ["wayland"]="https://deps.files.ghostty.org/wayland-9cb3d7aa9dc995ffafdbdef7ab86a949d0fb0e7d.tar.gz"
+        ["wayland-protocols"]="https://deps.files.ghostty.org/wayland-protocols-258d8f88f2c8c25a830c6316f87d23ce1a0f12d9.tar.gz"
+        ["plasma_wayland_protocols"]="https://deps.files.ghostty.org/plasma_wayland_protocols-12207e0851c12acdeee0991e893e0132fc87bb763969a585dc16ecca33e88334c566.tar.gz"
+    )
+    
+    for dep_name in "${!WAYLAND_DEPS[@]}"; do
+        dep_url="${WAYLAND_DEPS[$dep_name]}"
+        dep_file="${dep_name}.tar.gz"
+        log_info "Downloading ${dep_name}..."
+        if ! download_file_with_retry "$dep_url" "$dep_file"; then
+            log_error "Failed to download ${dep_name}"
+            exit $ERR_NETWORK
+        fi
+        log_success "Downloaded ${dep_file}"
+    done
+
     # Patch build.zig.zon to use the downloaded themes using Dec 2025 release
     log_info "Patching build.zig.zon to use local themes..."
     THEMES_FILE="file://$SOURCE_DIR/ghostty-themes.tgz"
     sed -i "s|https://github.com/mbadolato/iTerm2-Color-Schemes/releases/download/.\+/ghostty-themes.tgz|${THEMES_FILE}|" "$SOURCE_DIR/build.zig.zon"
     sed -i '/\.iterm2_themes/,/}/ s|\.hash = "[^"]\+"|.hash = "N-V-__8AANFEAwCzzNzNs3Gaq8pzGNl2BbeyFBwTyO5iZJL-"|' "$SOURCE_DIR/build.zig.zon"
+    
+    # Patch wayland dependency URLs to use local files
+    log_info "Patching build.zig.zon to use local wayland dependencies..."
+    sed -i "s|https://deps.files.ghostty.org/wayland-9cb3d7aa9dc995ffafdbdef7ab86a949d0fb0e7d.tar.gz|file://$SOURCE_DIR/wayland.tar.gz|" "$SOURCE_DIR/build.zig.zon"
+    sed -i "s|https://deps.files.ghostty.org/wayland-protocols-258d8f88f2c8c25a830c6316f87d23ce1a0f12d9.tar.gz|file://$SOURCE_DIR/wayland-protocols.tar.gz|" "$SOURCE_DIR/build.zig.zon"
+    sed -i "s|https://deps.files.ghostty.org/plasma_wayland_protocols-12207e0851c12acdeee0991e893e0132fc87bb763969a585dc16ecca33e88334c566.tar.gz|file://$SOURCE_DIR/plasma_wayland_protocols.tar.gz|" "$SOURCE_DIR/build.zig.zon"
 
     # Vendor Zig dependencies by running a fetch-only build
     log_info "Fetching Zig dependencies..."
@@ -389,8 +415,16 @@ if [[ "$PACKAGE" == "ghostty" ]]; then
     fi
 
     log_info "Using $ZIG_BIN to vendor dependencies..."
-    # Run build to populate cache with ALL dependencies (deps are cached)
-    $ZIG_BIN build -Doptimize=ReleaseFast 2>&1 | grep -v "^info:" || true
+    # Use fetch to download all dependencies without building
+    if ! $ZIG_BIN build --fetch 2>&1 | grep -v "^info:"; then
+        log_warn "'zig build --fetch' failed, trying individual fetches..."
+        # Fallback
+        THEME_HASH=$(grep -A2 "iterm2_themes" build.zig.zon | grep hash | sed 's/.*"\(.*\)".*/\1/' | head -1)
+        if [ -n "$THEME_HASH" ] && [ ! -d "zig-deps/p/$THEME_HASH" ]; then
+            mkdir -p "zig-deps/p/$THEME_HASH"
+            tar -xzf ghostty-themes.tgz -C "zig-deps/p/$THEME_HASH" 2>/dev/null || true
+        fi
+    fi
     log_success "Vendored Zig dependencies: $(du -sh zig-deps | cut -f1)"
 
     cd "$WORK_DIR"
