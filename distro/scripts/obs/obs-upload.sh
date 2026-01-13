@@ -257,8 +257,8 @@ fi
 if [[ "$UPLOAD_OPENSUSE" == "true" ]]; then
     log_info "Copying OpenSUSE artifacts..."
 
-    # Copy .spec, source tarballs (compressed and uncompressed), _service
-    find "$ARTIFACTS_DIR" -maxdepth 1 -type f \( -name "*.spec" -o -name "*.tar" -o -name "*.tar.*" -o -name "_service" \) -exec cp -v {} . \;
+    # Copy .spec, source tarballs (compressed and uncompressed), binary .gz files, _service
+    find "$ARTIFACTS_DIR" -maxdepth 1 -type f \( -name "*.spec" -o -name "*.tar" -o -name "*.tar.*" -o -name "*.gz" -o -name "_service" \) -exec cp -v {} . \;
 
     log_success "OpenSUSE artifacts copied"
 fi
