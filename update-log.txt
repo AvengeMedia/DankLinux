@@ -6,8 +6,9 @@
 
 📦 Checking quickshell-git (development)...
    Current commit: db37dc5 (date: 20260112)
-   Latest commit:  db37dc5 (date: 20260112)
-   ✓ Already up to date
+   Latest commit:  dca6523 (date: 20260113)
+   ✨ Update available: db37dc5 → dca6523
+   Commit count: 725
 
 📦 Checking dgop...
    Current: 0.1.13
@@ -50,4 +51,7 @@
    Skipping automatic updates for font file
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✓ All packages are up to date
+✅ Updated 1 package(s):
+   • quickshell-git: db37dc5 → dca6523
+
+📝 Changes staged for commit
