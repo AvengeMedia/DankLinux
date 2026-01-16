@@ -36,6 +36,7 @@ override_dh_auto_build:
 	ZIG_GLOBAL_CACHE_DIR=$(CURDIR)/zig-deps \
 	DESTDIR=$(CURDIR)/debian/ghostty \
 	/usr/bin/zig-0.14 build \
+		--system $(CURDIR)/zig-deps/p \
 		--prefix /usr \
 		-Dversion-string=$(UPSTREAM_VERSION) \
 		-Doptimize=ReleaseFast \
@@ -46,6 +47,7 @@ override_dh_auto_install:
 	ZIG_GLOBAL_CACHE_DIR=$(CURDIR)/zig-deps \
 	DESTDIR=$(CURDIR)/debian/ghostty \
 	/usr/bin/zig-0.14 build install \
+		--system $(CURDIR)/zig-deps/p \
 		--prefix /usr \
 		-Doptimize=ReleaseFast \
 		-Dcpu=baseline

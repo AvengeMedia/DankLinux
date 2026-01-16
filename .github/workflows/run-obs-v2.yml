@@ -49,6 +49,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Cache Ghostty Zig deps
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.cache/ghostty-zig-deps
+          key: ghostty-zig-deps-v1-${{ runner.os }}
+          restore-keys: |
+            ghostty-zig-deps-v1-
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -119,6 +127,7 @@ jobs:
           PACKAGES: ${{ steps.packages.outputs.packages }}
           REBUILD_NUMBER: ${{ github.event.inputs.rebuild_number }}
           DISTRO: ${{ github.event.inputs.distro || 'both' }}
+          GHOSTTY_VENDOR_CACHE_DIR: ${{ github.workspace }}/.cache/ghostty-zig-deps
         run: |
           # Build and upload with orchestrator
           if [[ -n "$REBUILD_NUMBER" ]]; then

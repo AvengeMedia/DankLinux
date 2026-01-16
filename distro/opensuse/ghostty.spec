@@ -60,22 +60,21 @@ sed -i "s|https://deps.files.ghostty.org/plasma_wayland_protocols-12207e0851c12a
 # zig14 package provides /usr/bin/zig-0.14
 # Use vendored Zig dependencies from source tarball
 export ZIG_GLOBAL_CACHE_DIR=$PWD/zig-deps
-# Build with temp DESTDIR to prevent writing to system directories
+
 mkdir -p %{_builddir}/ghostty-buildroot
-DESTDIR=%{_builddir}/ghostty-buildroot /usr/bin/zig-0.14 build \
+DESTDIR=%{_builddir}/ghostty-buildroot /usr/bin/zig-0.14 build install \
+    --system "$ZIG_GLOBAL_CACHE_DIR/p" \
     --summary new \
     --prefix "%{_prefix}" \
     -Dversion-string=%{version}-%{release} \
     -Doptimize=ReleaseFast \
     -Dcpu=baseline \
-    -Dpie=true
+    -Dpie=true \
+    -Demit-docs=false
 
 %install
-export ZIG_GLOBAL_CACHE_DIR=$PWD/zig-deps
-DESTDIR=%{buildroot} /usr/bin/zig-0.14 build install \
-    --prefix "%{_prefix}" \
-    -Doptimize=ReleaseFast \
-    -Dcpu=baseline
+# Copy pre-built files from build phase
+cp -a %{_builddir}/ghostty-buildroot/* %{buildroot}/
 
 %files
 %license LICENSE
@@ -150,9 +149,9 @@ DESTDIR=%{buildroot} /usr/bin/zig-0.14 build install \
 %{_datadir}/dbus-1/services/com.mitchellh.ghostty.service
 
 # Systemd user service
-%dir %{_datadir}/systemd
-%dir %{_datadir}/systemd/user
-%{_datadir}/systemd/user/app-com.mitchellh.ghostty.service
+%dir %{_prefix}/lib/systemd
+%dir %{_prefix}/lib/systemd/user
+%{_prefix}/lib/systemd/user/app-com.mitchellh.ghostty.service
 
 # Translations
 %dir %{_datadir}/locale/bg_BG.UTF-8
