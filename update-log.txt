@@ -5,10 +5,10 @@
    ✓ Already at pinned commit
 
 📦 Checking quickshell-git (development)...
-   Current commit: d03c597 (date: 20260116)
-   Latest commit:  5eb6f51 (date: 20260117)
-   ✨ Update available: d03c597 → 5eb6f51
-   Commit count: 728
+   Current commit: 5eb6f51 (date: 20260117)
+   Latest commit:  7a427ce (date: 20260117)
+   ✨ Update available: 5eb6f51 → 7a427ce
+   Commit count: 729
 
 📦 Checking dgop...
    Current: 0.1.13
@@ -52,6 +52,6 @@
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ Updated 1 package(s):
-   • quickshell-git: d03c597 → 5eb6f51
+   • quickshell-git: 5eb6f51 → 7a427ce
 
 📝 Changes staged for commit
