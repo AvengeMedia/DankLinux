@@ -1,8 +1,8 @@
-xwayland-satellite-git (0.8+git219.72245e1ppa1) questing; urgency=medium
+xwayland-satellite-git (0.8+git223.ed1cef7ppa1) questing; urgency=medium
 
-  * Git snapshot (commit 219: 72245e1)
+  * Git snapshot (commit 223: ed1cef7)
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Sun, 11 Jan 2026 06:21:53 +0000
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Wed, 21 Jan 2026 12:33:16 +0000
 
 xwayland-satellite-git (0.7+git192.f379ff5ppa4) questing; urgency=medium
 
