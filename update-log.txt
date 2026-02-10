@@ -5,10 +5,9 @@
    ✓ Already at pinned commit
 
 📦 Checking quickshell-git (development)...
-   Current commit: 4429c03 (date: 20260209)
+   Current commit: dacfa9d (date: 20260210)
    Latest commit:  dacfa9d (date: 20260210)
-   ✨ Update available: 4429c03 → dacfa9d
-   Commit count: 735
+   ✓ Already up to date
 
 📦 Checking dgop...
    Current: 0.2.0
@@ -36,9 +35,9 @@
    ✓ Already up to date
 
 📦 Checking danksearch...
-   Current: 0.1.1
+   Current: 0.1.2
    Latest:  0.1.2
-   ✨ Update available: 0.1.1 → 0.1.2
+   ✓ Already up to date
 
 📦 Checking dms-greeter...
    ℹ️  Builds directly from: https://github.com/AvengeMedia/DankMaterialShell
@@ -51,8 +50,4 @@
    Skipping automatic updates for font file
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Updated 2 package(s):
-   • quickshell-git: 4429c03 → dacfa9d
-   • danksearch: 0.1.1 → 0.1.2
-
-📝 Changes staged for commit
+✓ All packages are up to date
