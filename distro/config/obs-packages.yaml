@@ -38,6 +38,7 @@ packages:
       language: go
       go_version: "1.24"
       binary_release: true
+      binary_template: "dsearch-linux-{arch}.gz"
     tarball:
       directory_name: "danksearch-{version}"
       compression: gz

@@ -323,21 +323,42 @@ if is_binary_release "$PACKAGE"; then
     
     cd "$SOURCE_DIR"
     
-    # Download amd64 binary
-    AMD64_URL="https://github.com/$UPSTREAM_REPO/releases/download/v${BASE_VERSION}/${PACKAGE}-linux-amd64.gz"
-    if ! download_file_with_retry "$AMD64_URL" "${PACKAGE}-linux-amd64.gz"; then
-        log_error "Failed to download amd64 binary"
-        exit $ERR_NETWORK
+    # Determine binary filenames from template or default
+    BINARY_TEMPLATE=$(get_binary_template "$PACKAGE")
+    
+    if [[ -n "$BINARY_TEMPLATE" ]]; then
+        AMD64_BINARY="${BINARY_TEMPLATE//\{arch\}/amd64}"
+        AMD64_BINARY="${AMD64_BINARY//\{version\}/$BASE_VERSION}"
+        ARM64_BINARY="${BINARY_TEMPLATE//\{arch\}/arm64}"
+        ARM64_BINARY="${ARM64_BINARY//\{version\}/$BASE_VERSION}"
+    else
+        AMD64_BINARY="${PACKAGE}-linux-amd64.gz"
+        ARM64_BINARY="${PACKAGE}-linux-arm64.gz"
     fi
-    log_success "Downloaded ${PACKAGE}-linux-amd64.gz"
+
+    # Download amd64 binary
+    AMD64_URL="https://github.com/$UPSTREAM_REPO/releases/download/v${BASE_VERSION}/${AMD64_BINARY}"
+    if ! download_file_with_retry "$AMD64_URL" "${AMD64_BINARY}"; then
+        # Try without v prefix
+        AMD64_URL="https://github.com/$UPSTREAM_REPO/releases/download/${BASE_VERSION}/${AMD64_BINARY}"
+        if ! download_file_with_retry "$AMD64_URL" "${AMD64_BINARY}"; then
+            log_error "Failed to download amd64 binary: $AMD64_BINARY"
+            exit $ERR_NETWORK
+        fi
+    fi
+    log_success "Downloaded ${AMD64_BINARY}"
     
     # Download arm64 binary
-    ARM64_URL="https://github.com/$UPSTREAM_REPO/releases/download/v${BASE_VERSION}/${PACKAGE}-linux-arm64.gz"
-    if ! download_file_with_retry "$ARM64_URL" "${PACKAGE}-linux-arm64.gz"; then
-        log_error "Failed to download arm64 binary"
-        exit $ERR_NETWORK
+    ARM64_URL="https://github.com/$UPSTREAM_REPO/releases/download/v${BASE_VERSION}/${ARM64_BINARY}"
+    if ! download_file_with_retry "$ARM64_URL" "${ARM64_BINARY}"; then
+        # Try without v prefix
+        ARM64_URL="https://github.com/$UPSTREAM_REPO/releases/download/${BASE_VERSION}/${ARM64_BINARY}"
+        if ! download_file_with_retry "$ARM64_URL" "${ARM64_BINARY}"; then
+            log_error "Failed to download arm64 binary: $ARM64_BINARY"
+            exit $ERR_NETWORK
+        fi
     fi
-    log_success "Downloaded ${PACKAGE}-linux-arm64.gz"
+    log_success "Downloaded ${ARM64_BINARY}"
     
     cd "$WORK_DIR"
 fi

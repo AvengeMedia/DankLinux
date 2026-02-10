@@ -340,6 +340,14 @@ is_binary_release() {
     fi
 }
 
+# Get binary filename template
+get_binary_template() {
+    local package="$1"
+    local config=$(load_package_config "$package")
+
+    echo "$config" | yq eval '.build.binary_template // ""' -
+}
+
 # Get package full configuration as JSON (for passing to other scripts)
 get_package_config_json() {
     local package="$1"
