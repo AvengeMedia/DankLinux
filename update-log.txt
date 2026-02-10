@@ -6,8 +6,9 @@
 
 📦 Checking quickshell-git (development)...
    Current commit: 4429c03 (date: 20260209)
-   Latest commit:  4429c03 (date: 20260209)
-   ✓ Already up to date
+   Latest commit:  dacfa9d (date: 20260210)
+   ✨ Update available: 4429c03 → dacfa9d
+   Commit count: 735
 
 📦 Checking dgop...
    Current: 0.2.0
@@ -31,3 +32,27 @@
 
 📦 Checking ghostty...
    Current: 1.2.3
+   Latest:  1.2.3
+   ✓ Already up to date
+
+📦 Checking danksearch...
+   Current: 0.1.1
+   Latest:  0.1.2
+   ✨ Update available: 0.1.1 → 0.1.2
+
+📦 Checking dms-greeter...
+   ℹ️  Builds directly from: https://github.com/AvengeMedia/DankMaterialShell
+   Not tracked in dms_copr repo - managed in separate DankMaterialShell repo
+   Skipping automatic updates (separate repository)
+
+📦 Checking material-symbols-fonts...
+   ℹ️  Font file from google/material-design-icons (no version tags)
+   Current: 1.0 (manually versioned)
+   Skipping automatic updates for font file
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Updated 2 package(s):
+   • quickshell-git: 4429c03 → dacfa9d
+   • danksearch: 0.1.1 → 0.1.2
+
+📝 Changes staged for commit
