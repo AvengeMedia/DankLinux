@@ -3,7 +3,7 @@
 %endif
 
 Name:           matugen
-Version:        3.1.0
+Version:        4.0.0
 Release:        1%{?dist}
 Summary:        Material You color generation tool
 
