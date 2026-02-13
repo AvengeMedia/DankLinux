@@ -1,5 +1,5 @@
-matugen (3.1.0ppa4) questing; urgency=medium
+matugen (4.0.0ppa1) questing; urgency=medium
 
-  * Rebuild for packaging fixes (ppa4)
+  * Upstream release 4.0.0
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Mon, 22 Dec 2025 21:50:02 -0500
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Fri, 13 Feb 2026 12:44:53 +0000
