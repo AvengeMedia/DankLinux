@@ -59,6 +59,7 @@ BUILD_GHOSTTY=false
 BUILD_MATERIAL_SYMBOLS=false
 BUILD_DANKSEARCH=false
 BUILD_CLI11=false
+BUILD_QT6CT_KDE=false
 
 # Check which specs changed (paths relative to repo root)
 if echo "$CHANGED_FILES" | grep -q "distro/fedora/quickshell/quickshell.spec"; then
@@ -102,6 +103,10 @@ if echo "$CHANGED_FILES" | grep -q "distro/fedora/cli11/cli11.spec"; then
     BUILD_CLI11=true
 fi
 
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/qt6ct-kde/qt6ct-kde.spec"; then
+    BUILD_QT6CT_KDE=true
+fi
+
 # Note: dms-greeter builds from https://github.com/AvengeMedia/DankMaterialShell
 # and is not tracked in this repository
 
@@ -122,6 +127,8 @@ if [[ -z "$CHANGED_FILES" ]]; then
 
     # New CLI11 package
     echo "$UNCOMMITTED" | grep -q "distro/fedora/cli11/cli11.spec" && BUILD_CLI11=true
+
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/qt6ct-kde/qt6ct-kde.spec" && BUILD_QT6CT_KDE=true
 fi
 
 # Trigger builds
@@ -165,6 +172,10 @@ fi
 
 if [[ "$BUILD_CLI11" == true ]] || [[ "$FORCE_PACKAGE" == "cli11" ]]; then
     trigger_build "cli11" "distro/fedora/cli11/cli11.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+fi
+
+if [[ "$BUILD_QT6CT_KDE" == true ]] || [[ "$FORCE_PACKAGE" == "qt6ct-kde" ]]; then
+    trigger_build "qt6ct-kde" "distro/fedora/qt6ct-kde/qt6ct-kde.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
 echo ""
