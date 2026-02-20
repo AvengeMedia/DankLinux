@@ -11,15 +11,13 @@ BuildRequires:  cmake
 BuildRequires:  ninja
 BuildRequires:  gcc-c++
 BuildRequires:  git
-BuildRequires:  qt6-base-devel
-BuildRequires:  qt6-declarative-devel
+BuildRequires:  cmake(Qt6Core)
+BuildRequires:  cmake(Qt6Qml)
+BuildRequires:  cmake(Qt6ShaderTools)
+BuildRequires:  cmake(Qt6WaylandClient)
+BuildRequires:  qt6-base-private-devel
 BuildRequires:  qt6-declarative-private-devel
-BuildRequires:  qt6-wayland-devel
 BuildRequires:  qt6-waylandclient-private-devel
-BuildRequires:  qt6-linguist-devel
-BuildRequires:  qt6-tools-private-devel
-BuildRequires:  qt6-svg-devel
-BuildRequires:  qt6-shadertools-devel
 BuildRequires:  cli11-devel
 BuildRequires:  wayland-protocols-devel
 BuildRequires:  wayland-devel
@@ -103,4 +101,3 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.quickshell.deskto
 - Pinned to commit 713 (26531fc4) - unreleased stable with latest features
 * Thu Dec 05 2024 Avenge Media <AvengeMedia.US@gmail.com> - 0.2.1.1+pin713.26531fc-1
 - Pinned to git commit 713 (26531fc) - unreleased stable with latest features
-
