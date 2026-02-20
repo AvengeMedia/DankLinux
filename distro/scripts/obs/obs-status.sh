@@ -41,6 +41,7 @@ for pkg in "${PACKAGES[@]}"; do
     
     # Get all build results
     ALL_RESULTS=$(osc results 2>&1)
+    ALL_RESULTS_V=$(osc results -v 2>&1)
     
     # Check each repository and architecture
     FAILED_BUILDS=()
@@ -111,6 +112,13 @@ for pkg in "${PACKAGES[@]}"; do
             else
                 if echo "$ALL_RESULTS" | grep -q "$repo.*$arch.*unresolvable"; then
                     echo "  Attempting to fetch unresolvable reason..."
+                    
+                    # Fetch detailed string from -v output
+                    DETAILED_REASON=$(echo "$ALL_RESULTS_V" | awk "/^$repo.*$arch.*unresolvable:/{getline; print}" | sed -e 's/^[[:space:]]*//')
+                    if [[ -n "$DETAILED_REASON" ]]; then
+                        echo "  Technical Reason: $DETAILED_REASON"
+                    fi
+                    
                     REASON=$(osc api "/build/$OBS_BASE_PROJECT/$repo/$arch/$pkg/_reason" 2>&1)
                     if [[ $? -eq 0 && -n "$REASON" && "$REASON" != *"<error"* ]]; then
                         if echo "$REASON" | grep -q "<reason>"; then
@@ -118,7 +126,7 @@ for pkg in "${PACKAGES[@]}"; do
                             echo "  Reason: $EXPLAIN"
                             
                             # Count package changes
-                            PKG_CHANGE_COUNT=$(echo "$REASON" | grep -c '<packagechange' || echo "0")
+                            PKG_CHANGE_COUNT=$(echo "$REASON" | grep -o '<packagechange' | wc -l || echo "0")
                             if [[ $PKG_CHANGE_COUNT -gt 0 ]]; then
                                 echo ""
                                 echo "  Package changes ($PKG_CHANGE_COUNT):"
@@ -142,9 +150,11 @@ for pkg in "${PACKAGES[@]}"; do
                     fi
                 fi
                 
-                # Fallback to remotebuildlog if API fails
-                echo "  (Trying remotebuildlog as fallback...)"
-                osc remotebuildlog "$OBS_BASE_PROJECT" "$pkg" "$repo" "$arch" 2>&1 | tail -100
+                # Only fallback to remotebuildlog if there was an actual build that failed
+                if ! echo "$ALL_RESULTS" | grep -q "$repo.*$arch.*unresolvable"; then
+                    echo "  (Trying remotebuildlog as fallback...)"
+                    osc remotebuildlog "$OBS_BASE_PROJECT" "$pkg" "$repo" "$arch" 2>&1 | tail -100
+                fi
             fi
         done
     fi
