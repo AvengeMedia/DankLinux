@@ -5,10 +5,9 @@
    ✓ Already at pinned commit
 
 📦 Checking quickshell-git (development)...
-   Current commit: dacfa9d (date: 20260210)
+   Current commit: e7cd1e9 (date: 20260222)
    Latest commit:  e7cd1e9 (date: 20260222)
-   ✨ Update available: dacfa9d → e7cd1e9
-   Commit count: 737
+   ✓ Already up to date
 
 📦 Checking dgop...
    Current: 0.2.2
@@ -51,7 +50,4 @@
    Skipping automatic updates for font file
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Updated 1 package(s):
-   • quickshell-git: dacfa9d → e7cd1e9
-
-📝 Changes staged for commit
+✓ All packages are up to date
