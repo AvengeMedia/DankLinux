@@ -6,8 +6,9 @@
 
 📦 Checking quickshell-git (development)...
    Current commit: 2cf57f4 (date: 20260223)
-   Latest commit:  2cf57f4 (date: 20260223)
-   ✓ Already up to date
+   Latest commit:  cddb4f0 (date: 20260224)
+   ✨ Update available: 2cf57f4 → cddb4f0
+   Commit count: 744
 
 📦 Checking dgop...
    Current: 0.2.2
@@ -50,4 +51,7 @@
    Skipping automatic updates for font file
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✓ All packages are up to date
+✅ Updated 1 package(s):
+   • quickshell-git: 2cf57f4 → cddb4f0
+
+📝 Changes staged for commit
