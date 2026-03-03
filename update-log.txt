@@ -5,10 +5,9 @@
    ✓ Already at pinned commit
 
 📦 Checking quickshell-git (development)...
-   Current commit: cdde4c6 (date: 20260303)
+   Current commit: a849a88 (date: 20260303)
    Latest commit:  a849a88 (date: 20260303)
-   ✨ Update available: cdde4c6 → a849a88
-   Commit count: 746
+   ✓ Already up to date
 
 📦 Checking dgop...
    Current: 0.2.2
@@ -51,7 +50,4 @@
    Skipping automatic updates for font file
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Updated 1 package(s):
-   • quickshell-git: cdde4c6 → a849a88
-
-📝 Changes staged for commit
+✓ All packages are up to date
