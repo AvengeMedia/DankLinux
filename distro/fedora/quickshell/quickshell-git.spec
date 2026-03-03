@@ -18,10 +18,12 @@ Source0:            %{url}/archive/%{commit}/quickshell-%{commit}.tar.gz
 Conflicts:          quickshell <= %{tag}
 
 %if 0%{?fedora}
-%global crash_reporter ON
-BuildRequires:      breakpad-static
+%global crash_handler ON
+BuildRequires:      cpptrace-devel
+BuildRequires:      libdwarf-devel
+BuildRequires:      pkgconfig(libzstd)
 %else
-%global crash_reporter OFF
+%global crash_handler OFF
 %endif
 
 %if 0%{?fedora}
@@ -37,7 +39,6 @@ BuildRequires:      cmake(Qt6WaylandClient)
 BuildRequires:      gcc-c++
 BuildRequires:      ninja-build
 %if 0%{?fedora}
-BuildRequires:      pkgconfig(breakpad)
 BuildRequires:      pkgconfig(CLI11)
 %else
 BuildRequires:      cli11-devel
@@ -75,7 +76,7 @@ Wayland and X11.
         -DASAN=ON \
 %endif
         -DBUILD_SHARED_LIBS=OFF \
-        -DCRASH_REPORTER=%{crash_reporter} \
+        -DCRASH_HANDLER=%{crash_handler} \
         -DUSE_JEMALLOC=%{jemalloc_enabled} \
         -DCMAKE_BUILD_TYPE=Release \
         -DDISTRIBUTOR="Fedora COPR (avengemedia/quickshell)" \
