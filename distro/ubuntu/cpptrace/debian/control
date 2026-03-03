@@ -1,0 +1,24 @@
+Source: cpptrace
+Section: libs
+Priority: optional
+Maintainer: Avenge Media <AvengeMedia.US@gmail.com>
+Build-Depends: debhelper-compat (= 13), cmake, ninja-build, libdwarf-dev, libunwind-dev, pkgconf, pkg-config, zlib1g-dev, libzstd-dev
+Standards-Version: 4.6.2
+Homepage: <https://github.com/jeremy-rifkin/cpptrace>
+
+Package: libcpptrace
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Simple, portable, and drop-in C++ stacktrace library
+ cpptrace is an easy to use C++ stacktrace library providing a
+ straightforward unified interface for stack traces in C++.
+
+Package: libcpptrace-dev
+Architecture: any
+Section: libdevel
+Depends: libcpptrace (= ${binary:Version}), ${misc:Depends}
+Description: Development files for cpptrace
+ cpptrace is an easy to use C++ stacktrace library providing a
+ straightforward unified interface for stack traces in C++.
+ .
+ This package provides the development headers and libraries.

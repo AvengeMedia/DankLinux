@@ -13,7 +13,7 @@ LAUNCHPAD_API="https://api.launchpad.net/1.0"
 DISTRO_SERIES="questing"
 
 # Define packages (sync with ppa-upload.sh)
-ALL_PACKAGES=(cliphist ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git)
+ALL_PACKAGES=(cpptrace cliphist ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git)
 
 # Check for required tools
 if ! command -v curl &> /dev/null; then

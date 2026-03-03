@@ -1,0 +1,21 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --buildsystem=cmake
+
+override_dh_auto_configure:
+	mkdir -p build
+	cd build && cmake .. -GNinja -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=ON \
+		-DCPPTRACE_USE_EXTERNAL_LIBDWARF=ON \
+		-DCPPTRACE_FIND_LIBDWARF_WITH_PKGCONFIG=ON \
+		-DCPPTRACE_GET_SYMBOLS_WITH_LIBDWARF=ON \
+		-DCPPTRACE_UNWIND_WITH_LIBUNWIND=ON
+
+override_dh_auto_build:
+	cd build && ninja -v
+
+override_dh_auto_install:
+	cd build && DESTDIR=$$(pwd)/../debian/tmp ninja install
+
+override_dh_auto_test:
+	# Do nothing

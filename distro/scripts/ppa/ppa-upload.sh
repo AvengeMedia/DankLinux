@@ -35,7 +35,7 @@ fi
 TEMP_DIR=$(mktemp -d "$TEMP_BASE/ppa_build_XXXXXX")
 trap "rm -rf $TEMP_DIR" EXIT
 
-AVAILABLE_PACKAGES=(cliphist danksearch dgop ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git)
+AVAILABLE_PACKAGES=(cpptrace cliphist danksearch dgop ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git)
 KEEP_BUILDS=false
 BUILD_ONLY=false
 REBUILD_RELEASE=""
@@ -282,6 +282,9 @@ if grep -q "git clone" debian/rules 2>/dev/null; then
 fi
 
 case "$PACKAGE_NAME" in
+    cpptrace)
+        GIT_REPO="jeremy-rifkin/cpptrace"
+        ;;
     quickshell-git)
         IS_GIT_PACKAGE=true
         GIT_REPO="quickshell-mirror/quickshell"
@@ -661,6 +664,17 @@ fi
 # Handle packages that need pre-built binaries downloaded
 cd "$BUILD_DIR"
 case "$PACKAGE_NAME" in
+    cpptrace)
+        info "Downloading cpptrace source..."
+        # Get version from changelog
+        VERSION=$(dpkg-parsechangelog -S Version | sed 's/-[^-]*$//' | sed 's/ppa[0-9]*$//')
+        if [ ! -f "CMakeLists.txt" ]; then
+            wget -O cpptrace-download.tar.gz "https://github.com/jeremy-rifkin/cpptrace/archive/refs/tags/v${VERSION}.tar.gz"
+            tar -xzf cpptrace-download.tar.gz --strip-components=1
+            rm cpptrace-download.tar.gz
+            success "cpptrace source extracted"
+        fi
+        ;;
     danksearch)
         info "Downloading pre-built binaries for danksearch..."
         # Get version from changelog (remove ppa suffix for both quilt and native formats)

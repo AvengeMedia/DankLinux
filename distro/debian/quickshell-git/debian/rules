@@ -29,7 +29,6 @@ override_dh_auto_configure:
 	fi && \
 	cmake -GNinja \
 		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
-		-DCRASH_REPORTER=off \
 		-DCMAKE_CXX_STANDARD=20 \
 		-DCMAKE_INSTALL_PREFIX=/usr \
 		-S $$SOURCE_DIR \

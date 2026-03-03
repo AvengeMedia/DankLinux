@@ -26,6 +26,22 @@ packages:
       verify: true
       algorithm: sha256
 
+  cpptrace:
+    type: stable
+    upstream:
+      repo: jeremy-rifkin/cpptrace
+      source_type: github_release
+    distros:
+      - debian
+      - opensuse
+    build:
+      language: cpp
+      requires:
+        - cmake
+    tarball:
+      directory_name: "cpptrace-{version}"
+      compression: gz
+
   danksearch:
     type: stable
     upstream:
@@ -272,6 +288,7 @@ groups:
     - matugen
     - niri
     - quickshell
+    - cpptrace
     - xwayland-satellite
 
   all-git:
@@ -289,6 +306,7 @@ groups:
     - niri-git
     - quickshell
     - quickshell-git
+    - cpptrace
     - xwayland-satellite
     - xwayland-satellite-git
 
@@ -312,6 +330,7 @@ groups:
   cpp-packages:
     - quickshell
     - quickshell-git
+    - cpptrace
 
   binary-releases:
     - danksearch

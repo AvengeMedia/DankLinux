@@ -19,6 +19,9 @@ BuildRequires:  qt6-base-private-devel
 BuildRequires:  qt6-declarative-private-devel
 BuildRequires:  qt6-waylandclient-private-devel
 BuildRequires:  cli11-devel
+BuildRequires:  cpptrace-devel
+BuildRequires:  libdwarf-devel
+BuildRequires:  libzstd-devel
 BuildRequires:  wayland-protocols-devel
 BuildRequires:  wayland-devel
 BuildRequires:  pkgconfig(wayland-client)
@@ -64,7 +67,6 @@ mkdir -p build
 cd build
 cmake -GNinja \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-    -DCRASH_REPORTER=off \
     -DCMAKE_CXX_STANDARD=20 \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_INSTALL_RPATH="" \
