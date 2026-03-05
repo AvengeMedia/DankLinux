@@ -1,9 +1,9 @@
 %bcond_with         asan
 
 # Updated 2025-10-30: Added glib-2.0 dependency for new Polkit service
-%global commit      a849a88893c71d409aecef0b999e6cc3d9b50034
-%global commits     746
-%global snapdate    20260303
+%global commit      5721955686a474b814c27bc0ec743f86e473ac4f
+%global commits     747
+%global snapdate    20260305
 %global tag         0.2.1
 
 Name:               quickshell-git
