@@ -36,18 +36,3 @@
 
 📦 Checking danksearch...
    Current: 0.2.0
-   Latest:  0.2.0
-   ✓ Already up to date
-
-📦 Checking dms-greeter...
-   ℹ️  Builds directly from: https://github.com/AvengeMedia/DankMaterialShell
-   Not tracked in dms_copr repo - managed in separate DankMaterialShell repo
-   Skipping automatic updates (separate repository)
-
-📦 Checking material-symbols-fonts...
-   ℹ️  Font file from google/material-design-icons (no version tags)
-   Current: 1.0 (manually versioned)
-   Skipping automatic updates for font file
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✓ All packages are up to date
