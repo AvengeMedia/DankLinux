@@ -5,10 +5,10 @@
    ✓ Already at pinned commit
 
 📦 Checking quickshell-git (development)...
-   Current commit: 15a8409 (date: 20260307)
-   Latest commit:  cf1a2ae (date: 20260310)
-   ✨ Update available: 15a8409 → cf1a2ae
-   Commit count: 751
+   Current commit: cf1a2ae (date: 20260310)
+   Latest commit:  bd62179 (date: 20260310)
+   ✨ Update available: cf1a2ae → bd62179
+   Commit count: 752
 
 📦 Checking dgop...
    Current: 0.2.2
@@ -52,6 +52,6 @@
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ Updated 1 package(s):
-   • quickshell-git: 15a8409 → cf1a2ae
+   • quickshell-git: cf1a2ae → bd62179
 
 📝 Changes staged for commit
