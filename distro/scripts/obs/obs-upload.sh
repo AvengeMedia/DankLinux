@@ -152,8 +152,24 @@ if [[ -d "$PKG_DIR" ]]; then
 else
     log_info "Checking out package for the first time..."
 
-    osc co "$OBS_PROJECT" "$PACKAGE" 2>&1 || true
-    
+    CHECKOUT_OK=false
+    for attempt in 1 2 3; do
+        if osc co "$OBS_PROJECT" "$PACKAGE" 2>&1; then
+            CHECKOUT_OK=true
+            break
+        fi
+        if [[ $attempt -lt 3 ]]; then
+            log_warn "Checkout failed (attempt $attempt/3). Removing partial copy and retrying in $((5*attempt))s..."
+            rm -rf "${OBS_CACHE_DIR:?}/${OBS_PROJECT:?}"
+            sleep $((5*attempt))
+        fi
+    done
+
+    if [[ "$CHECKOUT_OK" != "true" ]]; then
+        log_error "Checkout failed after 3 attempts (possibly Content-Length mismatch or network issue)"
+        exit $ERR_UPLOAD_FAILURE
+    fi
+
     # Check if checkout actually succeeded by checking if directory exists
     if [[ ! -d "$PKG_DIR" ]]; then
         log_warn "Package does not exist on OBS, will be created"
@@ -265,6 +281,11 @@ fi
 
 # Add new files
 log_info "Adding files to OBS..."
+# Repair working copy if inconsistent (e.g. after Content-Length mismatch during checkout)
+if ! osc status . &>/dev/null; then
+    log_warn "Working copy inconsistent, repairing before add..."
+    osc repairwc . 2>&1 || true
+fi
 osc addremove
 
 # Check status
