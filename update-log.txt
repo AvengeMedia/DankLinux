@@ -5,10 +5,10 @@
    ✓ Already at pinned commit
 
 📦 Checking quickshell-git (development)...
-   Current commit: bd62179 (date: 20260310)
-   Latest commit:  9a9c605 (date: 20260312)
-   ✨ Update available: bd62179 → 9a9c605
-   Commit count: 753
+   Current commit: 9a9c605 (date: 20260312)
+   Latest commit:  706d6de (date: 20260312)
+   ✨ Update available: 9a9c605 → 706d6de
+   Commit count: 754
 
 📦 Checking dgop...
    Current: 0.2.2
@@ -52,6 +52,6 @@
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ Updated 1 package(s):
-   • quickshell-git: bd62179 → 9a9c605
+   • quickshell-git: 9a9c605 → 706d6de
 
 📝 Changes staged for commit
