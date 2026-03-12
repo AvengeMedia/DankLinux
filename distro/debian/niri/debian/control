@@ -33,8 +33,7 @@ Depends: ${shlibs:Depends},
 Recommends: fuzzel,
             xdg-desktop-portal-gtk,
             xdg-desktop-portal-gnome,
-            gnome-keyring,
-            policykit-1-gnome
+            gnome-keyring
 Conflicts: niri-git
 Description: Scrollable-tiling Wayland compositor
  niri is a scrollable-tiling Wayland compositor. It provides a unique

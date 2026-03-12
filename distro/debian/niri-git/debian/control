@@ -32,8 +32,7 @@ Depends: ${shlibs:Depends},
 Recommends: fuzzel,
             xdg-desktop-portal-gtk,
             xdg-desktop-portal-gnome,
-            gnome-keyring,
-            policykit-1-gnome
+            gnome-keyring
 Conflicts: niri
 Provides: niri
 Description: Scrollable-tiling Wayland compositor (git development version)

@@ -31,7 +31,6 @@ Depends: ${shlibs:Depends},
 Recommends: alacritty,
             fuzzel,
             gnome-keyring,
-            policykit-1-gnome,
             xdg-desktop-portal-gnome,
             xdg-desktop-portal-gtk
 Conflicts: niri
