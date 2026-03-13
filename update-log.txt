@@ -5,10 +5,9 @@
    ✓ Already at pinned commit
 
 📦 Checking quickshell-git (development)...
-   Current commit: 706d6de (date: 20260312)
+   Current commit: 4b77936 (date: 20260313)
    Latest commit:  4b77936 (date: 20260313)
-   ✨ Update available: 706d6de → 4b77936
-   Commit count: 757
+   ✓ Already up to date
 
 📦 Checking dgop...
    Current: 0.2.2
@@ -32,8 +31,8 @@
 
 📦 Checking ghostty...
    Current: 1.3.0
-   Latest:  1.3.0
-   ✓ Already up to date
+   Latest:  1.3.1
+   ✨ Update available: 1.3.0 → 1.3.1
 
 📦 Checking danksearch...
    Current: 0.2.0
@@ -52,6 +51,6 @@
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ Updated 1 package(s):
-   • quickshell-git: 706d6de → 4b77936
+   • ghostty: 1.3.0 → 1.3.1
 
 📝 Changes staged for commit
