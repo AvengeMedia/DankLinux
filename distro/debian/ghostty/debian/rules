@@ -4,7 +4,122 @@ export HOME = $(CURDIR)
 DEB_VERSION := $(shell dpkg-parsechangelog -S Version)
 # Extract upstream version: remove Debian suffixes (.db[0-9] or db[0-9]) and ppa suffixes, then trim trailing dots/dashes
 UPSTREAM_VERSION := $(shell echo $(DEB_VERSION) | sed -E 's/(\\.db|db)[0-9]+$$//' | sed 's/ppa[0-9]*$$//' | sed 's/[.-]$$//')
-THEME_HASH := N-V-__8AANFEAwCzzNzNs3Gaq8pzGNl2BbeyFBwTyO5iZJL-
+THEME_HASH := N-V-__8AABVbAwBwDRyZONfx553tvMW8_A2OKUoLzPUSRiLF
+DEB_HOST_ARCH_CPU ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_CPU)
+STAGE_DIR := $(CURDIR)/debian/tmp
+
+ifeq ($(DEB_HOST_ARCH_CPU),amd64)
+	ZIG_LOCAL_BIN = ./zig/x86_64/zig
+else ifeq ($(DEB_HOST_ARCH_CPU),arm64)
+	ZIG_LOCAL_BIN = ./zig/aarch64/zig
+else
+	ZIG_LOCAL_BIN = ./zig/$(DEB_HOST_ARCH_CPU)/zig
+endif
+
+GHOSTTY_BUILD_FLAGS = \
+	--system $(CURDIR)/zig-deps/p \
+	--prefix /usr \
+	-Dversion-string=$(UPSTREAM_VERSION) \
+	-Doptimize=ReleaseFast \
+	-Dcpu=baseline \
+	-Demit-docs=false \
+	-Dpie=true \
+	-- -fno-lld -fuse-ld=bfd
+
+define select_zig_bin
+ZIG_BIN=""; \
+if [ -x /usr/bin/zig-0.15 ]; then \
+	ZIG_BIN="/usr/bin/zig-0.15"; \
+elif [ -x /usr/bin/zig ]; then \
+	ZIG_BIN="/usr/bin/zig"; \
+elif [ -x "$(ZIG_LOCAL_BIN)" ]; then \
+	ZIG_BIN="$(ZIG_LOCAL_BIN)"; \
+else \
+	echo "ERROR: No compatible zig binary found (/usr/bin/zig-0.15, /usr/bin/zig, or $(ZIG_LOCAL_BIN))"; \
+	exit 1; \
+fi
+endef
+
+define patch_harfbuzz
+HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES="c.HB_BUFFER_CLUSTER_LEVEL_GRAPHEMES"; \
+if [ ! -d /usr/include/harfbuzz ] || ! grep -R -q "HB_BUFFER_CLUSTER_LEVEL_GRAPHEMES" /usr/include/harfbuzz 2>/dev/null; then \
+	if grep -R -q "HB_BUFFER_CLUSTER_LEVEL_CHARACTERS" /usr/include/harfbuzz 2>/dev/null; then \
+		HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES="c.HB_BUFFER_CLUSTER_LEVEL_CHARACTERS + 3"; \
+	elif grep -R -q "HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES" /usr/include/harfbuzz 2>/dev/null; then \
+		HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES="c.HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES + 3"; \
+	else \
+		HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES="c.HB_BUFFER_CLUSTER_LEVEL_MONOTONE_CHARACTERS + 3"; \
+	fi; \
+fi; \
+find . -type f -path "*/pkg/harfbuzz/buffer.zig" -exec \
+	sed -i "s/enum(u2)/enum(u8)/" {} + || true; \
+find . -type f -path "*/pkg/harfbuzz/buffer.zig" -exec \
+	sed -i "s/graphemes = c.HB_BUFFER_CLUSTER_LEVEL_GRAPHEMES/graphemes = $${HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES}/" {} + || true
+endef
+
+define normalize_staged_tree
+if [ ! -d "$(STAGE_DIR)/usr" ]; then \
+	echo "ERROR: staged install tree missing at $(STAGE_DIR)/usr"; \
+	exit 1; \
+fi; \
+if [ -d "$(STAGE_DIR)/usr/share/ghostty/themes/ghostty" ]; then \
+	mv "$(STAGE_DIR)/usr/share/ghostty/themes/ghostty/"* "$(STAGE_DIR)/usr/share/ghostty/themes/"; \
+	rmdir "$(STAGE_DIR)/usr/share/ghostty/themes/ghostty"; \
+fi; \
+rm -f "$(STAGE_DIR)/usr/share/terminfo/g/ghostty"; \
+if [ -f "$(STAGE_DIR)/usr/lib64/libghostty-vt.so" ] || [ -f "$(STAGE_DIR)/usr/lib64/libghostty-vt.so.0" ] || [ -f "$(STAGE_DIR)/usr/lib64/libghostty-vt.so.0.1.0" ]; then \
+	mkdir -p "$(STAGE_DIR)/usr/lib"; \
+	mv -f "$(STAGE_DIR)/usr/lib64/libghostty-vt.so"* "$(STAGE_DIR)/usr/lib/"; \
+fi; \
+mkdir -p "$(STAGE_DIR)/usr/share/pkgconfig"; \
+PKGCONFIG_DEST="$(STAGE_DIR)/usr/share/pkgconfig/libghostty-vt.pc"; \
+for candidate in \
+	"$(STAGE_DIR)/usr/lib/pkgconfig/libghostty-vt.pc" \
+	"$(STAGE_DIR)/usr/share/pkgconfig/libghostty-vt.pc" \
+	"$(STAGE_DIR)/usr/lib64/pkgconfig/libghostty-vt.pc"; \
+do \
+	if [ -f "$$candidate" ]; then \
+		if [ "$$candidate" != "$$PKGCONFIG_DEST" ]; then \
+			mv -f "$$candidate" "$$PKGCONFIG_DEST"; \
+		fi; \
+		break; \
+	fi; \
+done; \
+SYSTEMD_SERVICE_DEST="$(STAGE_DIR)/usr/lib/systemd/user/app-com.mitchellh.ghostty.service"; \
+mkdir -p "$(STAGE_DIR)/usr/lib/systemd/user"; \
+if [ ! -f "$$SYSTEMD_SERVICE_DEST" ]; then \
+	for candidate in \
+		"$(STAGE_DIR)/usr/lib/systemd/user/app-com.mitchellh.ghostty.service" \
+		"$(STAGE_DIR)/usr/lib/systemd/user/com.mitchellh.ghostty.service" \
+		"$(STAGE_DIR)/usr/share/systemd/user/app-com.mitchellh.ghostty.service" \
+		"$(STAGE_DIR)/usr/share/systemd/user/com.mitchellh.ghostty.service"; \
+	do \
+		if [ -f "$$candidate" ]; then \
+			cp -a "$$candidate" "$$SYSTEMD_SERVICE_DEST"; \
+			break; \
+		fi; \
+	done; \
+fi; \
+if [ -f "$(STAGE_DIR)/usr/share/kio/servicemenus/com.mitchellh.ghostty.desktop" ]; then \
+	chmod -x "$(STAGE_DIR)/usr/share/kio/servicemenus/com.mitchellh.ghostty.desktop"; \
+fi; \
+if [ ! -f "$(STAGE_DIR)/usr/lib/libghostty-vt.so" ]; then \
+	echo "ERROR: Ghostty VT library was not installed to $(STAGE_DIR)/usr/lib"; \
+	exit 1; \
+fi; \
+if [ ! -f "$(STAGE_DIR)/usr/include/ghostty/vt.h" ]; then \
+	echo "ERROR: Ghostty VT headers were not installed to $(STAGE_DIR)/usr/include/ghostty"; \
+	exit 1; \
+fi; \
+if [ ! -f "$$PKGCONFIG_DEST" ]; then \
+	echo "ERROR: libghostty-vt.pc not found in staged install tree"; \
+	exit 1; \
+fi; \
+if [ ! -f "$$SYSTEMD_SERVICE_DEST" ]; then \
+	echo "ERROR: Ghostty systemd user service file not found in expected paths"; \
+	exit 1; \
+fi
+endef
 
 %:
 	dh $@
@@ -13,6 +128,7 @@ override_dh_auto_configure:
 	# Rewrite theme URL to local tarball and update hash (themes are vendored in source package)
 	test -f ghostty-themes.tgz || (echo "ERROR: ghostty-themes.tgz not found!" && exit 1)
 	# Update URL to file://
+	sed -i "s#https://deps.files.ghostty.org/ghostty-themes-release-[^\"]*\.tgz#file://$(CURDIR)/ghostty-themes.tgz#g" build.zig.zon build.zig.zon.json 2>/dev/null || true
 	sed -i "s#https://github.com/mbadolato[^\"]*ghostty-themes.tgz#file://$(CURDIR)/ghostty-themes.tgz#g" build.zig.zon build.zig.zon.json 2>/dev/null || true
 	# Update hash to match the fixed themes tarball (required for file:// URLs)
 	sed -i '/\.iterm2_themes/,/}/ s|\.hash = "[^"]*"|.hash = "$(THEME_HASH)"|' build.zig.zon 2>/dev/null || true
@@ -22,6 +138,21 @@ override_dh_auto_configure:
 	if [ -z "$$(ls -A "$(CURDIR)/zig-deps/p/$(THEME_HASH)" 2>/dev/null)" ]; then \
 		tar -xzf ghostty-themes.tgz -C "$(CURDIR)/zig-deps/p/$(THEME_HASH)"; \
 	fi
+	# HarfBuzz compatibility: older header sets can lack HB_BUFFER_CLUSTER_LEVEL_GRAPHEMES
+	HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES="c.HB_BUFFER_CLUSTER_LEVEL_GRAPHEMES"; \
+	if [ ! -d /usr/include/harfbuzz ] || ! grep -R -q "HB_BUFFER_CLUSTER_LEVEL_GRAPHEMES" /usr/include/harfbuzz 2>/dev/null; then \
+		if grep -R -q "HB_BUFFER_CLUSTER_LEVEL_CHARACTERS" /usr/include/harfbuzz 2>/dev/null; then \
+			HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES="c.HB_BUFFER_CLUSTER_LEVEL_CHARACTERS + 3"; \
+		elif grep -R -q "HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES" /usr/include/harfbuzz 2>/dev/null; then \
+			HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES="c.HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES + 3"; \
+		else \
+			HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES="c.HB_BUFFER_CLUSTER_LEVEL_MONOTONE_CHARACTERS + 3"; \
+		fi; \
+	fi; \
+	find . -type f -path "*/pkg/harfbuzz/buffer.zig" -exec \
+		sed -i "s/enum(u2)/enum(u8)/" {} + || true; \
+	find . -type f -path "*/pkg/harfbuzz/buffer.zig" -exec \
+		sed -i "s/graphemes = c.HB_BUFFER_CLUSTER_LEVEL_GRAPHEMES/graphemes = $${HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES}/" {} + || true
 	# Rewrite wayland dependency URLs to local files (vendored in source package)
 	test -f wayland.tar.gz || (echo "ERROR: wayland.tar.gz not found!" && exit 1)
 	test -f wayland-protocols.tar.gz || (echo "ERROR: wayland-protocols.tar.gz not found!" && exit 1)
@@ -29,35 +160,21 @@ override_dh_auto_configure:
 	sed -i "s#https://deps.files.ghostty.org/wayland-9cb3d7aa9dc995ffafdbdef7ab86a949d0fb0e7d.tar.gz#file://$(CURDIR)/wayland.tar.gz#g" build.zig.zon 2>/dev/null || true
 	sed -i "s#https://deps.files.ghostty.org/wayland-protocols-258d8f88f2c8c25a830c6316f87d23ce1a0f12d9.tar.gz#file://$(CURDIR)/wayland-protocols.tar.gz#g" build.zig.zon 2>/dev/null || true
 	sed -i "s#https://deps.files.ghostty.org/plasma_wayland_protocols-12207e0851c12acdeee0991e893e0132fc87bb763969a585dc16ecca33e88334c566.tar.gz#file://$(CURDIR)/plasma_wayland_protocols.tar.gz#g" build.zig.zon 2>/dev/null || true
+	# Use system linker instead of LLD (fixes Debian libdcimgui.a/libfreetype.so bug, ziglang/zig#20476)
+	sed -i '/\.use_llvm = true,/a\ .use_lld = false,' src/build/GhosttyExe.zig
 	dh_auto_configure
 
 override_dh_auto_build:
-	# Build using zig14 package with vendored dependencies
-	ZIG_GLOBAL_CACHE_DIR=$(CURDIR)/zig-deps \
-	DESTDIR=$(CURDIR)/debian/ghostty \
-	/usr/bin/zig-0.14 build \
-		--system $(CURDIR)/zig-deps/p \
-		--prefix /usr \
-		-Dversion-string=$(UPSTREAM_VERSION) \
-		-Doptimize=ReleaseFast \
-		-Dcpu=baseline \
-		-Dpie=true
+	@echo "Skipping explicit build step; zig build install handles staged compilation during install"
 
 override_dh_auto_install:
+	@set -e; \
+	rm -rf "$(STAGE_DIR)"; \
+	$(select_zig_bin); \
+	$(patch_harfbuzz); \
 	ZIG_GLOBAL_CACHE_DIR=$(CURDIR)/zig-deps \
-	DESTDIR=$(CURDIR)/debian/ghostty \
-	/usr/bin/zig-0.14 build install \
-		--system $(CURDIR)/zig-deps/p \
-		--prefix /usr \
-		-Doptimize=ReleaseFast \
-		-Dcpu=baseline
-	# Flatten themes directory so files live directly under share/ghostty/themes
-	if [ -d "$(CURDIR)/debian/ghostty/usr/share/ghostty/themes/ghostty" ]; then \
-		mv "$(CURDIR)/debian/ghostty/usr/share/ghostty/themes/ghostty/"* $(CURDIR)/debian/ghostty/usr/share/ghostty/themes/ && \
-		rmdir "$(CURDIR)/debian/ghostty/usr/share/ghostty/themes/ghostty"; \
-	fi
-	# Remove terminfo file that conflicts with ncurses-term (Ubuntu 25.04+)
-	rm -f $(CURDIR)/debian/ghostty/usr/share/terminfo/g/ghostty
+	DESTDIR="$(STAGE_DIR)" "$$ZIG_BIN" build install $(GHOSTTY_BUILD_FLAGS); \
+	$(normalize_staged_tree)
 
 override_dh_auto_clean:
 	rm -rf zig-cache zig-out .zig-cache

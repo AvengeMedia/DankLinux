@@ -1,6 +1,12 @@
-ghostty (1.2.3.db18) unstable; urgency=medium
+ghostty (1.3.1db1) unstable; urgency=medium
 
-  * Flatten installed themes into /usr/share/ghostty/themes so +list-themes works.
+  * New upstream release 1.3.1
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Fri, 13 Mar 2026 00:00:00 -0500
+
+ghostty (1.3.0db1) unstable; urgency=medium
+
+  * New upstream release 1.3.0
 
  -- Avenge Media <AvengeMedia.US@gmail.com>  Wed, 24 Dec 2025 00:00:00 -0500
 

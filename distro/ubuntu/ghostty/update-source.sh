@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script to update Ghostty source and vendor Zig dependencies for multiple architectures
+# Script to update Ghostty source, bundle Zig, and vendor dependencies for Launchpad builds
 # Usage: ./update-source.sh [version-tag]
 
 set -e
@@ -42,34 +42,73 @@ rm ghostty-source.tar.gz
 
 cd ghostty-source
 
-# Download Zig Binaries (Multi-arch)
-ZIG_VERSION="0.14.0"
-ZIG_URL_X86_64="https://ziglang.org/download/${ZIG_VERSION}/zig-linux-x86_64-${ZIG_VERSION}.tar.xz"
-ZIG_URL_AARCH64="https://ziglang.org/download/${ZIG_VERSION}/zig-linux-aarch64-${ZIG_VERSION}.tar.xz"
+# Bundle Zig 0.15.2 so Launchpad does not depend on archive zig versions.
+ZIG_VERSION="0.15.2"
+ZIG_URL_X86_64="https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz"
+ZIG_URL_AARCH64="https://ziglang.org/download/${ZIG_VERSION}/zig-aarch64-linux-${ZIG_VERSION}.tar.xz"
 
-echo "Using Zig version: $ZIG_VERSION"
-
-mkdir -p zig/x86_64
-mkdir -p zig/aarch64
+echo "Bundling Zig version: $ZIG_VERSION"
+mkdir -p zig/x86_64 zig/aarch64
 
 echo "Downloading Zig for x86_64..."
 wget -q -O zig-x86_64.tar.xz "$ZIG_URL_X86_64"
-tar -xf zig-x86_64.tar.xz --strip-components=1 -C zig/x86_64
+tar --no-same-owner -xf zig-x86_64.tar.xz --strip-components=1 -C zig/x86_64
 rm zig-x86_64.tar.xz
 chmod +x zig/x86_64/zig
 
 echo "Downloading Zig for aarch64..."
 wget -q -O zig-aarch64.tar.xz "$ZIG_URL_AARCH64"
-tar -xf zig-aarch64.tar.xz --strip-components=1 -C zig/aarch64
+tar --no-same-owner -xf zig-aarch64.tar.xz --strip-components=1 -C zig/aarch64
 rm zig-aarch64.tar.xz
 chmod +x zig/aarch64/zig
 
-# Workaround for Ghostty 1.2.3 broken themes URL (see: https://github.com/ghostty-org/ghostty/issues/6026)
-echo "Patching broken ghostty-themes URL..."
+# Prefer system Zig for vendoring when it is new enough; otherwise use bundled Zig.
+REQUIRED_ZIG_VERSION="0.15.2"
+ZIG_BIN="${ZIG_BIN:-}"
+HOST_ARCH="$(uname -m)"
+
+case "$HOST_ARCH" in
+    x86_64)
+        BUNDLED_ZIG="./zig/x86_64/zig"
+        ;;
+    aarch64|arm64)
+        BUNDLED_ZIG="./zig/aarch64/zig"
+        ;;
+    *)
+        BUNDLED_ZIG=""
+        ;;
+esac
+
+if [ -z "$ZIG_BIN" ]; then
+    for candidate in /usr/bin/zig-0.15 /usr/bin/zig zig-0.15 zig15 zig; do
+        if command -v "$candidate" >/dev/null 2>&1; then
+            candidate_bin=$(command -v "$candidate")
+            candidate_ver=$("$candidate_bin" version 2>/dev/null | head -1)
+            if [[ "$candidate_ver" =~ ^0\.(1[5-9]|[2-9][0-9]) ]]; then
+                ZIG_BIN="$candidate_bin"
+                break
+            fi
+        fi
+    done
+fi
+
+if [ -z "$ZIG_BIN" ]; then
+    if [ -n "$BUNDLED_ZIG" ] && [ -x "$BUNDLED_ZIG" ]; then
+        ZIG_BIN="$BUNDLED_ZIG"
+    else
+        echo "ERROR: Compatible Zig not found. Install Zig ${REQUIRED_ZIG_VERSION}+ or set ZIG_BIN."
+        exit 1
+    fi
+fi
+
+echo "Using Zig binary: $ZIG_BIN ($("$ZIG_BIN" version 2>/dev/null | head -1))"
+
+# Normalize Ghostty themes vendoring details for offline packaging.
+echo "Normalizing ghostty-themes vendoring..."
 BROKEN_URL="https://github.com/mbadolato/iTerm2-Color-Schemes/releases/download/release-20251002-142451-4a5043e/ghostty-themes.tgz"
-FIXED_URL="https://deps.files.ghostty.org/ghostty-themes-release-20251201-150531-bfb3ee1.tgz"
+FIXED_URL="https://deps.files.ghostty.org/ghostty-themes-release-20260216-151611-fc73ce3.tgz"
 OLD_HASH="1220c73a50f92bd1aab12c8f8ff96e87e3bb5fbd2a3b9a43d23d450d72db1dc28e99"
-NEW_HASH="N-V-__8AANFEAwCzzNzNs3Gaq8pzGNl2BbeyFBwTyO5iZJL-"
+NEW_HASH="N-V-__8AABVbAwBwDRyZONfx553tvMW8_A2OKUoLzPUSRiLF"
 
 # Patch build.zig.zon.txt if it contains the broken URL
 if [ -f "build.zig.zon.txt" ]; then
@@ -101,7 +140,7 @@ if [ -f "build.zig.zon" ]; then
         echo "Extracted themes hash: $THEME_HASH"
         if wget -q -O ghostty-themes.tgz "$FIXED_URL"; then
             mkdir -p "zig-deps/p/$THEME_HASH"
-            tar -xzf ghostty-themes.tgz -C "zig-deps/p/$THEME_HASH"
+            tar --no-same-owner -xzf ghostty-themes.tgz -C "zig-deps/p/$THEME_HASH"
             # Keep tarball in source root - Themes are also in zig-deps for --system mode fallback
             echo "Themes dependency injected successfully"
         else
@@ -119,14 +158,11 @@ echo "Vendoring Zig dependencies..."
 export ZIG_GLOBAL_CACHE_DIR="$PWD/zig-deps"
 mkdir -p "$ZIG_GLOBAL_CACHE_DIR"
 
-# Add bundled zig to PATH for all fetch operations
-export PATH="$PWD/zig/x86_64:$PATH"
-
 FETCH_SUCCESS=false
 
 # Use 'zig build --fetch' to fetch all transitive dependencies
 echo "Attempting to fetch all dependencies with 'zig build --fetch'..."
-if ./zig/x86_64/zig build --fetch 2>&1; then
+if "$ZIG_BIN" build --fetch 2>&1; then
     echo "All dependencies fetched successfully with 'zig build --fetch'"
     FETCH_SUCCESS=true
 else
@@ -151,7 +187,7 @@ if [ -f "build.zig.zon.txt" ]; then
     while IFS= read -r url; do
         [ -z "$url" ] || [[ "$url" =~ ^[[:space:]]*# ]] && continue
         echo "Fetching: $url"
-        if ! ./zig/x86_64/zig fetch "$url" >/dev/null 2>&1; then
+        if ! "$ZIG_BIN" fetch "$url" >/dev/null 2>&1; then
             echo "Failed to fetch (may be optional): $url"
             FETCH_FAILED_COUNT=$((FETCH_FAILED_COUNT + 1))
         fi
@@ -162,8 +198,6 @@ if [ -f "build.zig.zon.txt" ]; then
     echo "Manual dependency fetch completed"
     FETCH_SUCCESS=true
 fi
-
-export PATH="${PATH#$PWD/zig/x86_64:}"
 
 # Check if we have dependencies now
 if [ ! -d "zig-deps/p" ]; then

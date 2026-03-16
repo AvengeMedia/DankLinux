@@ -1,0 +1,7 @@
+usr/include/ghostty/vt.h
+usr/include/ghostty/vt/*.h
+usr/include/ghostty/vt/key/encoder.h
+usr/include/ghostty/vt/key/event.h
+usr/lib/libghostty-vt.so
+usr/lib/libghostty-vt.so.0*
+usr/share/pkgconfig/libghostty-vt.pc

@@ -17,8 +17,7 @@ Build-Depends: debhelper-compat (= 13),
                libpixman-1-dev,
                libwayland-dev,
                wayland-protocols,
-               zlib1g-dev,
-               pandoc
+               zlib1g-dev
 Standards-Version: 4.6.2
 Homepage: https://github.com/ghostty-org/ghostty
 Vcs-Browser: https://github.com/ghostty-org/ghostty
@@ -34,3 +33,11 @@ Description: Fast, feature-rich, cross-platform terminal emulator
  .
  Features include GPU acceleration, ligature support, custom shaders,
  and native OS integration for macOS, Linux, and Windows.
+
+Package: libghostty-vt-dev
+Architecture: any
+Depends: ghostty (= ${binary:Version}), ${misc:Depends}
+Section: libdevel
+Description: Development files for Ghostty VT library
+ Development files for the Ghostty VT library, including headers,
+ pkg-config metadata, and the development shared object symlinks.

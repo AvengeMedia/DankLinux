@@ -1,5 +1,9 @@
+%global zig_minimum_version 0.15.0
+%global ghostty_libdir /usr/lib
+%global ghostty_systemd_user_unitdir %{_userunitdir}
+
 Name:           ghostty
-Version:        1.2.3
+Version:        1.3.1
 Release:        1%{?dist}
 Summary:        Fast, feature-rich, and cross-platform terminal emulator that uses platform-native UI and GPU acceleration
 
@@ -7,7 +11,7 @@ License:        MIT
 URL:            https://github.com/ghostty-org/ghostty
 Source0:        ghostty-%{version}.tar.xz
 
-BuildRequires:  zig14
+BuildRequires:  zig15
 BuildRequires:  curl
 BuildRequires:  blueprint-compiler
 BuildRequires:  fontconfig-devel
@@ -46,37 +50,175 @@ and native OS integration.
 %prep
 %setup -q
 
-# Themes are already included in source tarball
+# Normalize vendored dependency URLs for offline/reproducible builds.
 THEMES_FILE="file://$PWD/ghostty-themes.tgz"
-sed -i "s|https://github.com/mbadolato/iTerm2-Color-Schemes/releases/download/.\+/ghostty-themes.tgz|${THEMES_FILE}|" build.zig.zon
-sed -i '/\.iterm2_themes/,/}/ s|\.hash = "[^"]\+"|.hash = "N-V-__8AANFEAwCzzNzNs3Gaq8pzGNl2BbeyFBwTyO5iZJL-"|' build.zig.zon
+if [ -f "$PWD/ghostty-themes.tgz" ]; then
+    sed -i "s#https://deps.files.ghostty.org/ghostty-themes-release-[^\"]*\.tgz#${THEMES_FILE}#" build.zig.zon
+    sed -i "s#https://github.com/mbadolato/iTerm2-Color-Schemes/releases/download/.\+/ghostty-themes.tgz#${THEMES_FILE}#" build.zig.zon
+    sed -i '/\.iterm2_themes/,/}/ s|\.hash = "[^"]\+"|.hash = "N-V-__8AABVbAwBwDRyZONfx553tvMW8_A2OKUoLzPUSRiLF"|' build.zig.zon
+fi
+if [ -f "$PWD/wayland.tar.gz" ]; then
+    sed -i "s#https://deps.files.ghostty.org/wayland-9cb3d7aa9dc995ffafdbdef7ab86a949d0fb0e7d.tar.gz#file://$PWD/wayland.tar.gz#" build.zig.zon
+fi
+if [ -f "$PWD/wayland-protocols.tar.gz" ]; then
+    sed -i "s#https://deps.files.ghostty.org/wayland-protocols-258d8f88f2c8c25a830c6316f87d23ce1a0f12d9.tar.gz#file://$PWD/wayland-protocols.tar.gz#" build.zig.zon
+fi
+if [ -f "$PWD/plasma_wayland_protocols.tar.gz" ]; then
+    sed -i "s#https://deps.files.ghostty.org/plasma_wayland_protocols-12207e0851c12acdeee0991e893e0132fc87bb763969a585dc16ecca33e88334c566.tar.gz#file://$PWD/plasma_wayland_protocols.tar.gz#" build.zig.zon
+fi
+HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES="c.HB_BUFFER_CLUSTER_LEVEL_GRAPHEMES"
+if [ ! -d /usr/include/harfbuzz ] || ! grep -R -q "HB_BUFFER_CLUSTER_LEVEL_GRAPHEMES" /usr/include/harfbuzz 2>/dev/null; then
+    if grep -R -q "HB_BUFFER_CLUSTER_LEVEL_CHARACTERS" /usr/include/harfbuzz 2>/dev/null; then
+        HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES="c.HB_BUFFER_CLUSTER_LEVEL_CHARACTERS + 3"
+    elif grep -R -q "HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES" /usr/include/harfbuzz 2>/dev/null; then
+        HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES="c.HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES + 3"
+    else
+        HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES="c.HB_BUFFER_CLUSTER_LEVEL_MONOTONE_CHARACTERS + 3"
+    fi
+fi
+find . -type f -path "*/pkg/harfbuzz/buffer.zig" -exec \
+    sed -i "s/enum(u2)/enum(u8)/" {} + || true
+find . -type f -path "*/pkg/harfbuzz/buffer.zig" -exec \
+    sed -i "s/graphemes = c.HB_BUFFER_CLUSTER_LEVEL_GRAPHEMES/graphemes = ${HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES}/" {} + || true
 
-# Wayland dependencies included in source tarball
-sed -i "s|https://deps.files.ghostty.org/wayland-9cb3d7aa9dc995ffafdbdef7ab86a949d0fb0e7d.tar.gz|file://$PWD/wayland.tar.gz|" build.zig.zon
-sed -i "s|https://deps.files.ghostty.org/wayland-protocols-258d8f88f2c8c25a830c6316f87d23ce1a0f12d9.tar.gz|file://$PWD/wayland-protocols.tar.gz|" build.zig.zon
-sed -i "s|https://deps.files.ghostty.org/plasma_wayland_protocols-12207e0851c12acdeee0991e893e0132fc87bb763969a585dc16ecca33e88334c566.tar.gz|file://$PWD/plasma_wayland_protocols.tar.gz|" build.zig.zon
+ZIG_GLOBAL_CACHE_DIR=$PWD/zig-deps
+# Skip fetch-zig-cache when zig-deps pre-vendored (OBS source tarball has no network)
+if [ -d "$ZIG_GLOBAL_CACHE_DIR/p" ] && [ -n "$(ls -A "$ZIG_GLOBAL_CACHE_DIR/p" 2>/dev/null)" ]; then
+    echo "Using pre-vendored zig-deps from source package"
+elif [ -x ./nix/build-support/fetch-zig-cache.sh ]; then
+    ZIG_GLOBAL_CACHE_DIR=$ZIG_GLOBAL_CACHE_DIR ./nix/build-support/fetch-zig-cache.sh
+else
+    echo "WARNING: fetch-zig-cache.sh not found; proceeding with direct network access."
+fi
 
 %build
-# zig14 package provides /usr/bin/zig-0.14
-# Use vendored Zig dependencies from source tarball
 export ZIG_GLOBAL_CACHE_DIR=$PWD/zig-deps
+HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES="c.HB_BUFFER_CLUSTER_LEVEL_GRAPHEMES"
+if [ ! -d /usr/include/harfbuzz ] || ! grep -R -q "HB_BUFFER_CLUSTER_LEVEL_GRAPHEMES" /usr/include/harfbuzz 2>/dev/null; then
+    if grep -R -q "HB_BUFFER_CLUSTER_LEVEL_CHARACTERS" /usr/include/harfbuzz 2>/dev/null; then
+        HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES="c.HB_BUFFER_CLUSTER_LEVEL_CHARACTERS + 3"
+    elif grep -R -q "HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES" /usr/include/harfbuzz 2>/dev/null; then
+        HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES="c.HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES + 3"
+    else
+        HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES="c.HB_BUFFER_CLUSTER_LEVEL_MONOTONE_CHARACTERS + 3"
+    fi
+fi
+find . -type f -path "*/pkg/harfbuzz/buffer.zig" -exec \
+    sed -i "s/enum(u2)/enum(u8)/" {} + || true
+find . -type f -path "*/pkg/harfbuzz/buffer.zig" -exec \
+    sed -i "s/graphemes = c.HB_BUFFER_CLUSTER_LEVEL_GRAPHEMES/graphemes = ${HARFBUZZ_CLUSTER_LEVEL_GRAPHEMES}/" {} + || true
 
 mkdir -p %{_builddir}/ghostty-buildroot
-DESTDIR=%{_builddir}/ghostty-buildroot /usr/bin/zig-0.14 build install \
-    --system "$ZIG_GLOBAL_CACHE_DIR/p" \
-    --summary new \
-    --prefix "%{_prefix}" \
-    -Dversion-string=%{version}-%{release} \
-    -Doptimize=ReleaseFast \
-    -Dcpu=baseline \
-    -Dpie=true \
-    -Demit-docs=false
+if [ -d "$ZIG_GLOBAL_CACHE_DIR/p" ]; then
+    if [ -x "%{_bindir}/zig-0.15" ]; then
+        ZIG_BIN="%{_bindir}/zig-0.15"
+    elif [ -x "%{_bindir}/zig" ]; then
+        ZIG_BIN="%{_bindir}/zig"
+    else
+        echo "ERROR: zig compiler not found in %{_bindir}"
+        exit 1
+    fi
+    DESTDIR=%{_builddir}/ghostty-buildroot "$ZIG_BIN" build install \
+        --system "$ZIG_GLOBAL_CACHE_DIR/p" \
+        --summary all \
+        --prefix "%{_prefix}" \
+        -Dversion-string=%{version}-%{release} \
+        -Doptimize=ReleaseFast \
+        -Dcpu=baseline \
+        -Dpie=true \
+        -Demit-docs=false
+else
+    echo "WARNING: Zig cache directory not found at $ZIG_GLOBAL_CACHE_DIR/p; building without --system."
+    if [ -x "%{_bindir}/zig-0.15" ]; then
+        ZIG_BIN="%{_bindir}/zig-0.15"
+    elif [ -x "%{_bindir}/zig" ]; then
+        ZIG_BIN="%{_bindir}/zig"
+    else
+        echo "ERROR: zig compiler not found in %{_bindir}"
+        exit 1
+    fi
+    DESTDIR=%{_builddir}/ghostty-buildroot "$ZIG_BIN" build install \
+        --summary all \
+        --prefix "%{_prefix}" \
+        -Dversion-string=%{version}-%{release} \
+        -Doptimize=ReleaseFast \
+        -Dcpu=baseline \
+        -Dpie=true \
+        -Demit-docs=false
+fi
 
 %install
 # Copy pre-built files from build phase
 cp -a %{_builddir}/ghostty-buildroot/* %{buildroot}/
+rm -f %{buildroot}%{_datadir}/terminfo/g/ghostty
 
-%files
+# Normalize systemd user unit location for robust packaging across upstream variations.
+SYSTEMD_SERVICE_DEST="%{buildroot}%{ghostty_systemd_user_unitdir}/app-com.mitchellh.ghostty.service"
+mkdir -p "%{buildroot}%{ghostty_systemd_user_unitdir}"
+if [ ! -f "$SYSTEMD_SERVICE_DEST" ]; then
+    for candidate in \
+        "%{buildroot}%{_prefix}/lib/systemd/user/app-com.mitchellh.ghostty.service" \
+        "%{buildroot}%{_datadir}/systemd/user/app-com.mitchellh.ghostty.service" \
+        "%{buildroot}%{_prefix}/share/systemd/user/app-com.mitchellh.ghostty.service" \
+        "%{buildroot}%{_prefix}/lib/systemd/user/com.mitchellh.ghostty.service" \
+        "%{buildroot}%{_datadir}/systemd/user/com.mitchellh.ghostty.service" \
+        "%{buildroot}%{_prefix}/share/systemd/user/com.mitchellh.ghostty.service"
+    do
+        if [ -f "$candidate" ]; then
+            cp -a "$candidate" "$SYSTEMD_SERVICE_DEST"
+            break
+        fi
+    done
+fi
+if [ ! -f "$SYSTEMD_SERVICE_DEST" ]; then
+    echo "ERROR: Ghostty systemd user service was not generated by zig build."
+    echo "Looked for app/com variants in %{_prefix}/lib, %{_datadir}, and share locations."
+    exit 1
+fi
+
+# Normalize pkgconfig location. Fedora upstream now emits the file under /usr/share/pkgconfig.
+mkdir -p %{buildroot}%{_datadir}/pkgconfig
+PKGCONFIG_DEST="%{buildroot}%{_datadir}/pkgconfig/libghostty-vt.pc"
+for candidate in \
+    "%{buildroot}%{ghostty_libdir}/pkgconfig/libghostty-vt.pc" \
+    "%{buildroot}%{_libdir}/pkgconfig/libghostty-vt.pc" \
+    "%{buildroot}%{_datadir}/pkgconfig/libghostty-vt.pc"
+do
+    if [ -f "$candidate" ]; then
+        if [ "$candidate" != "$PKGCONFIG_DEST" ]; then
+            cp -a "$candidate" "$PKGCONFIG_DEST"
+        fi
+        break
+    fi
+done
+rm -f %{buildroot}%{_libdir}/pkgconfig/libghostty-vt.pc
+
+# Build include dir list for ghostty-devel to avoid "directories not owned" (es_BO/ko_KR-style issues).
+INCLUDE_DIRS_FILE="%{_builddir}/ghostty-devel.include-dirs"
+: > "$INCLUDE_DIRS_FILE"
+if [ -d "%{buildroot}%{_includedir}/ghostty" ]; then
+    find "%{buildroot}%{_includedir}/ghostty" -type d -print \
+        | sed "s#^%{buildroot}##" \
+        | while read -r d; do echo "%%dir $d"; done \
+        >> "$INCLUDE_DIRS_FILE"
+fi
+
+# Build locale file list from actual outputs to avoid packaging errors on missing dirs.
+# Use -mindepth 1 so parent locale dirs (es_BO, ko_KR, etc.) are owned
+LOCALE_FILES_FILE="%{_builddir}/ghostty.locale.files"
+: > "$LOCALE_FILES_FILE"
+if [ -d "%{buildroot}%{_datadir}/locale" ]; then
+    {
+        find "%{buildroot}%{_datadir}/locale" -type f -name "com.mitchellh.ghostty.mo" -print
+        find "%{buildroot}%{_datadir}/locale" -mindepth 1 -type d -print
+    } | sed "s#^%{buildroot}##" | sort -u >> "$LOCALE_FILES_FILE"
+fi
+
+if [ -f "%{buildroot}%{_datadir}/kio/servicemenus/com.mitchellh.ghostty.desktop" ]; then
+    chmod -x "%{buildroot}%{_datadir}/kio/servicemenus/com.mitchellh.ghostty.desktop"
+fi
+
+%files -f %{_builddir}/ghostty.locale.files
 %license LICENSE
 %{_bindir}/ghostty
 
@@ -149,67 +291,32 @@ cp -a %{_builddir}/ghostty-buildroot/* %{buildroot}/
 %{_datadir}/dbus-1/services/com.mitchellh.ghostty.service
 
 # Systemd user service
-%dir %{_prefix}/lib/systemd
-%dir %{_prefix}/lib/systemd/user
-%{_prefix}/lib/systemd/user/app-com.mitchellh.ghostty.service
-
-# Translations
-%dir %{_datadir}/locale/bg_BG.UTF-8
-%dir %{_datadir}/locale/bg_BG.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/ca_ES.UTF-8
-%dir %{_datadir}/locale/ca_ES.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/de_DE.UTF-8
-%dir %{_datadir}/locale/de_DE.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/es_AR.UTF-8
-%dir %{_datadir}/locale/es_AR.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/es_BO.UTF-8
-%dir %{_datadir}/locale/es_BO.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/fr_FR.UTF-8
-%dir %{_datadir}/locale/fr_FR.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/ga_IE.UTF-8
-%dir %{_datadir}/locale/ga_IE.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/he_IL.UTF-8
-%dir %{_datadir}/locale/he_IL.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/hr_HR.UTF-8
-%dir %{_datadir}/locale/hr_HR.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/hu_HU.UTF-8
-%dir %{_datadir}/locale/hu_HU.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/id_ID.UTF-8
-%dir %{_datadir}/locale/id_ID.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/it_IT.UTF-8
-%dir %{_datadir}/locale/it_IT.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/ja_JP.UTF-8
-%dir %{_datadir}/locale/ja_JP.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/ko_KR.UTF-8
-%dir %{_datadir}/locale/ko_KR.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/mk_MK.UTF-8
-%dir %{_datadir}/locale/mk_MK.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/nb_NO.UTF-8
-%dir %{_datadir}/locale/nb_NO.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/nl_NL.UTF-8
-%dir %{_datadir}/locale/nl_NL.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/pl_PL.UTF-8
-%dir %{_datadir}/locale/pl_PL.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/pt_BR.UTF-8
-%dir %{_datadir}/locale/pt_BR.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/ru_RU.UTF-8
-%dir %{_datadir}/locale/ru_RU.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/tr_TR.UTF-8
-%dir %{_datadir}/locale/tr_TR.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/uk_UA.UTF-8
-%dir %{_datadir}/locale/uk_UA.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/zh_CN.UTF-8
-%dir %{_datadir}/locale/zh_CN.UTF-8/LC_MESSAGES
-%dir %{_datadir}/locale/zh_TW.UTF-8
-%dir %{_datadir}/locale/zh_TW.UTF-8/LC_MESSAGES
-%{_datadir}/locale/*/LC_MESSAGES/com.mitchellh.ghostty.mo
+%dir %{ghostty_systemd_user_unitdir}
+%{ghostty_systemd_user_unitdir}/app-com.mitchellh.ghostty.service
 
 # Terminfo
 %{_datadir}/terminfo/x/xterm-ghostty
-%{_datadir}/terminfo/g/ghostty
+
+%package devel
+Summary:        Ghostty VT library development files
+Requires:       %{name} = %{version}-%{release}
+Provides:       pkgconfig(libghostty-vt) = 0.1.0
+
+%description devel
+This package contains the headers and pkg-config metadata for the Ghostty VT library.
+
+%files devel -f %{_builddir}/ghostty-devel.include-dirs
+%{_includedir}/ghostty/vt.h
+%{_includedir}/ghostty/vt/*.h
+%{_includedir}/ghostty/vt/key/encoder.h
+%{_includedir}/ghostty/vt/key/event.h
+%{ghostty_libdir}/libghostty-vt.so
+%{ghostty_libdir}/libghostty-vt.so.0
+%{ghostty_libdir}/libghostty-vt.so.0.1.0
+%{_datadir}/pkgconfig/libghostty-vt.pc
 
 %changelog
 * Sat Jan 10 2026 Avenge Media <AvengeMedia.US@gmail.com> - 1.2.3-1
-- Initial OpenSUSE package using zig14 from danklinux repository
+- Initial OpenSUSE package using distro toolchain Zig
 - GPU-accelerated terminal emulator with platform-native UI
-- Uses /usr/bin/zig-0.14 from zig14 package
+- Uses Zig %{zig_minimum_version}+ for build compatibility with modern Ghostty releases

@@ -249,7 +249,12 @@ else
 
     # Extract tarball
     log_info "Extracting source tarball..."
-    tar -xf "$TARBALL" -C "$WORK_DIR"
+    if [[ "$PACKAGE" == "ghostty" ]]; then
+        # Ghostty's fuzz corpus has 6000+ files; exclude to avoid disk quota / inode exhaustion
+        tar -xf "$TARBALL" -C "$WORK_DIR" --exclude='*fuzz-libghostty/corpus*'
+    else
+        tar -xf "$TARBALL" -C "$WORK_DIR"
+    fi
 
     # Find extracted directory
     EXTRACTED_DIR=$(find "$WORK_DIR" -maxdepth 1 -type d -name "${PACKAGE}*" | grep -v "^$WORK_DIR$" | head -1)
@@ -388,8 +393,8 @@ if [[ "$PACKAGE" == "ghostty" ]]; then
         fi
     fi
 
-    # Download ghostty-themes.tgz
-    THEME_URL="https://github.com/mbadolato/iTerm2-Color-Schemes/releases/download/release-20251201-150531-bfb3ee1/ghostty-themes.tgz"
+    # Download ghostty-themes.tgz from Ghostty's vendored dependency host
+    THEME_URL="https://deps.files.ghostty.org/ghostty-themes-release-20260216-151611-fc73ce3.tgz"
     log_info "Downloading ghostty-themes.tgz..."
     if [[ -f "ghostty-themes.tgz" ]]; then
         log_success "Using cached ghostty-themes.tgz"
@@ -435,8 +440,9 @@ if [[ "$PACKAGE" == "ghostty" ]]; then
     # Patch URLs to use local vendored files for offline OBS builds
     log_info "Patching build.zig.zon to use local files..."
     THEMES_FILE="file://$SOURCE_DIR/ghostty-themes.tgz"
+    sed -i "s|https://deps.files.ghostty.org/ghostty-themes-release-[^\"]\+\.tgz|${THEMES_FILE}|" "$SOURCE_DIR/build.zig.zon"
     sed -i "s|https://github.com/mbadolato/iTerm2-Color-Schemes/releases/download/.\+/ghostty-themes.tgz|${THEMES_FILE}|" "$SOURCE_DIR/build.zig.zon"
-    sed -i '/\.iterm2_themes/,/}/ s|\.hash = "[^"]\+"|.hash = "N-V-__8AANFEAwCzzNzNs3Gaq8pzGNl2BbeyFBwTyO5iZJL-"|' "$SOURCE_DIR/build.zig.zon"
+    sed -i '/\.iterm2_themes/,/}/ s|\.hash = "[^"]\+"|.hash = "N-V-__8AABVbAwBwDRyZONfx553tvMW8_A2OKUoLzPUSRiLF"|' "$SOURCE_DIR/build.zig.zon"
     sed -i "s|https://deps.files.ghostty.org/wayland-9cb3d7aa9dc995ffafdbdef7ab86a949d0fb0e7d.tar.gz|file://$SOURCE_DIR/wayland.tar.gz|" "$SOURCE_DIR/build.zig.zon"
     sed -i "s|https://deps.files.ghostty.org/wayland-protocols-258d8f88f2c8c25a830c6316f87d23ce1a0f12d9.tar.gz|file://$SOURCE_DIR/wayland-protocols.tar.gz|" "$SOURCE_DIR/build.zig.zon"
     sed -i "s|https://deps.files.ghostty.org/plasma_wayland_protocols-12207e0851c12acdeee0991e893e0132fc87bb763969a585dc16ecca33e88334c566.tar.gz|file://$SOURCE_DIR/plasma_wayland_protocols.tar.gz|" "$SOURCE_DIR/build.zig.zon"
@@ -446,30 +452,47 @@ if [[ "$PACKAGE" == "ghostty" ]]; then
     mkdir -p zig-deps/p
     export ZIG_GLOBAL_CACHE_DIR="$SOURCE_DIR/zig-deps"
 
-    # Use zig to fetch dependencies (must use Zig 0.14 for compatibility with OBS builds)
+    # Use zig to fetch dependencies (Ghostty currently requires Zig 0.15.2)
     ZIG_BIN=""
-    if command -v zig-0.14 &> /dev/null; then
-        ZIG_BIN="zig-0.14"
-    elif command -v /usr/bin/zig-0.14 &> /dev/null; then
-        ZIG_BIN="/usr/bin/zig-0.14"
-    elif [ -x "/tmp/zig-linux-x86_64-0.14.0/zig" ]; then
-        ZIG_BIN="/tmp/zig-linux-x86_64-0.14.0/zig"
-    fi
+    for candidate in zig zig-0.15 zig15 /usr/bin/zig /usr/bin/zig-0.15 /tmp/zig-linux-x86_64-0.15.2/zig; do
+        local_bin=""
+        if [[ "$candidate" == /* ]]; then
+            [ -x "$candidate" ] && local_bin="$candidate"
+        else
+            local_bin=$(command -v "$candidate" 2>/dev/null)
+            [ -n "$local_bin" ] && [ -x "$local_bin" ] || local_bin=""
+        fi
+        if [ -n "$local_bin" ]; then
+            ver=$("$local_bin" version 2>/dev/null | head -1)
+            if [[ "$ver" =~ 0\.(1[5-9]|[2-9][0-9]) ]]; then
+                ZIG_BIN="$local_bin"
+                log_info "Using $ZIG_BIN (version $ver)"
+                break
+            fi
+        fi
+    done
 
     if [ -z "$ZIG_BIN" ]; then
-        log_info "Zig 0.14 not found - downloading to /tmp..."
+        log_info "Zig 0.15+ not found - downloading to /tmp..."
         cd /tmp
-        if ! curl -LO https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz; then
-            log_error "Failed to download Zig 0.14.0"
+        ZIG_TAR="zig-linux-x86_64-0.15.2.tar.xz"
+        if ! curl -L -f -o "$ZIG_TAR" "https://ziglang.org/download/0.15.2/$ZIG_TAR" 2>/dev/null; then
+            log_error "Zig 0.15.2 not available from ziglang.org (404). Install Zig 0.15+ with: sudo dnf install zig"
             exit $ERR_BUILD_FAILURE
         fi
-        if ! tar -xJf zig-linux-x86_64-0.14.0.tar.xz; then
-            log_error "Failed to extract Zig 0.14.0"
+        if [ ! -s "$ZIG_TAR" ] || [ "$(stat -c%s "$ZIG_TAR" 2>/dev/null)" -lt 1000000 ]; then
+            rm -f "$ZIG_TAR"
+            log_error "Zig download failed (got HTML/error page). Install Zig 0.15+ with: sudo dnf install zig"
             exit $ERR_BUILD_FAILURE
         fi
-        ZIG_BIN="/tmp/zig-linux-x86_64-0.14.0/zig"
+        if ! tar -xJf "$ZIG_TAR"; then
+            rm -f "$ZIG_TAR"
+            log_error "Failed to extract Zig 0.15.2"
+            exit $ERR_BUILD_FAILURE
+        fi
+        ZIG_BIN="/tmp/zig-linux-x86_64-0.15.2/zig"
         cd "$SOURCE_DIR"
-        log_success "Downloaded and extracted Zig 0.14.0 to /tmp"
+        log_success "Downloaded and extracted Zig 0.15.2 to /tmp"
     fi
 
     if [[ "$SKIP_ZIG_FETCH" == "true" ]] && [[ -d "$SOURCE_DIR/zig-deps/p" ]] && [[ -n "$(ls -A "$SOURCE_DIR/zig-deps/p" 2>/dev/null)" ]]; then
