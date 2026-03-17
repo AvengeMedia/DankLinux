@@ -5,10 +5,10 @@
    ✓ Already at pinned commit
 
 📦 Checking quickshell-git (development)...
-   Current commit: 6705e2d (date: 20260316)
-   Latest commit:  1bd5b08 (date: 20260317)
-   ✨ Update available: 6705e2d → 1bd5b08
-   Commit count: 763
+   Current commit: 1bd5b08 (date: 20260317)
+   Latest commit:  e8c4979 (date: 20260317)
+   ✨ Update available: 1bd5b08 → e8c4979
+   Commit count: 767
 
 📦 Checking dgop...
    Current: 0.2.2
@@ -52,6 +52,6 @@
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ Updated 1 package(s):
-   • quickshell-git: 6705e2d → 1bd5b08
+   • quickshell-git: 1bd5b08 → e8c4979
 
 📝 Changes staged for commit
