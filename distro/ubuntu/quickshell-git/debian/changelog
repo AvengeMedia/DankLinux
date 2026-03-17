@@ -1,8 +1,8 @@
-quickshell-git (0.2.1+git763.1bd5b08ppa1) questing; urgency=medium
+quickshell-git (0.2.1+git767.e8c4979ppa1) questing; urgency=medium
 
-  * Git snapshot (commit 763: 1bd5b08)
+  * Git snapshot (commit 767: e8c4979)
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Tue, 17 Mar 2026 06:55:09 +0000
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Tue, 17 Mar 2026 12:52:09 +0000
 
 quickshell-git (0.2.1+git713.26531fcppa1) questing; urgency=medium
 
