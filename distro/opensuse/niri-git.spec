@@ -6,7 +6,7 @@ Summary:        Scrollable-tiling Wayland compositor (nightly)
 
 License:        GPL-3.0
 URL:            https://github.com/YaLTeR/niri
-Source0:        niri.tar
+Source0:        niri.tar.xz
 
 BuildRequires:  cargo >= 1.80.1
 BuildRequires:  rust >= 1.80.1
@@ -45,7 +45,7 @@ This is the nightly/git version with the latest development features.
 For stable releases, use the 'niri' package instead.
 
 %prep
-%setup -q -n niri
+%setup -q -n niri -a 0
 
 %build
 for checksum in vendor/*/.cargo-checksum.json; do

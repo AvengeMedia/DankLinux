@@ -192,7 +192,7 @@ packages:
       vendor_deps: true
     tarball:
       directory_name: "niri"
-      compression: none  # .tar only (no compression)
+      compression: xz
 
   quickshell-git:
     type: git
