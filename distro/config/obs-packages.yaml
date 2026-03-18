@@ -8,24 +8,6 @@ packages:
   # STABLE PACKAGES
   # ============================================================================
 
-  cliphist:
-    type: stable
-    upstream:
-      repo: sentriz/cliphist
-      source_type: github_release
-    distros:
-      - debian
-      - opensuse
-    build:
-      language: go
-      go_version: "1.24"
-    tarball:
-      directory_name: "cliphist-{version}"
-      compression: gz
-    checksums:
-      verify: true
-      algorithm: sha256
-
   cpptrace:
     type: stable
     upstream:
@@ -281,7 +263,6 @@ defaults:
 
 groups:
   all-stable:
-    - cliphist
     - danksearch
     - dgop
     - ghostty
@@ -297,7 +278,6 @@ groups:
     - xwayland-satellite-git
 
   all:
-    - cliphist
     - danksearch
     - dgop
     - ghostty
@@ -323,7 +303,6 @@ groups:
     - xwayland-satellite-git
 
   go-packages:
-    - cliphist
     - danksearch
     - dgop
 

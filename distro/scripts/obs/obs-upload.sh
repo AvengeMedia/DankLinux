@@ -39,7 +39,7 @@ OPTIONS:
 EXAMPLES:
   $(basename "$0") niri-git /tmp/build/niri-git
   $(basename "$0") --distro=debian ghostty /tmp/build/ghostty
-  $(basename "$0") --message="Fix build" cliphist /tmp/build/cliphist
+  $(basename "$0") --message="Fix build" ghostty /tmp/build/ghostty
 
 EOF
     exit 0

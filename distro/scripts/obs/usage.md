@@ -120,7 +120,7 @@ Same source, incremented `.db` suffix. Use for packaging fixes, dependency updat
 
 ## Packages
 
-**Stable:** cliphist, danksearch, dgop, ghostty, matugen, niri (Debian), quickshell, xwayland-satellite
+**Stable:** danksearch, dgop, ghostty, matugen, niri (Debian), quickshell, xwayland-satellite
 **Git:** niri-git, quickshell-git, xwayland-satellite-git
 **Pinned:** quickshell (stable) uses pins.yaml for commit pinning
 

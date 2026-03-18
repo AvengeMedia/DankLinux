@@ -10,7 +10,6 @@ on:
         options:
           - all
           - all-git
-          - cliphist
           - danksearch
           - dgop
           - ghostty

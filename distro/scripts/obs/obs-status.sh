@@ -6,13 +6,13 @@
 #
 # Examples:
 #   ./distro/scripts/obs-status.sh              # Check all packages
-#   ./distro/scripts/obs-status.sh cliphist     # Check specific package
+#   ./distro/scripts/obs-status.sh ghostty     # Check specific package
 
 OBS_BASE_PROJECT="home:AvengeMedia:danklinux"
 OBS_BASE="$HOME/.cache/osc-checkouts"
 
 # Define packages (sync with obs-upload.sh)
-ALL_PACKAGES=(cliphist matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git danksearch dgop ghostty)
+ALL_PACKAGES=(matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git danksearch dgop ghostty)
 
 # Define repositories and architectures to check
 REPOS=("Debian_13" "openSUSE_Tumbleweed" "openSUSE_Slowroll" "16.0")
