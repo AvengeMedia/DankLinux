@@ -1,3 +1,10 @@
+quickshell-git (0.2.1+git774.6a244c3c.db11) unstable; urgency=medium
+
+  * Bundle ext-background-effect protocol when missing (Debian 13 / trixie has
+    wayland-protocols 1.44; protocol added in upstream 1.45)
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Fri, 21 Mar 2026 12:00:00 +0000
+
 quickshell-git (0.2.1+git713.26531fc4.db10) unstable; urgency=medium
 
   * Rebuild to fix repository metadata issues
