@@ -1,5 +1,5 @@
-matugen (4.0.0ppa2) resolute; urgency=medium
+matugen (4.1.0ppa2) resolute; urgency=medium
 
   * Rebuild for packaging fixes (ppa2)
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 21 Mar 2026 17:40:03 -0400
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sun, 22 Mar 2026 12:35:40 +0000
