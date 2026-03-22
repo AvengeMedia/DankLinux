@@ -21,8 +21,8 @@
 
 📦 Checking matugen...
    Current: 4.0.0
-   Latest:  4.0.0
-   ✓ Already up to date
+   Latest:  4.1.0
+   ✨ Update available: 4.0.0 → 4.1.0
 
 📦 Checking breakpad...
    Current: 2024.02.16
@@ -50,4 +50,7 @@
    Skipping automatic updates for font file
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✓ All packages are up to date
+✅ Updated 1 package(s):
+   • matugen: 4.0.0 → 4.1.0
+
+📝 Changes staged for commit
