@@ -186,7 +186,10 @@ jobs:
               echo "🔄 Using rebuild release number: ppa$REBUILD_RELEASE"
             fi
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            bash distro/scripts/ppa/ppa-upload.sh "$pkg" danklinux questing || echo "⚠️ Failed to upload $pkg"
+            if ! bash distro/scripts/ppa/ppa-upload.sh "$pkg" danklinux; then
+              echo "::error::Upload failed for $pkg"
+              exit 1
+            fi
           done
       
       - name: Get changed packages

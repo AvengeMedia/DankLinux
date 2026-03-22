@@ -10,7 +10,7 @@
 PPA_OWNER="avengemedia"
 PPA_NAME="danklinux"
 LAUNCHPAD_API="https://api.launchpad.net/1.0"
-DISTRO_SERIES="questing"
+DISTRO_SERIES_LIST=(questing resolute)
 
 # Define packages (sync with ppa-upload.sh)
 ALL_PACKAGES=(cpptrace cliphist ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git)
@@ -65,12 +65,13 @@ get_status_display() {
 PPA_ARCHIVE="${LAUNCHPAD_API}/~${PPA_OWNER}/+archive/ubuntu/${PPA_NAME}"
 
 echo "Checking PPA: ${PPA_OWNER}/${PPA_NAME}"
-echo "Distribution: Ubuntu $DISTRO_SERIES"
+echo "Distributions: Ubuntu ${DISTRO_SERIES_LIST[*]}"
 echo ""
 
+for DISTRO_SERIES in "${DISTRO_SERIES_LIST[@]}"; do
 for pkg in "${PACKAGES[@]}"; do
     echo "=========================================="
-    echo "=== $pkg ==="
+    echo "=== $pkg (Ubuntu ${DISTRO_SERIES}) ==="
     echo "=========================================="
     
     # Get published sources for this package
@@ -156,6 +157,7 @@ for pkg in "${PACKAGES[@]}"; do
     fi
     
     echo ""
+done
 done
 
 echo "=========================================="

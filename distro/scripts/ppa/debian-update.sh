@@ -44,11 +44,11 @@ error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 
 # Package definitions: "name:repo:type" (type: git or release)
 PACKAGES=(
-    "niri-git:YaLTeR/niri:git"
+    "niri-git:niri-wm/niri:git"
     "quickshell-git:quickshell-mirror/quickshell:git"
     "xwayland-satellite-git:Supreeeme/xwayland-satellite:git"
     "quickshell:quickshell-mirror/quickshell:release"
-    "niri:YaLTeR/niri:release"
+    "niri:niri-wm/niri:release"
     "xwayland-satellite:Supreeeme/xwayland-satellite:release"
     "cliphist:sentriz/cliphist:release"
     "matugen:InioX/matugen:release"

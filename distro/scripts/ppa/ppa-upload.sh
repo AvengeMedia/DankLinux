@@ -5,11 +5,15 @@
 #
 # Examples:
 #   ./ppa-upload.sh                           # Interactive menu
-#   ./ppa-upload.sh ghostty                   # Single package
-#   ./ppa-upload.sh all                       # All packages
-#   ./ppa-upload.sh ghostty danklinux questing --build-only
-#   ./ppa-upload.sh niri-git 2                # Rebuild with ppa2 suffix
-#   ./ppa-upload.sh niri-git --rebuild=2      # Rebuild with ppa2 suffix (flag syntax)
+#   ./ppa-upload.sh ghostty                   # Single package → questing + resolute
+#   ./ppa-upload.sh ghostty 8                 # Native: questing ppa8, resolute ppa9 (auto +1)
+#   ./ppa-upload.sh ghostty resolute          # 26.04 only (no need to repeat "danklinux")
+#   ./ppa-upload.sh all                       # All packages (each → both series)
+#   ./ppa-upload.sh all resolute 2            # All packages, resolute only, ppa2 rebuild
+#   ./ppa-upload.sh ghostty danklinux questing --build-only   # Explicit PPA + one series
+#   ./ppa-upload.sh ghostty danklinux resolute --build-only
+#   ./ppa-upload.sh niri-git 2                # Rebuild with ppa2 on both series
+#   ./ppa-upload.sh niri-git --rebuild=2      # Rebuild with ppa2 (flag syntax)
 
 set -e
 
@@ -65,7 +69,7 @@ done
 
 PACKAGE="${POSITIONAL_ARGS[0]:-}"
 PPA_NAME="${POSITIONAL_ARGS[1]:-danklinux}"
-UBUNTU_SERIES="${POSITIONAL_ARGS[2]:-questing}"
+UBUNTU_SERIES_RAW="${POSITIONAL_ARGS[2]:-}"
 
 # Check if last positional argument is a number (rebuild release)
 if [[ ${#POSITIONAL_ARGS[@]} -gt 0 ]]; then
@@ -79,8 +83,25 @@ if [[ ${#POSITIONAL_ARGS[@]} -gt 0 ]]; then
         # Re-assign variables after slicing array
         PACKAGE="${POSITIONAL_ARGS[0]:-}"
         PPA_NAME="${POSITIONAL_ARGS[1]:-danklinux}"
-        UBUNTU_SERIES="${POSITIONAL_ARGS[2]:-questing}"
+        UBUNTU_SERIES_RAW="${POSITIONAL_ARGS[2]:-}"
     fi
+fi
+
+# Shorthand: "ghostty resolute" (package + series; PPA defaults to danklinux)
+if [[ ${#POSITIONAL_ARGS[@]} -eq 2 ]] && [[ "${POSITIONAL_ARGS[1]}" == "questing" || "${POSITIONAL_ARGS[1]}" == "resolute" ]]; then
+    PACKAGE="${POSITIONAL_ARGS[0]}"
+    PPA_NAME="danklinux"
+    UBUNTU_SERIES_RAW="${POSITIONAL_ARGS[1]}"
+fi
+
+SERIES_LIST=()
+if [[ -z "$UBUNTU_SERIES_RAW" ]]; then
+    SERIES_LIST=(questing resolute)
+elif [[ "$UBUNTU_SERIES_RAW" == "questing" || "$UBUNTU_SERIES_RAW" == "resolute" ]]; then
+    SERIES_LIST=("$UBUNTU_SERIES_RAW")
+else
+    error "Invalid Ubuntu series: $UBUNTU_SERIES_RAW (use questing, resolute, or omit for both)"
+    exit 1
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -134,7 +155,12 @@ if [[ "$PACKAGE" == "all" ]]; then
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         info "Processing $pkg..."
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        BUILD_ARGS=("$pkg" "$PPA_NAME" "$UBUNTU_SERIES")
+        BUILD_ARGS=("$pkg" "$PPA_NAME")
+        # Forward a single explicit series (e.g. all resolute 2); otherwise children default to questing+resolute
+        if [[ ${#SERIES_LIST[@]} -eq 1 ]]; then
+            BUILD_ARGS+=("${SERIES_LIST[0]}")
+        fi
+        [[ -n "$REBUILD_RELEASE" ]] && BUILD_ARGS+=("$REBUILD_RELEASE")
         [[ "$KEEP_BUILDS" == "true" ]] && BUILD_ARGS+=("--keep-builds")
         [[ "$BUILD_ONLY" == "true" ]] && BUILD_ARGS+=("--build-only")
         if ! "$0" "${BUILD_ARGS[@]}"; then
@@ -171,7 +197,6 @@ if [[ -z "${PACKAGE_DIR:-}" ]]; then
     PACKAGE_DIR="$REPO_ROOT/distro/ubuntu/$PACKAGE"
 fi
 PACKAGE_NAME="$PACKAGE"
-OUTPUT_DIR="$(dirname "$PACKAGE_DIR")"
 BUILD_DIR="$TEMP_DIR/$PACKAGE_NAME"
 
 if [ ! -d "$PACKAGE_DIR" ]; then
@@ -183,6 +208,50 @@ if [ ! -d "$PACKAGE_DIR/debian" ]; then
     error "No debian/ directory found in $PACKAGE_DIR"
     exit 1
 fi
+
+PACKAGE_DIR="$(cd "$PACKAGE_DIR" && pwd)"
+OUTPUT_DIR="$(dirname "$PACKAGE_DIR")"
+
+if [[ ${#SERIES_LIST[@]} -gt 1 ]]; then
+    # Native 3.0 packages: same version string => same tarball name; questing vs resolute trees differ
+    # and Launchpad rejects the second upload. Use ppaN for questing and ppa(N+1) for resolute.
+    SOURCE_FORMAT_LINE=$(head -1 "$PACKAGE_DIR/debian/source/format" 2>/dev/null || echo "")
+    IS_NATIVE_DUAL=false
+    if [[ "$SOURCE_FORMAT_LINE" == *"native"* ]]; then
+        IS_NATIVE_DUAL=true
+        info "Native source format: second series uses PPA suffix +1 (or ppa2 if unset) so both uploads succeed."
+    fi
+    export REBUILD_RELEASE
+    for idx in "${!SERIES_LIST[@]}"; do
+        SERIES="${SERIES_LIST[$idx]}"
+        ARGS=("$PACKAGE_NAME" "$PPA_NAME" "$SERIES")
+        if [[ "$IS_NATIVE_DUAL" == true ]]; then
+            if [[ "$idx" -eq 0 ]]; then
+                [[ -n "${REBUILD_RELEASE:-}" ]] && ARGS+=("$REBUILD_RELEASE")
+            else
+                if [[ -n "${REBUILD_RELEASE:-}" ]]; then
+                    SECOND_PPA=$((REBUILD_RELEASE + 1))
+                    ARGS+=("$SECOND_PPA")
+                    info "Second series ${SERIES}: using ppa${SECOND_PPA} (native dual-series)"
+                else
+                    ARGS+=("2")
+                    info "Second series ${SERIES}: using ppa2 (native dual-series; first uses default ppa1)"
+                fi
+            fi
+        else
+            [[ -n "${REBUILD_RELEASE:-}" ]] && ARGS+=("$REBUILD_RELEASE")
+        fi
+        [[ "$KEEP_BUILDS" == "true" ]] && ARGS+=("--keep-builds")
+        [[ "$BUILD_ONLY" == "true" ]] && ARGS+=("--build-only")
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        info "Upload series: $SERIES (of ${SERIES_LIST[*]})"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        "$0" "${ARGS[@]}" || exit 1
+    done
+    exit 0
+fi
+UBUNTU_SERIES="${SERIES_LIST[0]}"
 
 info "Building source package for: $PACKAGE_NAME"
 info "Package directory: $PACKAGE_DIR"
@@ -292,7 +361,7 @@ case "$PACKAGE_NAME" in
         ;;
     niri-git)
         IS_GIT_PACKAGE=true
-        GIT_REPO="YaLTeR/niri"
+        GIT_REPO="niri-wm/niri"
         SOURCE_DIR="niri"
         ;;
     danksearch)
@@ -303,7 +372,7 @@ case "$PACKAGE_NAME" in
         GIT_REPO="InioX/matugen"
         ;;
     niri)
-        GIT_REPO="YaLTeR/niri"
+        GIT_REPO="niri-wm/niri"
         ;;
     quickshell)
         GIT_REPO="quickshell-mirror/quickshell"
@@ -326,23 +395,18 @@ case "$PACKAGE_NAME" in
     ghostty)
         FORCE_SA="true"
         
-        # Handle version bumping for rebuilds
+        # Changelog must use $UBUNTU_SERIES (questing/resolute), not the committed template distribution
         CURRENT_VERSION=$(dpkg-parsechangelog -S Version 2>/dev/null || echo "")
-        if [ -n "${REBUILD_RELEASE:-}" ] && [ -n "$CURRENT_VERSION" ]; then
-            # Extract base version (everything before ppa)
+        OLD_DIST=$(dpkg-parsechangelog -S Distribution 2>/dev/null || echo "")
+        MAINTAINER=$(dpkg-parsechangelog -S Maintainer)
+        TIMESTAMP=$(date -R)
+        if [ -n "$CURRENT_VERSION" ] && [ -n "${REBUILD_RELEASE:-}" ]; then
             BASE_VERSION=$(echo "$CURRENT_VERSION" | sed 's/ppa[0-9]*$//')
             NEW_VERSION="${BASE_VERSION}ppa${REBUILD_RELEASE}"
-            
             if [ "$CURRENT_VERSION" != "$NEW_VERSION" ]; then
-                info "Updating version: $CURRENT_VERSION -> $NEW_VERSION"
-                
-                # Update changelog
-                TIMESTAMP=$(date -R)
-                MAINTAINER=$(dpkg-parsechangelog -S Maintainer)
-                DISTRIBUTION=$(dpkg-parsechangelog -S Distribution)
-                
+                info "Updating version: $CURRENT_VERSION -> $NEW_VERSION (${UBUNTU_SERIES})"
                 cat > debian/changelog.new << EOF
-$PACKAGE_NAME ($NEW_VERSION) $DISTRIBUTION; urgency=medium
+$PACKAGE_NAME ($NEW_VERSION) ${UBUNTU_SERIES}; urgency=medium
 
   * Rebuild: Update Zig dependencies for offline builds
 
@@ -351,9 +415,37 @@ $PACKAGE_NAME ($NEW_VERSION) $DISTRIBUTION; urgency=medium
 EOF
                 cat debian/changelog >> debian/changelog.new
                 mv debian/changelog.new debian/changelog
-                
                 success "Changelog updated to version $NEW_VERSION"
+                cp debian/changelog "$PACKAGE_DIR/debian/changelog"
+            elif [ "$OLD_DIST" != "$UBUNTU_SERIES" ]; then
+                info "Updating changelog distribution: $OLD_DIST -> $UBUNTU_SERIES (version $CURRENT_VERSION)"
+                cat > debian/changelog.new << EOF
+$PACKAGE_NAME ($CURRENT_VERSION) ${UBUNTU_SERIES}; urgency=medium
+
+  * Target ${UBUNTU_SERIES} (same package version)
+
+ -- $MAINTAINER  $TIMESTAMP
+
+EOF
+                cat debian/changelog >> debian/changelog.new
+                mv debian/changelog.new debian/changelog
+                success "Changelog updated to target $UBUNTU_SERIES"
+                cp debian/changelog "$PACKAGE_DIR/debian/changelog"
             fi
+        elif [ -n "$CURRENT_VERSION" ] && [ "$OLD_DIST" != "$UBUNTU_SERIES" ]; then
+            info "Updating changelog distribution: $OLD_DIST -> $UBUNTU_SERIES (no rebuild number)"
+            cat > debian/changelog.new << EOF
+$PACKAGE_NAME ($CURRENT_VERSION) ${UBUNTU_SERIES}; urgency=medium
+
+  * Target ${UBUNTU_SERIES}
+
+ -- $MAINTAINER  $TIMESTAMP
+
+EOF
+            cat debian/changelog >> debian/changelog.new
+            mv debian/changelog.new debian/changelog
+            success "Changelog updated to target $UBUNTU_SERIES"
+            cp debian/changelog "$PACKAGE_DIR/debian/changelog"
         fi
         
         info "Running Ghostty source update script..."
@@ -656,6 +748,40 @@ elif [ -n "$GIT_REPO" ] && [ "${SKIP_VERSION_UPDATE:-false}" != "true" ]; then
         else
             info "Version already at latest tag: $LATEST_TAG"
         fi
+    elif [ -n "${REBUILD_RELEASE:-}" ] && [ "${SKIP_VERSION_UPDATE:-false}" != "true" ]; then
+        # Upstream tag lookup failed (e.g. repo rename) but operator passed an explicit rebuild number
+        CURRENT_VERSION=$(dpkg-parsechangelog -S Version 2>/dev/null || echo "")
+        CURRENT_DIST=$(dpkg-parsechangelog -S Distribution 2>/dev/null || echo "")
+        PPA_NUM=$REBUILD_RELEASE
+        BASE_WITHOUT_PPA=$(echo "$CURRENT_VERSION" | sed 's/ppa[0-9]*$//')
+        NEW_VERSION="${BASE_WITHOUT_PPA}ppa${PPA_NUM}"
+        info "🔄 Latest tag unavailable; applying ppa${PPA_NUM} from changelog base ${BASE_WITHOUT_PPA}"
+        if [ "$CURRENT_VERSION" != "$NEW_VERSION" ] || [ "$CURRENT_DIST" != "$UBUNTU_SERIES" ]; then
+            OLD_ENTRY_START=$(grep -n "^${SOURCE_NAME} (" debian/changelog | sed -n '2p' | cut -d: -f1)
+            if [ -n "$OLD_ENTRY_START" ]; then
+                CHANGELOG_CONTENT=$(tail -n +$OLD_ENTRY_START debian/changelog)
+            else
+                CHANGELOG_CONTENT=""
+            fi
+            if [ "$CURRENT_VERSION" != "$NEW_VERSION" ]; then
+                CHANGELOG_MSG="Rebuild for packaging fixes (ppa${PPA_NUM})"
+            else
+                CHANGELOG_MSG="Target ${UBUNTU_SERIES} (same package version)"
+            fi
+            CHANGELOG_ENTRY="${SOURCE_NAME} (${NEW_VERSION}) ${UBUNTU_SERIES}; urgency=medium
+
+  * ${CHANGELOG_MSG}
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  $(date -R)"
+            echo "$CHANGELOG_ENTRY" > debian/changelog
+            if [ -n "$CHANGELOG_CONTENT" ]; then
+                echo "" >> debian/changelog
+                echo "$CHANGELOG_CONTENT" >> debian/changelog
+            fi
+            success "Changelog updated to ${NEW_VERSION} (${UBUNTU_SERIES})"
+            cp debian/changelog "$PACKAGE_DIR/debian/changelog"
+            success "Changelog written back to $PACKAGE_DIR/debian/changelog"
+        fi
     else
         warn "Could not determine latest tag for $GIT_REPO, using existing version"
     fi
@@ -853,7 +979,7 @@ case "$PACKAGE_NAME" in
         # Download and vendor Rust dependencies (Launchpad has no internet access)
         if [ ! -d "niri-${VERSION}/vendor" ]; then
             info "Downloading niri source tarball v${VERSION}..."
-            if wget -O niri-download.tar.gz "https://github.com/YaLTeR/niri/archive/refs/tags/v${VERSION}.tar.gz"; then
+            if wget -O niri-download.tar.gz "https://github.com/niri-wm/niri/archive/refs/tags/v${VERSION}.tar.gz"; then
                 info "Extracting and vendoring Rust dependencies..."
                 rm -rf "niri-${VERSION}"
                 tar -xzf niri-download.tar.gz
@@ -1046,10 +1172,10 @@ EOF
         ;;
 esac
 
-# Check if this version already exists on PPA (only in CI environment)
+# Check if this version already exists on PPA for this Ubuntu series only (only in CI environment)
 if command -v rmadison >/dev/null 2>&1; then
-    info "Checking if version already exists on PPA..."
-    PPA_VERSION_CHECK=$(rmadison -u ppa:avengemedia/danklinux "$PACKAGE_NAME" 2>/dev/null | grep "$VERSION" || true)
+    info "Checking if version already exists on PPA (series $UBUNTU_SERIES)..."
+    PPA_VERSION_CHECK=$(rmadison -u ppa:avengemedia/danklinux "$PACKAGE_NAME" 2>/dev/null | grep "$UBUNTU_SERIES" | grep "$VERSION" || true)
     if [ -n "$PPA_VERSION_CHECK" ]; then
         warn "Version $VERSION already exists on PPA:"
         echo "$PPA_VERSION_CHECK"

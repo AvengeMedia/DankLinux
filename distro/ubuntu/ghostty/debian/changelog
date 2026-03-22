@@ -1,3 +1,27 @@
+ghostty (1.3.1ppa10) resolute; urgency=medium
+
+  * Rebuild: Update Zig dependencies for offline builds
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 21 Mar 2026 18:52:46 -0400
+
+ghostty (1.3.1ppa9) questing; urgency=medium
+
+  * Rebuild: Update Zig dependencies for offline builds
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 21 Mar 2026 18:48:53 -0400
+
+ghostty (1.3.1ppa8) resolute; urgency=medium
+
+  * Target resolute (same package version)
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 21 Mar 2026 18:15:07 -0400
+
+ghostty (1.3.1ppa8) questing; urgency=medium
+
+  * Rebuild: Update Zig dependencies for offline builds
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 21 Mar 2026 18:11:20 -0400
+
 ghostty (1.3.1ppa1) questing; urgency=medium
 
   * New upstream release 1.3.1
