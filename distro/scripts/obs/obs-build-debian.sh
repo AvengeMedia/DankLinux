@@ -177,6 +177,12 @@ if [[ "$PACKAGE_TYPE" == "git" ]] || [[ -n "$COMMIT_HASH" ]]; then
     if [[ "$BUILD_LANGUAGE" == "rust" ]] && requires_vendor_deps "$PACKAGE"; then
         log_info "Vendoring Rust dependencies..."
 
+        # Workaround for matugen on Debian 13 (rustc 1.85.0)
+        if [[ "$PACKAGE" == "matugen" ]]; then
+            log_info "Downgrading image crate for Debian 13 compatibility (rustc 1.85.0)..."
+            cargo update -p image --precise 0.25.9 2>/dev/null || true
+        fi
+
         # Vendor dependencies before removing .git directory
         if ! cargo vendor --versioned-dirs --sync Cargo.toml > cargo-vendor-config.txt; then
             log_error "Failed to vendor Rust dependencies"
@@ -287,6 +293,12 @@ else
         log_info "Vendoring Rust dependencies..."
         
         cd "$SOURCE_DIR"
+
+        # Workaround for matugen on Debian 13 (rustc 1.85.0)
+        if [[ "$PACKAGE" == "matugen" ]]; then
+            log_info "Downgrading image crate for Debian 13 compatibility (rustc 1.85.0)..."
+            cargo update -p image --precise 0.25.9 2>/dev/null || true
+        fi
 
         # Run cargo vendor and capture only stdout (config), let stderr show progress
         if ! cargo vendor --versioned-dirs --sync Cargo.toml > cargo-vendor-config.txt; then

@@ -938,6 +938,10 @@ case "$PACKAGE_NAME" in
                     rm -rf vendor .cargo
                     find . -type f -name "*.orig" -exec rm -f {} + || true
                     
+                    # Workaround for Ubuntu questing (arm64 has rustc 1.85.1)
+                    info "Downgrading image crate for Ubuntu compatibility (rustc 1.85.1)..."
+                    cargo update -p image --precise 0.25.9 2>/dev/null || true
+                    
                     mkdir -p .cargo
                     cargo vendor 2>&1 | awk '
                         /^\[source\.crates-io\]/ { printing=1 }
