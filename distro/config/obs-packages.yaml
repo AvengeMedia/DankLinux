@@ -137,6 +137,23 @@ packages:
     base_version:
       from_pins: true  # Check pins.yaml first
 
+  matugen-snapshot:
+    type: stable
+    upstream:
+      repo: InioX/matugen
+      source_type: github_release
+    distros:
+      - debian
+    build:
+      language: rust
+      rust_version: stable
+      vendor_deps: true
+    tarball:
+      directory_name: "matugen-{version}"
+      compression: gz
+    base_version:
+      from_pins: true  # Pin to debian_13 version
+
   xwayland-satellite:
     type: stable
     upstream:
@@ -267,6 +284,7 @@ groups:
     - dgop
     - ghostty
     - matugen
+    - matugen-snapshot
     - niri
     - quickshell
     - cpptrace
@@ -282,6 +300,7 @@ groups:
     - dgop
     - ghostty
     - matugen
+    - matugen-snapshot
     - niri
     - niri-git
     - quickshell
@@ -292,11 +311,13 @@ groups:
 
   debian-only:
     - niri  # niri stable is Debian-only; OpenSUSE uses niri-git
+    - matugen-snapshot
 
   opensuse-only: []
 
   rust-packages:
     - matugen
+    - matugen-snapshot
     - niri
     - niri-git
     - xwayland-satellite

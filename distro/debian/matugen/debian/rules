@@ -25,7 +25,8 @@ override_dh_auto_build:
 			pkg=$$(cat "$$checksum" | grep -o '"package":"[^"]*"' | cut -d'"' -f4); \
 			echo "{\"files\":{},\"package\":\"$$pkg\"}" > "$$checksum"; \
 		fi; \
-	done && \
+	done
+	# Build with cargo using vendored dependencies
 	cargo build --offline --release
 
 override_dh_auto_install:

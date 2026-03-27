@@ -67,8 +67,9 @@ load_package_config() {
     if [[ "$uses_pins" == "true" && -f "$PINS_FILE" ]]; then
         log_debug "Checking pins.yaml for $package"
 
-        # Get base package name (strip -git suffix for pin lookup)
+        # Get base package name (strip -git and -snapshot suffixes for pin lookup)
         local base_package="${package%-git}"
+        base_package="${base_package%-snapshot}"
         local pin_config=$(yq eval ".$base_package" "$PINS_FILE" 2>/dev/null)
 
         if [[ "$pin_config" != "null" && -n "$pin_config" ]]; then

@@ -647,8 +647,26 @@ elif [ -n "$GIT_REPO" ] && [ "${SKIP_VERSION_UPDATE:-false}" != "true" ]; then
             exit 0
         fi
     else
-        info "Fetching latest tag from $GIT_REPO..."
-        LATEST_TAG=$(get_latest_tag "$GIT_REPO")
+        LATEST_TAG=""
+        # Check for OS pin
+        if [ -f "$REPO_ROOT/distro/pins.yaml" ] && command -v yq &> /dev/null; then
+            OS_PIN_VERSION=$(yq eval ".${PACKAGE_NAME}.os_pins.${UBUNTU_SERIES}" "$REPO_ROOT/distro/pins.yaml" 2>/dev/null || echo "null")
+            if [ "$OS_PIN_VERSION" != "null" ] && [ -n "$OS_PIN_VERSION" ]; then
+                info "📌 Using OS-specific pinned version for ${UBUNTU_SERIES}: $OS_PIN_VERSION"
+                LATEST_TAG="$OS_PIN_VERSION"
+            fi
+            
+            PPA_OVERRIDE=$(yq eval ".${PACKAGE_NAME}.ppa_version_override.${UBUNTU_SERIES}" "$REPO_ROOT/distro/pins.yaml" 2>/dev/null || echo "null")
+            if [ "$PPA_OVERRIDE" != "null" ] && [ -n "$PPA_OVERRIDE" ]; then
+                info "📌 Using debian version override for ${UBUNTU_SERIES}: $PPA_OVERRIDE"
+                DPKG_VERSION_OVERRIDE="$PPA_OVERRIDE"
+            fi
+        fi
+        
+        if [ -z "$LATEST_TAG" ]; then
+            info "Fetching latest tag from $GIT_REPO..."
+            LATEST_TAG=$(get_latest_tag "$GIT_REPO")
+        fi
     fi
 
     if [ -n "$LATEST_TAG" ] && [ "${SKIP_VERSION_UPDATE:-false}" != "true" ]; then
@@ -658,12 +676,14 @@ elif [ -n "$GIT_REPO" ] && [ "${SKIP_VERSION_UPDATE:-false}" != "true" ]; then
         PPA_NUM=1
 
         if [[ "$SOURCE_FORMAT" == *"native"* ]]; then
-            BASE_VERSION="${LATEST_TAG}"
+            BASE_VERSION="${DPKG_VERSION_OVERRIDE:-$LATEST_TAG}"
+            ESCAPED_BASE=$(echo "$BASE_VERSION" | sed 's/\./\\./g' | sed 's/-/\\-/g' | sed 's/+/\\+/g')
+            
             # Check if manual rebuild release number is specified
             if [ -n "${REBUILD_RELEASE:-}" ]; then
                 PPA_NUM=$REBUILD_RELEASE
                 info "🔄 Using manual rebuild release number: ppa$PPA_NUM"
-            elif [[ "$CURRENT_VERSION" =~ ^${LATEST_TAG}ppa([0-9]+)$ ]]; then
+            elif [[ "$CURRENT_VERSION" =~ ^${ESCAPED_BASE}ppa([0-9]+)$ ]]; then
                 # In CI, skip if same version
                 if [ -n "${GITHUB_ACTIONS:-}" ] || [ -n "${CI:-}" ]; then
                     info "Same version detected in CI (current: $CURRENT_VERSION), skipping build"
@@ -680,29 +700,27 @@ elif [ -n "$GIT_REPO" ] && [ "${SKIP_VERSION_UPDATE:-false}" != "true" ]; then
             fi
             NEW_VERSION="${BASE_VERSION}ppa${PPA_NUM}"
         else
-            BASE_VERSION="${LATEST_TAG}-1"
+            BASE_VERSION="${DPKG_VERSION_OVERRIDE:-$LATEST_TAG}-1"
+            ESCAPED_BASE=$(echo "$BASE_VERSION" | sed 's/\./\\./g' | sed 's/-/\\-/g' | sed 's/+/\\+/g')
+            
             # Check if manual rebuild release number is specified
             if [ -n "${REBUILD_RELEASE:-}" ]; then
                 PPA_NUM=$REBUILD_RELEASE
                 info "🔄 Using manual rebuild release number: ppa$PPA_NUM"
-            else
-                # Check if we're rebuilding the same version
-                ESCAPED_BASE=$(echo "$BASE_VERSION" | sed 's/\./\\./g' | sed 's/-/\\-/g')
-                if [[ "$CURRENT_VERSION" =~ ^${ESCAPED_BASE}ppa([0-9]+)$ ]]; then
-                    # In CI, skip if same version
-                    if [ -n "${GITHUB_ACTIONS:-}" ] || [ -n "${CI:-}" ]; then
-                        info "Same version detected in CI (current: $CURRENT_VERSION), skipping build"
-                        exit 0
-                    fi
-                    error "Same version detected ($CURRENT_VERSION) but no rebuild number specified"
-                    error "To rebuild, explicitly specify a rebuild number:"
-                    error "  ./distro/scripts/ppa-upload.sh $PACKAGE_NAME 2"
-                    error "or use flag syntax:"
-                    error "  ./distro/scripts/ppa-upload.sh $PACKAGE_NAME --rebuild=2"
-                    exit 1
-                else
-                    info "New version or first build, using PPA number $PPA_NUM"
+            elif [[ "$CURRENT_VERSION" =~ ^${ESCAPED_BASE}ppa([0-9]+)$ ]]; then
+                # In CI, skip if same version
+                if [ -n "${GITHUB_ACTIONS:-}" ] || [ -n "${CI:-}" ]; then
+                    info "Same version detected in CI (current: $CURRENT_VERSION), skipping build"
+                    exit 0
                 fi
+                error "Same version detected ($CURRENT_VERSION) but no rebuild number specified"
+                error "To rebuild, explicitly specify a rebuild number:"
+                error "  ./distro/scripts/ppa-upload.sh $PACKAGE_NAME 2"
+                error "or use flag syntax:"
+                error "  ./distro/scripts/ppa-upload.sh $PACKAGE_NAME --rebuild=2"
+                exit 1
+            else
+                info "New version or first build, using PPA number $PPA_NUM"
             fi
             NEW_VERSION="${BASE_VERSION}ppa${PPA_NUM}"
         fi
@@ -900,7 +918,7 @@ case "$PACKAGE_NAME" in
         info "Downloading pre-built binaries and source for matugen..."
         # Get version from changelog (remove ppa suffix for both quilt and native formats)
         # Native: 0.5.2ppa1 -> 0.5.2, Quilt: 0.5.2-1ppa1 -> 0.5.2
-        VERSION=$(dpkg-parsechangelog -S Version | sed 's/-[^-]*$//' | sed 's/ppa[0-9]*$//')
+        VERSION=$(dpkg-parsechangelog -S Version | sed 's/-[^-]*$//' | sed 's/ppa[0-9]*$//' | sed -E 's/.*\+really//')
 
         # Download amd64 binary (will be included in source package)
         if [ ! -f "matugen-amd64.tar.gz" ]; then
@@ -939,7 +957,7 @@ case "$PACKAGE_NAME" in
                     find . -type f -name "*.orig" -exec rm -f {} + || true
                     
                     # Workaround for Ubuntu questing (arm64 has rustc 1.85.1)
-                    info "Downgrading image crate for Ubuntu compatibility (rustc 1.85.1)..."
+                    info "Downgrading image for Ubuntu compatibility (rustc 1.85.1)..."
                     cargo update -p image --precise 0.25.9 2>/dev/null || true
                     
                     mkdir -p .cargo

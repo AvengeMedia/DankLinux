@@ -191,14 +191,25 @@ check_package_updates() {
     else
         # Stable package: check if pinned first
         if is_package_pinned "$package"; then
-            log_info "  Package is pinned, skipping update check"
+            local os_pin_version=$(echo "$config" | yq eval '.pin_info.os_pins.debian_13 // ""' - 2>/dev/null)
+            
+            if [[ -n "$os_pin_version" ]]; then
+                if [[ "$package" == *-snapshot ]]; then
+                    log_info "  Package is OS-pinned to $os_pin_version"
+                    upstream_version="$os_pin_version"
+                else
+                    log_info "  Package has OS-pins locally, treating main package ($package) as unpinned."
+                    # Continue to fetch latest release naturally
+                fi
+            else
+                log_info "  Package is pinned, skipping update check"
 
-            # Get current OBS version for rebuild support
-            local obs_version=$(get_obs_version "$package" 2>/dev/null || echo "")
+                # Get current OBS version for rebuild support
+                local obs_version=$(get_obs_version "$package" 2>/dev/null || echo "")
 
-            log_success "$package: Pinned to specific commit → UP TO DATE"
+                log_success "$package: Pinned to specific commit → UP TO DATE"
 
-            UPDATE_RESULTS+=("$(cat <<EOF
+                UPDATE_RESULTS+=("$(cat <<EOF
 {
   "package": "$package",
   "needs_update": false,
@@ -207,35 +218,38 @@ check_package_updates() {
   "obs_version": $(if [[ -n "$obs_version" ]]; then echo "\"$obs_version\""; else echo "null"; fi)
 }
 EOF
-            )")
-            return 0
+                )")
+                return 0
+            fi
         fi
 
-        # Stable package: get latest release
-        local source_type=$(echo "$config" | yq eval '.upstream.source_type // "github_release"' -)
+        if [[ -z "${upstream_version:-}" ]]; then
+            # Stable package: get latest release
+            local source_type=$(echo "$config" | yq eval '.upstream.source_type // "github_release"' -)
 
-        if [[ "$source_type" == "custom" ]]; then
-            # Custom source: try git tags as fallback
-            log_info "  Custom source detected, fetching latest tag from $upstream_repo..."
-            upstream_version=$(get_latest_tag "$upstream_repo")
+            if [[ "$source_type" == "custom" ]]; then
+                # Custom source: try git tags as fallback
+                log_info "  Custom source detected, fetching latest tag from $upstream_repo..."
+                upstream_version=$(get_latest_tag "$upstream_repo")
 
-            if [[ $? -ne 0 || -z "$upstream_version" ]]; then
-                log_error "$package: Failed to fetch latest tag"
-                return 1
+                if [[ $? -ne 0 || -z "$upstream_version" ]]; then
+                    log_error "$package: Failed to fetch latest tag"
+                    return 1
+                fi
+
+                log_info "  Latest tag: $upstream_version"
+            else
+                # GitHub release
+                log_info "  Fetching latest release from $upstream_repo..."
+                upstream_version=$(get_latest_release "$upstream_repo")
+
+                if [[ $? -ne 0 || -z "$upstream_version" ]]; then
+                    log_error "$package: Failed to fetch latest release"
+                    return 1
+                fi
+
+                log_info "  Latest release: $upstream_version"
             fi
-
-            log_info "  Latest tag: $upstream_version"
-        else
-            # GitHub release
-            log_info "  Fetching latest release from $upstream_repo..."
-            upstream_version=$(get_latest_release "$upstream_repo")
-
-            if [[ $? -ne 0 || -z "$upstream_version" ]]; then
-                log_error "$package: Failed to fetch latest release"
-                return 1
-            fi
-
-            log_info "  Latest release: $upstream_version"
         fi
 
         # Don't add .db suffix yet - only add it when building/uploading

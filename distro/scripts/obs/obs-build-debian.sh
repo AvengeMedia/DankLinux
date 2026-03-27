@@ -121,7 +121,8 @@ WORK_DIR=$(create_temp_dir)
 log_debug "Working directory: $WORK_DIR"
 
 # Debian package directory
-DEBIAN_SRC_DIR="$REPO_ROOT/distro/debian/$PACKAGE"
+BASE_PACKAGE="${PACKAGE%-snapshot}"
+DEBIAN_SRC_DIR="$REPO_ROOT/distro/debian/$BASE_PACKAGE"
 
 if [[ ! -d "$DEBIAN_SRC_DIR/debian" ]]; then
     log_error "Debian packaging not found: $DEBIAN_SRC_DIR/debian"
@@ -141,7 +142,7 @@ log_info "Preparing source code"
 log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # Prepare source based on package type
-SOURCE_DIR="$WORK_DIR/${PACKAGE}-source"
+SOURCE_DIR="$WORK_DIR/${BASE_PACKAGE}-source"
 mkdir -p "$SOURCE_DIR"
 
 # Treat stable packages with commit hashes (pinned) as git packages
@@ -177,11 +178,6 @@ if [[ "$PACKAGE_TYPE" == "git" ]] || [[ -n "$COMMIT_HASH" ]]; then
     if [[ "$BUILD_LANGUAGE" == "rust" ]] && requires_vendor_deps "$PACKAGE"; then
         log_info "Vendoring Rust dependencies..."
 
-        # Workaround for matugen on Debian 13 (rustc 1.85.0)
-        if [[ "$PACKAGE" == "matugen" ]]; then
-            log_info "Downgrading image crate for Debian 13 compatibility (rustc 1.85.0)..."
-            cargo update -p image --precise 0.25.9 2>/dev/null || true
-        fi
 
         # Vendor dependencies before removing .git directory
         if ! cargo vendor --versioned-dirs --sync Cargo.toml > cargo-vendor-config.txt; then
@@ -231,11 +227,11 @@ else
         DOWNLOAD_URL="${URL_TEMPLATE//\{version\}/$BASE_VERSION}"
     else
         # GitHub release - try multiple URL patterns
-        DOWNLOAD_URL="https://github.com/$UPSTREAM_REPO/releases/download/v${BASE_VERSION}/${PACKAGE}-${BASE_VERSION}.tar.gz"
+        DOWNLOAD_URL="https://github.com/$UPSTREAM_REPO/releases/download/v${BASE_VERSION}/${BASE_PACKAGE}-${BASE_VERSION}.tar.gz"
 
         # Try without 'v' prefix if first attempt fails
         if ! curl -sL -f -I "$DOWNLOAD_URL" &>/dev/null; then
-            DOWNLOAD_URL="https://github.com/$UPSTREAM_REPO/releases/download/${BASE_VERSION}/${PACKAGE}-${BASE_VERSION}.tar.gz"
+            DOWNLOAD_URL="https://github.com/$UPSTREAM_REPO/releases/download/${BASE_VERSION}/${BASE_PACKAGE}-${BASE_VERSION}.tar.gz"
 
             # Try GitHub's automatic source archive as final fallback
             if ! curl -sL -f -I "$DOWNLOAD_URL" &>/dev/null; then
@@ -274,7 +270,7 @@ else
     fi
 
     # Find extracted directory
-    EXTRACTED_DIR=$(find "$WORK_DIR" -maxdepth 1 -type d -name "${PACKAGE}*" | grep -v "^$WORK_DIR$" | head -1)
+    EXTRACTED_DIR=$(find "$WORK_DIR" -maxdepth 1 -type d -name "${BASE_PACKAGE}*" | grep -v "^$WORK_DIR$" | head -1)
 
     if [[ -z "$EXTRACTED_DIR" ]]; then
         log_error "Failed to find extracted source directory"
@@ -294,11 +290,6 @@ else
         
         cd "$SOURCE_DIR"
 
-        # Workaround for matugen on Debian 13 (rustc 1.85.0)
-        if [[ "$PACKAGE" == "matugen" ]]; then
-            log_info "Downgrading image crate for Debian 13 compatibility (rustc 1.85.0)..."
-            cargo update -p image --precise 0.25.9 2>/dev/null || true
-        fi
 
         # Run cargo vendor and capture only stdout (config), let stderr show progress
         if ! cargo vendor --versioned-dirs --sync Cargo.toml > cargo-vendor-config.txt; then

@@ -154,10 +154,24 @@ else
 
     CHECKOUT_OK=false
     for attempt in 1 2 3; do
-        if osc co "$OBS_PROJECT" "$PACKAGE" 2>&1; then
+        set +e
+        CO_OUTPUT=$(osc co "$OBS_PROJECT" "$PACKAGE" 2>&1)
+        CO_EXIT=$?
+        set -e
+        
+        if [[ $CO_EXIT -eq 0 ]]; then
             CHECKOUT_OK=true
             break
         fi
+        
+        # If the package legitimately doesn't exist, don't retry, just fall through to creation
+        if echo "$CO_OUTPUT" | grep -qi "Not Found\|Package not found"; then
+            log_warn "Package $PACKAGE does not exist on OBS yet. Proceeding to creation."
+            CHECKOUT_OK=true
+            break
+        fi
+        
+        echo "$CO_OUTPUT"
         if [[ $attempt -lt 3 ]]; then
             log_warn "Checkout failed (attempt $attempt/3). Removing partial copy and retrying in $((5*attempt))s..."
             rm -rf "${OBS_CACHE_DIR:?}/${OBS_PROJECT:?}"
@@ -172,7 +186,7 @@ else
 
     # Check if checkout actually succeeded by checking if directory exists
     if [[ ! -d "$PKG_DIR" ]]; then
-        log_warn "Package does not exist on OBS, will be created"
+        log_warn "Package does not exist on OBS, initialized local structure."
 
         # Create package directory structure
         mkdir -p "$OBS_CACHE_DIR/$OBS_PROJECT"

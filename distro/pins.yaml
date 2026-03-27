@@ -8,3 +8,11 @@ quickshell:
   commit: "26531fc46ef17e9365b03770edd3fb9206fcb460"
   commit_count: 713
   snap_date: "20251202"
+
+matugen:
+  enabled: true
+  os_pins:
+    questing: "4.0.0"
+    debian_13: "4.0.0"
+  ppa_version_override:
+    questing: "4.1.0+really4.0.0"

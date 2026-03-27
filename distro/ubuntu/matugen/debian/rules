@@ -8,7 +8,8 @@ export CARGO_HOME = $(CURDIR)/.cargo
 # Extract version from debian/changelog
 DEB_VERSION := $(shell dpkg-parsechangelog -S Version)
 # Get upstream version (strip ppaN suffix for native packages)
-UPSTREAM_VERSION := $(shell echo $(DEB_VERSION) | sed 's/ppa[0-9]*$$//')
+RAW_VERSION := $(shell echo $(DEB_VERSION) | sed 's/ppa[0-9]*$$//')
+UPSTREAM_VERSION := $(shell echo $(RAW_VERSION) | sed -E 's/.*\+really//')
 
 # Get architecture
 DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
@@ -38,7 +39,8 @@ else ifeq ($(DEB_HOST_ARCH),arm64)
 	done
 	
 	# Build with cargo using vendored dependencies (no internet access on Launchpad)
-	cd matugen-$(UPSTREAM_VERSION) && cargo build --offline --release
+	cd matugen-$(UPSTREAM_VERSION) && \
+	cargo build --offline --release
 endif
 
 override_dh_auto_install:
