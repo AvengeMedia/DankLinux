@@ -19,6 +19,19 @@ on:
       package:
         description: 'Package to rebuild (leave empty to auto-detect changes)'
         required: false
+        type: choice
+        options:
+          - ''
+          - all
+          - cliphist
+          - ghostty
+          - matugen
+          - niri
+          - niri-git
+          - quickshell
+          - quickshell-git
+          - xwayland-satellite
+          - xwayland-satellite-git
         default: ''
 
   push:

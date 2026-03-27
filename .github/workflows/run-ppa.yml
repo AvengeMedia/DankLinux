@@ -4,8 +4,21 @@ on:
   workflow_dispatch:
     inputs:
       package:
-        description: 'Package to upload (cliphist, ghostty, matugen, niri, niri-git, quickshell, quickshell-git, xwayland-satellite, xwayland-satellite-git, or all)'
+        description: 'Package to upload'
         required: false
+        type: choice
+        options:
+          - auto
+          - all
+          - cliphist
+          - ghostty
+          - matugen
+          - niri
+          - niri-git
+          - quickshell
+          - quickshell-git
+          - xwayland-satellite
+          - xwayland-satellite-git
         default: 'auto'
       force_upload:
         description: 'Force upload without version check'
