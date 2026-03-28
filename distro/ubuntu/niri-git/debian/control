@@ -17,15 +17,15 @@ Build-Depends: debhelper-compat (= 13),
                libgbm-dev,
                libxkbcommon-dev
 Standards-Version: 4.6.2
-Homepage: https://github.com/YaLTeR/niri
-Vcs-Browser: https://github.com/YaLTeR/niri
-Vcs-Git: https://github.com/YaLTeR/niri.git
+Homepage: <https://github.com/niri-wm/niri>
+Vcs-Browser: <https://github.com/niri-wm/niri>
+Vcs-Git: <https://github.com/niri-wm/niri.git>
 
 Package: niri-git
 Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
-         libdisplay-info2,
+         libdisplay-info3 | libdisplay-info2,
          libseat1,
          xwayland-satellite-git
 Recommends: alacritty,

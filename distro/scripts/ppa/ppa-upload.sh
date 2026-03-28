@@ -1298,9 +1298,8 @@ if yes | DEBIAN_FRONTEND=noninteractive debuild -S $DEBUILD_SOURCE_FLAG -d; then
         fi
         
         info "Uploading files:"
-        info "  - $CHANGES_BASENAME"
-        info "  - $DSC_FILE"
         info "  - $UPLOAD_TARBALL"
+        info "  - $DSC_FILE"
         
         # For quilt packages, also need to upload the debian tarball
         DEBIAN_TARBALL="${PACKAGE_NAME}_${FINAL_VERSION}.debian.tar.xz"
@@ -1308,6 +1307,7 @@ if yes | DEBIAN_FRONTEND=noninteractive debuild -S $DEBUILD_SOURCE_FLAG -d; then
             info "  - $DEBIAN_TARBALL"
         fi
         info "  - $BUILDINFO"
+        info "  - $CHANGES_BASENAME"
         echo
         
         # Use lftp for upload (works on Fedora where dput is broken)
@@ -1316,9 +1316,8 @@ if yes | DEBIAN_FRONTEND=noninteractive debuild -S $DEBUILD_SOURCE_FLAG -d; then
         # Build upload commands
         UPLOAD_COMMANDS="cd ~avengemedia/ubuntu/$PPA_NAME/
 lcd $TEMP_DIR
-mput $CHANGES_BASENAME
-mput $DSC_FILE
-mput $UPLOAD_TARBALL"
+mput $UPLOAD_TARBALL
+mput $DSC_FILE"
 
         if [ -f "$TEMP_DIR/$DEBIAN_TARBALL" ]; then
             UPLOAD_COMMANDS="$UPLOAD_COMMANDS
@@ -1327,6 +1326,7 @@ mput $DEBIAN_TARBALL"
         
         UPLOAD_COMMANDS="$UPLOAD_COMMANDS
 mput $BUILDINFO
+mput $CHANGES_BASENAME
 bye"
         
         echo "$UPLOAD_COMMANDS" > "$LFTP_SCRIPT"
