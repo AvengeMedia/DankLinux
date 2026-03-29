@@ -5,10 +5,9 @@
    ✓ Already at pinned commit
 
 📦 Checking quickshell-git (development)...
-   Current commit: 9bf752a (date: 20260329)
+   Current commit: ee1100e (date: 20260329)
    Latest commit:  ee1100e (date: 20260329)
-   ✨ Update available: 9bf752a → ee1100e
-   Commit count: 780
+   ✓ Already up to date
 
 📦 Checking dgop...
    Current: 0.2.2
@@ -51,7 +50,4 @@
    Skipping automatic updates for font file
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Updated 1 package(s):
-   • quickshell-git: 9bf752a → ee1100e
-
-📝 Changes staged for commit
+✓ All packages are up to date
