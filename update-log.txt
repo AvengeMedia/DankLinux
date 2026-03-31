@@ -5,10 +5,9 @@
    ✓ Already at pinned commit
 
 📦 Checking quickshell-git (development)...
-   Current commit: b83c39c (date: 20260331)
+   Current commit: d612227 (date: 20260331)
    Latest commit:  d612227 (date: 20260331)
-   ✨ Update available: b83c39c → d612227
-   Commit count: 782
+   ✓ Already up to date
 
 📦 Checking dgop...
    Current: 0.2.2
@@ -51,7 +50,4 @@
    Skipping automatic updates for font file
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Updated 1 package(s):
-   • quickshell-git: b83c39c → d612227
-
-📝 Changes staged for commit
+✓ All packages are up to date
