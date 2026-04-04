@@ -5,9 +5,9 @@
    ✓ Already at pinned commit
 
 📦 Checking quickshell-git (development)...
-   Current commit: 50cdf98 (date: 20260403)
-   Latest commit:  8140545 (date: 20260404)
-   ✨ Update available: 50cdf98 → 8140545
+   Current commit: 8140545 (date: 20260404)
+   Latest commit:  854088c (date: 20260404)
+   ✨ Update available: 8140545 → 854088c
    Commit count: 790
 
 📦 Checking dgop...
@@ -52,6 +52,6 @@
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ Updated 1 package(s):
-   • quickshell-git: 50cdf98 → 8140545
+   • quickshell-git: 8140545 → 854088c
 
 📝 Changes staged for commit
