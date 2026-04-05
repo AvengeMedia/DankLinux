@@ -1,8 +1,8 @@
-quickshell-git (0.2.1+git790.854088cppa2) resolute; urgency=medium
+quickshell-git (0.2.1+git793.ad5fd91ppa2) resolute; urgency=medium
 
-  * Git snapshot (commit 790: 854088c)
+  * Git snapshot (commit 793: ad5fd91)
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 04 Apr 2026 18:30:39 +0000
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sun, 05 Apr 2026 01:46:46 +0000
 
 quickshell-git (0.2.1+git713.26531fcppa1) questing; urgency=medium
 
