@@ -35,9 +35,9 @@
    ✓ Already up to date
 
 📦 Checking danksearch...
-   Current: 0.2.0
+   Current: 0.2.1
    Latest:  0.2.1
-   ✨ Update available: 0.2.0 → 0.2.1
+   ✓ Already up to date
 
 📦 Checking dms-greeter...
    ℹ️  Builds directly from: https://github.com/AvengeMedia/DankMaterialShell
@@ -50,7 +50,4 @@
    Skipping automatic updates for font file
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Updated 1 package(s):
-   • danksearch: 0.2.0 → 0.2.1
-
-📝 Changes staged for commit
+✓ All packages are up to date
