@@ -1,8 +1,8 @@
-niri-git (25.11+git2693.d1a0380eppa2) resolute; urgency=medium
+niri-git (25.11+git2694.599db847ppa2) resolute; urgency=medium
 
-  * Git snapshot (commit 2693: d1a0380e)
+  * Git snapshot (commit 2694: 599db847)
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Sun, 05 Apr 2026 18:36:51 +0000
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Wed, 08 Apr 2026 13:07:39 +0000
 
 niri-git (25.11+git2566.f874b2fcppa1) questing; urgency=medium
 
