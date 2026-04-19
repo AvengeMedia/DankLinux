@@ -5,10 +5,9 @@
    ✓ Already at pinned commit
 
 📦 Checking quickshell-git (development)...
-   Current commit: fb08ece (date: 20260413)
+   Current commit: 9a54119 (date: 20260419)
    Latest commit:  9a54119 (date: 20260419)
-   ✨ Update available: fb08ece → 9a54119
-   Commit count: 803
+   ✓ Already up to date
 
 📦 Checking dgop...
    Current: 0.2.2
@@ -51,7 +50,4 @@
    Skipping automatic updates for font file
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Updated 1 package(s):
-   • quickshell-git: fb08ece → 9a54119
-
-📝 Changes staged for commit
+✓ All packages are up to date
