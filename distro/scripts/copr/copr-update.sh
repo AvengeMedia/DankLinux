@@ -155,13 +155,19 @@ if [[ -n "$LATEST_COMMIT" ]]; then
     if [[ "$CURRENT_COMMIT" != "$LATEST_COMMIT" ]]; then
         echo "   ✨ Update available: ${CURRENT_COMMIT:0:7} → ${LATEST_SHORT_COMMIT}"
 
-        # Get commit count by cloning shallow repo
-        TMP_DIR=$(mktemp -d)
-        git clone --bare "https://github.com/${UPSTREAM_REPO}.git" "$TMP_DIR" &>/dev/null
-        COMMIT_COUNT=$(git -C "$TMP_DIR" rev-list --count HEAD)
-        rm -rf "$TMP_DIR"
+        # Get commit count via GitHub compare API — much faster than a full clone.
+        # ahead_by = how many commits the latest is ahead of our current spec commit.
+        CURRENT_COUNT=$(grep -oP '^%global commits\s+\K[0-9]+' "$SPEC_FILE" || echo "0")
+        COMPARE_DATA=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "compare" "$CURRENT_COMMIT" "$LATEST_COMMIT" 2>/dev/null || echo "")
+        if [[ -n "$COMPARE_DATA" ]]; then
+            AHEAD=$(echo "$COMPARE_DATA" | jq -r '.ahead_by // 0')
+            COMMIT_COUNT=$((CURRENT_COUNT + AHEAD))
+        else
+            # Fallback: increment by 1 if compare API is unavailable
+            COMMIT_COUNT=$((CURRENT_COUNT + 1))
+        fi
 
-        echo "   Commit count: $COMMIT_COUNT"
+        echo "   Commit count: $COMMIT_COUNT (was $CURRENT_COUNT, +$((COMMIT_COUNT - CURRENT_COUNT)) new)"
 
         # Update the spec file
         sed -i "s/^%global commit\s\+.*/%global commit      $LATEST_COMMIT/" "$SPEC_FILE"

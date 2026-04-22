@@ -61,6 +61,22 @@ BUILD_DANKSEARCH=false
 BUILD_CLI11=false
 BUILD_QT6CT_KDE=false
 
+# Handle "all" as a special force-all-packages shortcut
+if [[ "${FORCE_PACKAGE:-}" == "all" ]]; then
+    echo "📦 Force-all: enabling builds for every package"
+    BUILD_QUICKSHELL=true
+    BUILD_QUICKSHELL_GIT=true
+    BUILD_DGOP=true
+    BUILD_CLIPHIST=true
+    BUILD_MATUGEN=true
+    BUILD_BREAKPAD=true
+    BUILD_GHOSTTY=true
+    BUILD_MATERIAL_SYMBOLS=true
+    BUILD_DANKSEARCH=true
+    BUILD_CLI11=true
+    BUILD_QT6CT_KDE=true
+fi
+
 # Check which specs changed (paths relative to repo root)
 if echo "$CHANGED_FILES" | grep -q "distro/fedora/quickshell/quickshell.spec"; then
     BUILD_QUICKSHELL=true
@@ -185,4 +201,14 @@ if [[ $BUILDS_TRIGGERED -gt 0 ]]; then
     echo "📊 View builds: https://copr.fedorainfracloud.org/coprs/$COPR_OWNER/$COPR_PROJECT/builds/"
 else
     echo "ℹ️  No builds triggered (no package changes detected)"
+fi
+
+# Fail visibly if packages were expected to build but none were triggered.
+# This surfaces copr-cli errors, SCM misconfiguration, or auth failures
+# instead of letting the job exit green while silently doing nothing.
+if [[ $BUILDS_TRIGGERED -eq 0 ]] && { [[ -n "$CHANGED_FILES" ]] || [[ -n "${FORCE_PACKAGE:-}" ]]; }; then
+    echo ""
+    echo "❌ Builds were expected (changed files or forced package detected) but none were triggered."
+    echo "   Check copr-cli output above for errors, and verify COPR SCM configuration."
+    exit 1
 fi

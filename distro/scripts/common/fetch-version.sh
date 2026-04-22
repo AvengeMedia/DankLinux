@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # Fetches latest version information from GitHub
-# Usage: ./fetch-version.sh <repo> [type]
+# Usage: ./fetch-version.sh <repo> [type] [extra args...]
+#   type=release              → prints the latest release/tag name
+#   type=commit               → prints COMMIT|SHORT|SNAPDATE for master HEAD
+#   type=compare <base> <head> → prints the raw compare API JSON (ahead_by etc.)
 
 set -euo pipefail
 
 REPO="$1"
-TYPE="${2:-release}"  # release or commit
+TYPE="${2:-release}"  # release, commit, or compare
 
 # Helper to fetch with retries and token
 gh_curl() {
@@ -68,6 +71,15 @@ elif [[ "$TYPE" == "commit" ]]; then
     fi
         
     echo "${COMMIT}|${SHORT_COMMIT}|${SNAPDATE}"
+elif [[ "$TYPE" == "compare" ]]; then
+    # Compare two commits and return the raw JSON (caller reads .ahead_by)
+    BASE="${3:-}"
+    HEAD="${4:-}"
+    if [[ -z "$BASE" ]] || [[ -z "$HEAD" ]]; then
+        echo "Error: compare type requires <base> and <head> commit arguments" >&2
+        exit 1
+    fi
+    gh_curl "https://api.github.com/repos/${REPO}/compare/${BASE}...${HEAD}" || exit 1
 else
     echo "Error: Unknown type $TYPE" >&2
     exit 1

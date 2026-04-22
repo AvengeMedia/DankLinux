@@ -78,6 +78,7 @@ __pycache__/
 
 # Logs
 *.log
+update-log.txt
 
 # Temporary files
 tmp/

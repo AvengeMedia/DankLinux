@@ -83,16 +83,17 @@ jobs:
           chmod +x distro/scripts/copr/*.sh distro/scripts/common/*.sh
           distro/scripts/copr/copr-update.sh | tee update-log.txt
 
-          # Check if there are any changes - use git diff --exit-code for reliability
-          if git diff --exit-code >/dev/null 2>&1; then
+          # Check only spec file changes — scoped to distro/fedora/ to avoid
+          # update-log.txt and other non-spec files triggering false positives
+          if git diff --exit-code -- distro/fedora/ >/dev/null 2>&1; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
             echo "📋 No updates found"
           else
-            CHANGES=$(git diff --name-only | wc -l)
+            CHANGES=$(git diff --name-only -- distro/fedora/ | wc -l)
             echo "has_changes=true" >> $GITHUB_OUTPUT
             echo "📋 Updates detected! ($CHANGES files changed)"
             echo "Changed files:"
-            git diff --name-only | sed 's/^/  - /'
+            git diff --name-only -- distro/fedora/ | sed 's/^/  - /'
           fi
 
       - name: Check for spec changes in push
@@ -141,10 +142,13 @@ jobs:
       - name: Commit and push changes
         if: steps.update.outputs.has_changes == 'true'
         run: |
-          # Get list of changed spec files for commit message
-          CHANGED_SPECS=$(git diff --name-only | grep '\.spec$' | xargs basename -a | tr '\n' ', ' | sed 's/,$//')
+          # Get list of changed spec files for commit message — scoped to
+          # distro/fedora/ so update-log.txt never appears in the list
+          CHANGED_SPECS=$(git diff --name-only -- distro/fedora/ | grep '\.spec$' | xargs -r basename -a | tr '\n' ', ' | sed 's/,$//')
 
-          git add -A
+          # Stage only the spec directory, not the repo root (avoids committing
+          # update-log.txt or any other ephemeral file created during the run)
+          git add -- distro/fedora/
           git commit -m "ci: Auto-update Copr specs [$CHANGED_SPECS]
 
           🤖 Automated by GitHub Actions"
@@ -203,11 +207,10 @@ jobs:
 
       - name: Install COPR CLI
         run: |
-          sudo dnf install -y copr-cli || sudo apt-get install -y copr-cli || {
-            echo "⚠️ Could not install copr-cli via package manager"
-            echo "Installing via pip..."
-            pip install copr-cli
-          }
+          sudo apt-get update -q
+          sudo apt-get install -y python3-pip
+          pip3 install copr-cli
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Configure COPR
         env:
