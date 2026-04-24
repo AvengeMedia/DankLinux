@@ -1,6 +1,12 @@
+quickshell (0.2.1.1+snapshot806.783c9539ppa15) resolute; urgency=medium
+
+  * Rebuild for packaging fixes (ppa15)
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Thu, 23 Apr 2026 23:51:16 -0400
+
+
 quickshell (0.2.1.1+pin713.26531fcppa10) questing; urgency=medium
 
   * Rebuild for packaging fixes (ppa10)
 
  -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 21 Mar 2026 19:33:36 -0400
-

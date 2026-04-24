@@ -630,33 +630,33 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
 elif [ -n "$GIT_REPO" ] && [ "${SKIP_VERSION_UPDATE:-false}" != "true" ]; then
     info "Detected stable package: $PACKAGE_NAME"
 
-    # Check if this is a pinned quickshell version - if so, skip version update
+    # Check if this is a snapshot quickshell build — skip auto version bump
     CURRENT_VERSION=$(dpkg-parsechangelog -S Version 2>/dev/null || echo "")
     if [ "$PACKAGE_NAME" = "quickshell" ]; then
-        if [[ "$CURRENT_VERSION" =~ \+pin([0-9]+)\.([a-f0-9]+) ]] || [[ "$CURRENT_VERSION" =~ ~pin([0-9]+)\.([a-f0-9]+) ]]; then
-            info "Detected pinned quickshell version ($CURRENT_VERSION), preserving changelog"
+        if [[ "$CURRENT_VERSION" =~ \+snapshot([0-9]+)\.([a-f0-9]+) ]] || [[ "$CURRENT_VERSION" =~ ~snapshot([0-9]+)\.([a-f0-9]+) ]] || \
+           [[ "$CURRENT_VERSION" =~ \+pin([0-9]+)\.([a-f0-9]+) ]] || [[ "$CURRENT_VERSION" =~ ~pin([0-9]+)\.([a-f0-9]+) ]]; then
+            info "Detected quickshell snapshot in changelog ($CURRENT_VERSION), preserving version"
             SKIP_VERSION_UPDATE=true
         fi
     fi
 
     if [ "${SKIP_VERSION_UPDATE:-false}" = "true" ]; then
         info "Skipping version update (manual version in changelog)"
-        # In CI, exit early - we don't rebuild pinned versions automatically
         if [ -n "${GITHUB_ACTIONS:-}" ] || [ -n "${CI:-}" ]; then
-            info "CI run detected with pinned version - skipping upload"
+            info "CI run detected with snapshot version - skipping upload"
             exit 0
         fi
     else
         LATEST_TAG=""
         # Check for OS pin
-        if [ -f "$REPO_ROOT/distro/pins.yaml" ] && command -v yq &> /dev/null; then
-            OS_PIN_VERSION=$(yq eval ".${PACKAGE_NAME}.os_pins.${UBUNTU_SERIES}" "$REPO_ROOT/distro/pins.yaml" 2>/dev/null || echo "null")
+        if [ -f "$REPO_ROOT/distro/snapshots.yaml" ] && command -v yq &> /dev/null; then
+            OS_PIN_VERSION=$(yq eval ".${PACKAGE_NAME}.os_pins.${UBUNTU_SERIES}" "$REPO_ROOT/distro/snapshots.yaml" 2>/dev/null || echo "null")
             if [ "$OS_PIN_VERSION" != "null" ] && [ -n "$OS_PIN_VERSION" ]; then
-                info "📌 Using OS-specific pinned version for ${UBUNTU_SERIES}: $OS_PIN_VERSION"
+                info "📌 Using OS-specific version for ${UBUNTU_SERIES}: $OS_PIN_VERSION"
                 LATEST_TAG="$OS_PIN_VERSION"
             fi
-            
-            PPA_OVERRIDE=$(yq eval ".${PACKAGE_NAME}.ppa_version_override.${UBUNTU_SERIES}" "$REPO_ROOT/distro/pins.yaml" 2>/dev/null || echo "null")
+
+            PPA_OVERRIDE=$(yq eval ".${PACKAGE_NAME}.ppa_version_override.${UBUNTU_SERIES}" "$REPO_ROOT/distro/snapshots.yaml" 2>/dev/null || echo "null")
             if [ "$PPA_OVERRIDE" != "null" ] && [ -n "$PPA_OVERRIDE" ]; then
                 info "📌 Using debian version override for ${UBUNTU_SERIES}: $PPA_OVERRIDE"
                 DPKG_VERSION_OVERRIDE="$PPA_OVERRIDE"
@@ -800,7 +800,7 @@ elif [ -n "$GIT_REPO" ] && [ "${SKIP_VERSION_UPDATE:-false}" != "true" ]; then
             cp debian/changelog "$PACKAGE_DIR/debian/changelog"
             success "Changelog written back to $PACKAGE_DIR/debian/changelog"
         fi
-    else
+    elif [ "${SKIP_VERSION_UPDATE:-false}" != "true" ]; then
         warn "Could not determine latest tag for $GIT_REPO, using existing version"
     fi
 fi
@@ -1051,22 +1051,21 @@ case "$PACKAGE_NAME" in
         # Get full version from changelog
         FULL_VERSION=$(dpkg-parsechangelog -S Version)
 
-        # Check if this is a pinned version
-        if [[ "$FULL_VERSION" =~ \+pin([0-9]+)\.([a-f0-9]+) ]] || [[ "$FULL_VERSION" =~ ~pin([0-9]+)\.([a-f0-9]+) ]]; then
+        if [[ "$FULL_VERSION" =~ \+snapshot([0-9]+)\.([a-f0-9]+) ]] || [[ "$FULL_VERSION" =~ ~snapshot([0-9]+)\.([a-f0-9]+) ]] || \
+           [[ "$FULL_VERSION" =~ \+pin([0-9]+)\.([a-f0-9]+) ]] || [[ "$FULL_VERSION" =~ ~pin([0-9]+)\.([a-f0-9]+) ]]; then
             PINNED_COMMIT="${BASH_REMATCH[2]}"
-            info "Detected pinned version with commit: $PINNED_COMMIT"
+            info "Detected snapshot/legacy-pin version with short commit: $PINNED_COMMIT"
 
-            # Handle rebuild number for pinned versions
+            # Rebuild number for snapshot versions
             if [ -n "${REBUILD_RELEASE:-}" ]; then
                 BASE_VERSION=$(echo "$FULL_VERSION" | sed 's/ppa[0-9]*$//')
                 NEW_VERSION="${BASE_VERSION}ppa${REBUILD_RELEASE}"
                 
                 if [ "$FULL_VERSION" != "$NEW_VERSION" ]; then
-                    info "Updating pinned version rebuild number: $FULL_VERSION -> $NEW_VERSION"
+                    info "Updating snapshot version rebuild number: $FULL_VERSION -> $NEW_VERSION"
                     
                     TIMESTAMP=$(date -R)
                     MAINTAINER=$(dpkg-parsechangelog -S Maintainer)
-                    DISTRIBUTION=$(dpkg-parsechangelog -S Distribution)
                     SOURCE_NAME=$(dpkg-parsechangelog -S Source)
                     
                     OLD_ENTRY_START=$(grep -n "^${SOURCE_NAME} (" debian/changelog | sed -n '2p' | cut -d: -f1)
@@ -1077,7 +1076,7 @@ case "$PACKAGE_NAME" in
                     fi
                     
                     cat > debian/changelog.new << EOF
-${SOURCE_NAME} (${NEW_VERSION}) ${DISTRIBUTION}; urgency=medium
+${SOURCE_NAME} (${NEW_VERSION}) ${UBUNTU_SERIES}; urgency=medium
 
   * Rebuild for packaging fixes (ppa${REBUILD_RELEASE})
 
@@ -1095,12 +1094,11 @@ EOF
                 fi
             fi
 
-            # Extract base version (0.2.1.1+pin713.26531fcppa5 -> 0.2.1.1)
-            BASE_VERSION=$(echo "$FULL_VERSION" | sed 's/[+~]pin.*//' | sed 's/ppa[0-9]*$//')
+            # Extract base (e.g. 0.2.1.1+snapshot806.783c9539ppa1 -> 0.2.1.1)
+            BASE_VERSION=$(echo "$FULL_VERSION" | sed 's/[+~]pin.*//' | sed 's/[+~]snapshot.*//' | sed 's/ppa[0-9]*$//')
 
-            # Download source from pinned commit
             if [ ! -d "quickshell-source" ]; then
-                info "Downloading quickshell source from pinned commit ${PINNED_COMMIT}..."
+                info "Downloading quickshell from snapshot/short commit ${PINNED_COMMIT}..."
                 FULL_COMMIT_HASH=$(curl -s "https://api.github.com/repos/quickshell-mirror/quickshell/commits/${PINNED_COMMIT}" | grep '"sha":' | head -1 | sed 's/.*"sha": "\(.*\)".*/\1/')
                 if [ -z "$FULL_COMMIT_HASH" ]; then
                     error "Failed to get full commit hash for $PINNED_COMMIT"
@@ -1113,13 +1111,13 @@ EOF
                     mkdir -p quickshell-source
                     tar -xzf quickshell-download.tar.gz --strip-components=1 -C quickshell-source
                     rm -f quickshell-download.tar.gz
-                    success "Source prepared for pinned build"
+                    success "Source prepared for snapshot build"
                 else
                     error "Failed to download quickshell source from commit $PINNED_COMMIT"
                     exit 1
                 fi
             else
-                info "Pinned source already exists"
+                info "Source tree already present"
             fi
         else
             # Normal stable release - get version from changelog

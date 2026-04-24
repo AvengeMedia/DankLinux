@@ -9,7 +9,12 @@ Source0:        xwayland-satellite-source.tar.gz
 
 BuildRequires:  cargo >= 1.83
 BuildRequires:  rust >= 1.83
+%if "%{?_repository}" == "openSUSE_Tumbleweed"
+BuildRequires:  clang20-devel
+BuildRequires:  llvm20-devel
+%else
 BuildRequires:  clang-devel
+%endif
 BuildRequires:  pkgconfig
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-server)

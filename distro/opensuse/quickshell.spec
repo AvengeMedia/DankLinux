@@ -1,5 +1,5 @@
 Name:           quickshell
-Version:        0.2.1.1+pin713.26531fc4
+Version:        0.2.1.1+snapshot806.783c9539
 Release:        1%{?dist}
 Summary:        Flexible toolkit for creating desktop shells using QtQuick
 
@@ -19,6 +19,9 @@ BuildRequires:  qt6-base-private-devel
 BuildRequires:  qt6-declarative-private-devel
 BuildRequires:  qt6-waylandclient-private-devel
 BuildRequires:  cli11-devel
+BuildRequires:  cpptrace-devel
+BuildRequires:  libdwarf-devel
+BuildRequires:  libzstd-devel
 BuildRequires:  wayland-protocols-devel
 BuildRequires:  wayland-devel
 BuildRequires:  pkgconfig(wayland-client)
@@ -63,12 +66,11 @@ mkdir -p build
 cd build
 cmake -GNinja \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-    -DCRASH_REPORTER=off \
     -DCMAKE_CXX_STANDARD=20 \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_INSTALL_RPATH="" \
     -DCMAKE_BUILD_RPATH="" \
-    -DGIT_REVISION=26531fc46ef17e9365b03770edd3fb9206fcb460 \
+    -DGIT_REVISION=783c953987dc56ff0601abe6845ed96f1d00495a \
     ..
 
 cmake --build .
@@ -97,6 +99,8 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/org.quickshell.deskto
 %{_datadir}/icons/hicolor/scalable/apps/org.quickshell.svg
 
 %changelog
+* Wed Apr 23 2026 Avenge Media <AvengeMedia.US@gmail.com> - 0.2.1.1+snapshot806.783c9539-1
+- Snapshot 806: cpptrace stack; override pin naming with +snapshot; GIT_REVISION update
 * Sat Dec 06 2025 Avenge Media <AvengeMedia.US@gmail.com> - 0.2.1.1+pin713.26531fc4-1
 - Pinned to commit 713 (26531fc4) - unreleased stable with latest features
 * Thu Dec 05 2024 Avenge Media <AvengeMedia.US@gmail.com> - 0.2.1.1+pin713.26531fc-1

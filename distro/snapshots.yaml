@@ -1,0 +1,19 @@
+# Package snapshot configuration
+# Record stable package snapshots at specific git commits until a newer upstream
+# release than base_version appears; then automation can move back to tag-based
+# sources (see distro/scripts/ppa/debian-update.sh, copr-update.sh).
+
+quickshell:
+  enabled: true
+  base_version: "0.2.1"
+  commit: "783c953987dc56ff0601abe6845ed96f1d00495a"
+  commit_count: 806
+  snap_date: "20260423"
+
+matugen:
+  enabled: true
+  os_pins:
+    questing: "4.0.0"
+    debian_13: "4.0.0"
+  ppa_version_override:
+    questing: "4.1.0+really4.0.0"

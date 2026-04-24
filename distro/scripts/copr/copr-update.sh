@@ -18,68 +18,59 @@ echo "📦 Checking quickshell (stable)..."
 SPEC_FILE="quickshell/quickshell.spec"
 UPSTREAM_REPO="quickshell-mirror/quickshell"
 
-# Check for pin configuration
-USE_PIN=false
-if [ -f "$REPO_ROOT/distro/pins.yaml" ]; then
+# Snapshot from snapshots.yaml (commit-based stable)
+USE_SNAPSHOT=false
+if [ -f "$REPO_ROOT/distro/snapshots.yaml" ]; then
     if command -v yq &> /dev/null; then
-        PIN_ENABLED=$(yq eval '.quickshell.enabled' "$REPO_ROOT/distro/pins.yaml" 2>/dev/null || echo "false")
-        if [ "$PIN_ENABLED" = "true" ]; then
-            PIN_BASE=$(yq eval '.quickshell.base_version' "$REPO_ROOT/distro/pins.yaml")
+        SNAPSHOT_ENABLED=$(yq eval '.quickshell.enabled' "$REPO_ROOT/distro/snapshots.yaml" 2>/dev/null || echo "false")
+        if [ "$SNAPSHOT_ENABLED" = "true" ]; then
+            SNAPSHOT_BASE=$(yq eval '.quickshell.base_version' "$REPO_ROOT/distro/snapshots.yaml")
 
-            # Fetch latest release to check if it's newer than pin base
             LATEST_TAG=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "release")
             LATEST_VERSION="${LATEST_TAG#v}"
 
-            # Compare versions - if latest > pin_base, override pin
-            if [[ -n "$LATEST_VERSION" ]] && [[ "$(printf '%s\n' "$LATEST_VERSION" "$PIN_BASE" | sort -V | tail -1)" != "$PIN_BASE" ]]; then
-                echo "   📌 Pin override: New stable release $LATEST_VERSION detected (newer than pin base $PIN_BASE)"
-                USE_PIN=false
+            if [[ -n "$LATEST_VERSION" ]] && [[ "$(printf '%s\n' "$LATEST_VERSION" "$SNAPSHOT_BASE" | sort -V | tail -1)" != "$SNAPSHOT_BASE" ]]; then
+                echo "   📌 Snapshot override: new stable $LATEST_VERSION (newer than base $SNAPSHOT_BASE)"
+                USE_SNAPSHOT=false
             else
-                echo "   📌 Using pinned commit (no newer stable release than $PIN_BASE)"
-                USE_PIN=true
-                PINNED_COMMIT=$(yq eval '.quickshell.commit' "$REPO_ROOT/distro/pins.yaml")
-                PINNED_COUNT=$(yq eval '.quickshell.commit_count' "$REPO_ROOT/distro/pins.yaml")
-                PINNED_DATE=$(yq eval '.quickshell.snap_date' "$REPO_ROOT/distro/pins.yaml")
+                echo "   📌 Using snapshot commit (no stable release newer than $SNAPSHOT_BASE)"
+                USE_SNAPSHOT=true
+                PINNED_COMMIT=$(yq eval '.quickshell.commit' "$REPO_ROOT/distro/snapshots.yaml")
+                PINNED_COUNT=$(yq eval '.quickshell.commit_count' "$REPO_ROOT/distro/snapshots.yaml")
+                PINNED_DATE=$(yq eval '.quickshell.snap_date' "$REPO_ROOT/distro/snapshots.yaml")
             fi
         fi
     fi
 fi
 
-if [ "$USE_PIN" = "true" ]; then
-    # Using pin - check if spec needs update to match pin
+if [ "$USE_SNAPSHOT" = "true" ]; then
     CURRENT_COMMIT=$(grep -oP '^%global commit\s+\K[a-f0-9]+' "$SPEC_FILE" 2>/dev/null || echo "")
 
     if [[ "$CURRENT_COMMIT" != "$PINNED_COMMIT" ]]; then
-        echo "   ✨ Updating to pinned commit: ${PINNED_COMMIT:0:7}"
+        echo "   ✨ Updating to snapshot commit: ${PINNED_COMMIT:0:7}"
 
-        # Update spec to use pinned commit
         if grep -q '^%global commit' "$SPEC_FILE"; then
             sed -i "s/^%global commit\s\+.*/%global commit      $PINNED_COMMIT/" "$SPEC_FILE"
             sed -i "s/^%global commits\s\+.*/%global commits     $PINNED_COUNT/" "$SPEC_FILE"
             sed -i "s/^%global snapdate\s\+.*/%global snapdate    $PINNED_DATE/" "$SPEC_FILE"
         else
-            # Add commit variables if they don't exist (transitioning from tag-based to pinned)
             sed -i "/^%global tag/a %global commit      $PINNED_COMMIT\n%global commits     $PINNED_COUNT\n%global snapdate    $PINNED_DATE" "$SPEC_FILE"
 
-            # Update Version line to use pin format
-            sed -i "s/^Version:.*/Version:            %{tag}.1+pin%{commits}.%(c=%{commit}; echo \${c:0:7})/" "$SPEC_FILE"
+            sed -i "s/^Version:.*/Version:            %{tag}.1+snapshot%{commits}.%(c=%{commit}; echo \${c:0:7})/" "$SPEC_FILE"
 
-            # Update Source0 to use commit instead of tag
             sed -i "s|^Source0:.*|Source0:            %{url}/archive/%{commit}/quickshell-%{commit}.tar.gz|" "$SPEC_FILE"
 
-            # Update %autosetup to use commit directory
             sed -i "s/%autosetup -n quickshell-.*/%autosetup -n quickshell-%{commit} -p1/" "$SPEC_FILE"
 
-            # Add -DGIT_REVISION flag if not present
             if ! grep -q "DGIT_REVISION" "$SPEC_FILE"; then
-                sed -i '/DDISTRIBUTOR_DEBUGINFO_AVAILABLE/a\        -DGIT_REVISION=%{commit} \\' "$SPEC_FILE"
+                sed -i '/-DDISTRIBUTOR=/a\        -DGIT_REVISION=%{commit} \\' "$SPEC_FILE"
             fi
         fi
 
         UPDATED=$((UPDATED + 1))
-        UPDATED_PACKAGES+=("quickshell: pinned to ${PINNED_COMMIT:0:7}")
+        UPDATED_PACKAGES+=("quickshell: snapshot ${PINNED_COMMIT:0:7}")
     else
-        echo "   ✓ Already at pinned commit"
+        echo "   ✓ Already at snapshot commit"
     fi
 else
     # Normal release-based update
@@ -97,11 +88,10 @@ else
         if [[ "$CURRENT_VERSION" != "$LATEST_VERSION" ]]; then
             echo "   ✨ Update available: $CURRENT_VERSION → $LATEST_VERSION"
 
-            # Check if we're transitioning from pinned to normal 
             if grep -q '^%global commit' "$SPEC_FILE"; then
-                echo "   🔄 Transitioning from pinned version to stable release"
+                echo "   🔄 Transitioning from snapshot to stable release"
 
-                # Remove pin-related globals
+                # Remove snapshot commit globals
                 sed -i '/^%global commit/d' "$SPEC_FILE"
                 sed -i '/^%global commits/d' "$SPEC_FILE"
                 sed -i '/^%global snapdate/d' "$SPEC_FILE"

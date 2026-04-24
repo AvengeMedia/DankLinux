@@ -25,9 +25,17 @@ override_dh_auto_configure:
 			echo "Patched wayland-protocols requirement (system has $$WL_VERSION)"; \
 		fi; \
 	fi && \
+	WL_DATADIR=$$(pkg-config --variable=pkgdatadir wayland-protocols 2>/dev/null || true); \
+	if [ -z "$$WL_DATADIR" ] || [ ! -f "$$WL_DATADIR/staging/ext-background-effect/ext-background-effect-v1.xml" ]; then \
+		mkdir -p "$$SOURCE_DIR/debian-extra-wayland/staging/ext-background-effect"; \
+		cp "$(CURDIR)/debian/wayland-protocols-extra/staging/ext-background-effect/ext-background-effect-v1.xml" \
+			"$$SOURCE_DIR/debian-extra-wayland/staging/ext-background-effect/ext-background-effect-v1.xml"; \
+		sed -i 's|"\$${WAYLAND_PROTOCOLS}/staging/ext-background-effect"|"\$${CMAKE_SOURCE_DIR}/debian-extra-wayland/staging/ext-background-effect"|' \
+			"$$SOURCE_DIR/src/wayland/background_effect/CMakeLists.txt"; \
+		echo "Using bundled ext-background-effect protocol (system wayland-protocols lacks this file; e.g. trixie 1.44)"; \
+	fi && \
 	cmake -GNinja \
 		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
-		-DCRASH_REPORTER=off \
 		-DCMAKE_CXX_STANDARD=20 \
 		-DCMAKE_INSTALL_PREFIX=/usr \
 		-S $$SOURCE_DIR \
@@ -40,7 +48,7 @@ override_dh_auto_install:
 	DESTDIR=$(CURDIR)/debian/quickshell cmake --install build
 
 override_dh_auto_clean:
-	rm -rf build
+	rm -rf build quickshell-source/debian-extra-wayland
 	dh_auto_clean
 
 override_dh_shlibdeps:

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Package configuration loader
-# Loads and validates obs-packages.yaml and merges with pins.yaml
+# Loads and validates obs-packages.yaml and merges with snapshots.yaml
 
 # Source guard to prevent multiple sourcing
 if [[ -n "${_OBS_PACKAGE_CONFIG_SOURCED:-}" ]]; then
@@ -16,7 +16,7 @@ source "$_PKG_CONFIG_LIB_DIR/common.sh"
 # Configuration file paths
 REPO_ROOT=$(get_repo_root)
 CONFIG_FILE="${CONFIG_FILE:-$REPO_ROOT/distro/config/obs-packages.yaml}"
-PINS_FILE="${PINS_FILE:-$REPO_ROOT/distro/pins.yaml}"
+SNAPSHOTS_FILE="${SNAPSHOTS_FILE:-$REPO_ROOT/distro/snapshots.yaml}"
 
 # Check if yq is available
 check_yq() {
@@ -61,25 +61,25 @@ load_package_config() {
         return 1
     fi
 
-    # Check if package uses pins
-    local uses_pins=$(echo "$config" | yq eval '.base_version.from_pins // false' -)
+    # Check if package uses snapshots.yaml (quickshell / matugen commit snapshots)
+    local uses_snapshots=$(echo "$config" | yq eval '.base_version.from_snapshots // false' -)
 
-    if [[ "$uses_pins" == "true" && -f "$PINS_FILE" ]]; then
-        log_debug "Checking pins.yaml for $package"
+    if [[ "$uses_snapshots" == "true" && -f "$SNAPSHOTS_FILE" ]]; then
+        log_debug "Checking snapshots.yaml for $package"
 
-        # Get base package name (strip -git and -snapshot suffixes for pin lookup)
+        # Get base package name (strip -git and -snapshot suffixes for lookup)
         local base_package="${package%-git}"
         base_package="${base_package%-snapshot}"
-        local pin_config=$(yq eval ".$base_package" "$PINS_FILE" 2>/dev/null)
+        local snap_config=$(yq eval ".$base_package" "$SNAPSHOTS_FILE" 2>/dev/null)
 
-        if [[ "$pin_config" != "null" && -n "$pin_config" ]]; then
-            local pin_enabled=$(echo "$pin_config" | yq eval '.enabled // false' -)
+        if [[ "$snap_config" != "null" && -n "$snap_config" ]]; then
+            local snap_enabled=$(echo "$snap_config" | yq eval '.enabled // false' -)
 
-            if [[ "$pin_enabled" == "true" ]]; then
-                log_debug "$base_package: Pin is enabled in pins.yaml"
+            if [[ "$snap_enabled" == "true" ]]; then
+                log_debug "$base_package: snapshot is enabled in snapshots.yaml"
 
-                # Merge pin data into config (as separate pin_info section)
-                config=$(echo "$config" | yq eval ". += {\"pin_info\": $(echo "$pin_config" | yq eval -o=json .)}" -)
+                # Merge into snapshot_info for downstream
+                config=$(echo "$config" | yq eval ". += {\"snapshot_info\": $(echo "$snap_config" | yq eval -o=json .)}" -)
             fi
         fi
     fi
@@ -139,10 +139,10 @@ get_base_version_source() {
     local package="$1"
     local config=$(load_package_config "$package")
 
-    # Check for pin first
-    local has_pin=$(echo "$config" | yq eval '.pin_info.enabled // false' -)
-    if [[ "$has_pin" == "true" ]]; then
-        echo "pin"
+    # Check for active snapshot (quickshell) first
+    local has_snapshot=$(echo "$config" | yq eval '.snapshot_info.enabled // false' -)
+    if [[ "$has_snapshot" == "true" ]]; then
+        echo "snapshot"
         return 0
     fi
 
@@ -164,24 +164,24 @@ get_base_version_source() {
     return 1
 }
 
-# Get pinned commit info (if package is pinned)
-get_pin_info() {
+# Get snapshot commit info (if package uses an upstream snapshot in snapshots.yaml)
+get_snapshot_info() {
     local package="$1"
     local field="$2"  # commit, commit_count, base_version, snap_date
 
     local config=$(load_package_config "$package")
 
-    echo "$config" | yq eval ".pin_info.$field // \"\"" -
+    echo "$config" | yq eval ".snapshot_info.$field // \"\"" -
 }
 
-# Check if package has pin enabled
-is_package_pinned() {
+# Check if package has a forced upstream snapshot
+is_package_snapshotted() {
     local package="$1"
     local config=$(load_package_config "$package")
 
-    local pin_enabled=$(echo "$config" | yq eval '.pin_info.enabled // false' -)
+    local snap_enabled=$(echo "$config" | yq eval '.snapshot_info.enabled // false' -)
 
-    if [[ "$pin_enabled" == "true" ]]; then
+    if [[ "$snap_enabled" == "true" ]]; then
         return 0
     else
         return 1
@@ -384,12 +384,12 @@ print_package_info() {
         log_info "  Base version from: $base_source"
     fi
 
-    if is_package_pinned "$package"; then
-        local pin_commit=$(get_pin_info "$package" "commit")
-        local pin_base=$(get_pin_info "$package" "base_version")
-        log_info "  📌 Pinned: Yes"
-        log_info "     Commit: ${pin_commit:0:8}"
-        log_info "     Base: $pin_base"
+    if is_package_snapshotted "$package"; then
+        local s_commit=$(get_snapshot_info "$package" "commit")
+        local s_base=$(get_snapshot_info "$package" "base_version")
+        log_info "  📌 Upstream snapshot: Yes"
+        log_info "     Commit: ${s_commit:0:8}"
+        log_info "     Base: $s_base"
     fi
 
     if requires_vendor_deps "$package"; then

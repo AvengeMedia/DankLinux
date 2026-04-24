@@ -150,10 +150,10 @@ check_package_updates() {
         local base_version_source=$(get_base_version_source "$package")
         local base_version=""
 
-        if [[ "$base_version_source" == "pin" ]]; then
-            # Use pinned base version
-            base_version=$(get_pin_info "$package" "base_version")
-            log_info "  Base version (from pin): $base_version"
+        if [[ "$base_version_source" == "snapshot" ]]; then
+            # Use snapshot base version from snapshots.yaml
+            base_version=$(get_snapshot_info "$package" "base_version")
+            log_info "  Base version (from snapshot): $base_version"
 
         elif [[ "$base_version_source" =~ ^stable:(.+)$ ]]; then
             # Get from stable package
@@ -189,9 +189,9 @@ check_package_updates() {
         log_info "  Upstream version: $upstream_version"
 
     else
-        # Stable package: check if pinned first
-        if is_package_pinned "$package"; then
-            local os_pin_version=$(echo "$config" | yq eval '.pin_info.os_pins.debian_13 // ""' - 2>/dev/null)
+        # Stable package: check if using upstream snapshot (snapshots.yaml) first
+        if is_package_snapshotted "$package"; then
+            local os_pin_version=$(echo "$config" | yq eval '.snapshot_info.os_pins.debian_13 // ""' - 2>/dev/null)
             
             if [[ -n "$os_pin_version" ]]; then
                 if [[ "$package" == *-snapshot ]]; then
@@ -202,24 +202,87 @@ check_package_updates() {
                     # Continue to fetch latest release naturally
                 fi
             else
-                log_info "  Package is pinned, skipping update check"
+                # Snapshot path: check whether a newer tagged release has supersedes it the base version
+                local snap_base=$(get_snapshot_info "$package" "base_version")
+                local snap_commit=$(get_snapshot_info "$package" "commit")
+                local snap_count=$(get_snapshot_info "$package" "commit_count")
 
-                # Get current OBS version for rebuild support
-                local obs_version=$(get_obs_version "$package" 2>/dev/null || echo "")
+                log_info "  Snapshot base: $snap_base  commit: ${snap_commit:0:8}  count: $snap_count"
+                log_info "  Checking latest upstream release vs snapshot base..."
 
-                log_success "$package: Pinned to specific commit → UP TO DATE"
+                local latest_release_tag=$(get_latest_release "$upstream_repo" 2>/dev/null || echo "")
+                local latest_release_ver="${latest_release_tag#v}"
 
-                UPDATE_RESULTS+=("$(cat <<EOF
+                local use_snapshot=true
+                if [[ -n "$latest_release_ver" ]] && \
+                   [[ "$(printf '%s\n' "$latest_release_ver" "$snap_base" | sort -V | tail -1)" != "$snap_base" ]]; then
+                    log_info "  Release override: $latest_release_ver is newer than snapshot base $snap_base → tagged release path"
+                    use_snapshot=false
+                    upstream_version="$latest_release_ver"
+                    # Fall through to the standard stable version comparison
+                fi
+
+                if [[ "$use_snapshot" == "true" ]]; then
+                    # Build the canonical snapshot version string (8-char hash)
+                    upstream_version="${snap_base}.1+snapshot${snap_count}.${snap_commit:0:8}"
+                    log_info "  Snapshot version: $upstream_version"
+
+                    local obs_version=$(get_obs_version "$package" 2>/dev/null || echo "")
+
+                    if [[ -z "$obs_version" ]]; then
+                        log_success "$package: Not on OBS yet → NEEDS UPDATE"
+                        UPDATE_RESULTS+=("$(cat <<EOF
+{
+  "package": "$package",
+  "needs_update": true,
+  "snapshotted": true,
+  "reason": "new_snapshot",
+  "upstream_version": "$upstream_version",
+  "obs_version": null
+}
+EOF
+                        )")
+                        return 0
+                    fi
+
+                    log_info "  Current OBS version: $obs_version"
+
+                    local upstream_hash=$(extract_commit_hash "$upstream_version")
+                    local obs_hash=$(extract_commit_hash "$obs_version")
+
+                    log_info "  Snapshot hash: ${upstream_hash:-?}  OBS hash: ${obs_hash:-none}"
+
+                    if [[ "$upstream_hash" != "$obs_hash" ]]; then
+                        log_success "$package: Snapshot commit changed → NEEDS UPDATE (${obs_hash:-none} → $upstream_hash)"
+                        UPDATE_RESULTS+=("$(cat <<EOF
+{
+  "package": "$package",
+  "needs_update": true,
+  "snapshotted": true,
+  "reason": "new_snapshot",
+  "upstream_version": "$upstream_version",
+  "obs_version": "$obs_version"
+}
+EOF
+                        )")
+                    else
+                        log_info "$package: OBS already at snapshot commit $upstream_hash → UP TO DATE"
+                        UPDATE_RESULTS+=("$(cat <<EOF
 {
   "package": "$package",
   "needs_update": false,
-  "pinned": true,
-  "reason": "Package pinned in pins.yaml",
-  "obs_version": $(if [[ -n "$obs_version" ]]; then echo "\"$obs_version\""; else echo "null"; fi)
+  "snapshotted": true,
+  "reason": "current_snapshot",
+  "upstream_version": "$upstream_version",
+  "obs_version": "$obs_version"
 }
 EOF
-                )")
-                return 0
+                        )")
+                    fi
+                    return 0
+                fi
+                # use_snapshot=false: upstream_version set to latest release tag,
+                # fall through to standard stable version comparison below
             fi
         fi
 

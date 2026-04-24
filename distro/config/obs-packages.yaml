@@ -135,7 +135,7 @@ packages:
       directory_name: "quickshell-source"
       compression: gz
     base_version:
-      from_pins: true  # Check pins.yaml first
+      from_snapshots: true  # Check snapshots.yaml first
 
   matugen-snapshot:
     type: stable
@@ -152,7 +152,7 @@ packages:
       directory_name: "matugen-{version}"
       compression: gz
     base_version:
-      from_pins: true  # Pin to debian_13 version
+      from_snapshots: true  # Pin to debian_13 version (see snapshots.yaml)
 
   xwayland-satellite:
     type: stable
@@ -199,7 +199,7 @@ packages:
       repo: quickshell-mirror/quickshell
       branch: master
     base_version:
-      from_pins: true  # Check pins.yaml first for quickshell stable pin
+      from_snapshots: true  # Check snapshots.yaml for quickshell stable commit
       from_stable: quickshell
       fallback: "0.2.1"
     distros:

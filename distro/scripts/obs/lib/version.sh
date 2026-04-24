@@ -45,10 +45,10 @@ strip_db_suffixes() {
     echo "$version" | sed -E 's/(\.?db[0-9]+)+$//'
 }
 
-# Extract commit hash from git or pinned version
+# Extract commit hash from git or snapshot (+git / +pin legacy / +snapshot) version
 extract_commit_hash() {
     local version="$1"
-    echo "$version" | grep -oP '\+(git|pin)[0-9]+\.\K[a-f0-9]{8}' | head -c 8 || echo ""
+    echo "$version" | grep -oP '\+(git|pin|snapshot)[0-9]+\.\K[a-f0-9]{8}' | head -c 8 || echo ""
 }
 
 # Extract base version (strip git and db suffixes)

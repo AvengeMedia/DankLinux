@@ -187,21 +187,25 @@ else
     # Check if checkout actually succeeded by checking if directory exists
     if [[ ! -d "$PKG_DIR" ]]; then
         log_warn "Package does not exist on OBS, initialized local structure."
+        PROJECT_DIR="$OBS_CACHE_DIR/$OBS_PROJECT"
 
         # Create package directory structure
-        mkdir -p "$OBS_CACHE_DIR/$OBS_PROJECT"
-        cd "$OBS_CACHE_DIR/$OBS_PROJECT"
+        mkdir -p "$OBS_CACHE_DIR"
+        cd "$OBS_CACHE_DIR"
 
         # Initialize OBS project if needed
-        if [[ ! -d ".osc" ]]; then
+        if [[ ! -d "$PROJECT_DIR" ]]; then
             osc co "$OBS_PROJECT" 2>/dev/null || {
                 log_error "Failed to checkout OBS project: $OBS_PROJECT"
                 log_error "Please ensure the project exists and you have access"
                 exit $ERR_UPLOAD_FAILURE
             }
+        elif [[ ! -d "$PROJECT_DIR/.osc" ]]; then
+            log_error "Existing project directory is not a valid osc working copy: $PROJECT_DIR"
+            exit $ERR_UPLOAD_FAILURE
         fi
 
-        cd "$OBS_PROJECT"
+        cd "$PROJECT_DIR"
 
         # Create package
         if ! osc mkpac "$PACKAGE" 2>&1; then

@@ -1,13 +1,13 @@
 %bcond_with         asan
 
 %global debug_package %{nil}
-%global commit      26531fc46ef17e9365b03770edd3fb9206fcb460
-%global commits     713
-%global snapdate    20251202
+%global commit      783c953987dc56ff0601abe6845ed96f1d00495a
+%global commits     806
+%global snapdate    20260423
 %global tag         0.2.1
 
 Name:               quickshell
-Version:            %{tag}.1+pin%{commits}.%(c=%{commit}; echo ${c:0:7})
+Version:            %{tag}.1+snapshot%{commits}.%(c=%{commit}; echo ${c:0:7})
 Release:            %autorelease
 Summary:            Flexible QtQuick based desktop shell toolkit
 
@@ -16,10 +16,12 @@ URL:                https://github.com/quickshell-mirror/quickshell
 Source0:            %{url}/archive/%{commit}/quickshell-%{commit}.tar.gz
 
 %if 0%{?fedora}
-%global crash_reporter ON
-BuildRequires:      breakpad-static
+%global crash_handler ON
+BuildRequires:      cpptrace-devel
+BuildRequires:      libdwarf-devel
+BuildRequires:      pkgconfig(libzstd)
 %else
-%global crash_reporter OFF
+%global crash_handler OFF
 %endif
 
 %if 0%{?fedora}
@@ -35,7 +37,6 @@ BuildRequires:      cmake(Qt6WaylandClient)
 BuildRequires:      gcc-c++
 BuildRequires:      ninja-build
 %if 0%{?fedora}
-BuildRequires:      pkgconfig(breakpad)
 BuildRequires:      pkgconfig(CLI11)
 %else
 BuildRequires:      cli11-devel
@@ -75,11 +76,10 @@ Wayland and X11.
         -DASAN=ON \
 %endif
         -DBUILD_SHARED_LIBS=OFF \
-        -DCRASH_REPORTER=%{crash_reporter} \
+        -DCRASH_HANDLER=%{crash_handler} \
         -DUSE_JEMALLOC=%{jemalloc_enabled} \
         -DCMAKE_BUILD_TYPE=Release \
         -DDISTRIBUTOR="Fedora COPR (avengemedia/quickshell)" \
-        -DDISTRIBUTOR_DEBUGINFO_AVAILABLE=YES \
         -DGIT_REVISION=%{commit} \
         -DINSTALL_QML_PREFIX=%{_lib}/qt6/qml
 %cmake_build
@@ -93,6 +93,7 @@ Wayland and X11.
 %doc BUILD.md
 %doc CONTRIBUTING.md
 %doc README.md
+%doc changelog/v%{tag}.md
 %{_bindir}/qs
 %{_bindir}/quickshell
 %{_datadir}/applications/org.quickshell.desktop

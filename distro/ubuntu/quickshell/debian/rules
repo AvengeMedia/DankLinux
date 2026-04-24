@@ -6,10 +6,10 @@ DEB_VERSION := $(shell dpkg-parsechangelog -S Version)
 # Examples: 0.2.1ppa1 -> 0.2.1
 BASE_VERSION := $(shell echo $(DEB_VERSION) | sed 's/ppa[0-9]*$$//')
 
-# Check if this is a pinned version (contains +pin or ~pin)
-IS_PINNED := $(shell echo $(DEB_VERSION) | grep -E '[+~]pin' > /dev/null && echo yes || echo no)
+# Native snapshot build uses quickshell-source (+snapshot806… or legacy +pin…)
+IS_SNAPSHOT := $(shell echo $(DEB_VERSION) | grep -E '[+~](pin|snapshot)' > /dev/null && echo yes || echo no)
 
-ifeq ($(IS_PINNED),yes)
+ifeq ($(IS_SNAPSHOT),yes)
 SOURCE_DIR := quickshell-source
 else
 SOURCE_DIR := quickshell-$(BASE_VERSION)
@@ -44,7 +44,6 @@ override_dh_auto_configure:
 	# Using same flags as working pacstall build
 	cmake -GNinja \
 		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
-		-DCRASH_REPORTER=off \
 		-DCMAKE_CXX_STANDARD=20 \
 		-DCMAKE_INSTALL_PREFIX=/usr \
 		-S $(SOURCE_DIR) \

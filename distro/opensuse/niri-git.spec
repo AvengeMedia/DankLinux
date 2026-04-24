@@ -10,7 +10,14 @@ Source0:        niri.tar.xz
 
 BuildRequires:  cargo >= 1.80.1
 BuildRequires:  rust >= 1.80.1
+# On Tumbleweed, unversioned clang-devel tracks the latest (e.g. clang22) and
+# the stack can be temporarily unresolvable (e.g. libclang13 vs llvm). Pin only there.
+%if "%{?_repository}" == "openSUSE_Tumbleweed"
+BuildRequires:  clang20-devel
+BuildRequires:  llvm20-devel
+%else
 BuildRequires:  clang-devel
+%endif
 BuildRequires:  pkgconfig
 BuildRequires:  wayland-devel
 BuildRequires:  pkgconfig(cairo-gobject)

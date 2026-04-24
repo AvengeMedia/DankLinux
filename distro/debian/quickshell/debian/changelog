@@ -1,3 +1,9 @@
+quickshell (0.2.1.1+snapshot806.783c9539db1) unstable; urgency=medium
+
+  * Snapshot at commit 806 (783c9539): upstream cpptrace crash handler; packaging sync
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Wed, 23 Apr 2026 12:00:00 +0000
+
 quickshell (0.2.1.1+pin713.26531fc4.db4) unstable; urgency=medium
 
   * Rebuild to fix repository metadata issues
