@@ -102,26 +102,14 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Check if last commit was automated
-        id: check-loop
-        run: |
-          LAST_COMMIT_MSG=$(git log -1 --pretty=%B | head -1)
-          if [[ "$LAST_COMMIT_MSG" == "ci: Auto-update PPA packages"* ]] || [[ "$LAST_COMMIT_MSG" == "ci: Auto-update OBS packages"* ]]; then
-            echo "⏭️ Last commit was automated ($LAST_COMMIT_MSG), skipping to prevent infinite loop"
-            echo "skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "✅ Last commit was not automated, proceeding"
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
+
 
       - name: Configure Git
-        if: steps.check-loop.outputs.skip != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
       
       - name: Install build dependencies
-        if: steps.check-loop.outputs.skip != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -134,7 +122,6 @@ jobs:
             dpkg-dev
       
       - name: Configure GPG
-        if: steps.check-loop.outputs.skip != 'true'
         env:
           GPG_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         run: |
@@ -143,7 +130,6 @@ jobs:
           echo "DEBSIGN_KEYID=$GPG_KEY_ID" >> $GITHUB_ENV
       
       - name: Determine packages to upload
-        if: steps.check-loop.outputs.skip != 'true'
         id: packages
         run: |
           if [[ "${{ github.event.inputs.force_upload }}" == "true" ]]; then
@@ -186,7 +172,6 @@ jobs:
           fi
 
       - name: Upload to PPA
-        if: steps.check-loop.outputs.skip != 'true'
         env:
           REBUILD_RELEASE: ${{ github.event.inputs.rebuild_release }}
         run: |
@@ -199,14 +184,13 @@ jobs:
               echo "🔄 Using rebuild release number: ppa$REBUILD_RELEASE"
             fi
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            if ! bash distro/scripts/ppa/ppa-upload.sh "$pkg" danklinux; then
+            if ! bash distro/scripts/ppa/ppa-upload.sh "$pkg" danklinux "" ${REBUILD_RELEASE:+"$REBUILD_RELEASE"}; then
               echo "::error::Upload failed for $pkg"
               exit 1
             fi
           done
       
       - name: Get changed packages
-        if: steps.check-loop.outputs.skip != 'true'
         id: changed-packages
         run: |
           # Check if there are any changelog changes to commit
@@ -224,7 +208,7 @@ jobs:
           fi
 
       - name: Commit changelog changes
-        if: steps.check-loop.outputs.skip != 'true' && steps.changed-packages.outputs.has_changes == 'true'
+        if: steps.changed-packages.outputs.has_changes == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
