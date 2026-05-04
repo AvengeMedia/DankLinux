@@ -1,5 +1,5 @@
 Name:           quickshell-git
-Version:        0.2.1+git713.26531fc4
+Version:        0.3.1+git819.59e9c47b
 Release:        1%{?dist}
 Summary:        Flexible toolkit for creating desktop shells using QtQuick (git)
 
