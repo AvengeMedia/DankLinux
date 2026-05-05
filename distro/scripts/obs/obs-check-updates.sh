@@ -152,8 +152,30 @@ check_package_updates() {
 
         if [[ "$base_version_source" == "snapshot" ]]; then
             # Use snapshot base version from snapshots.yaml
-            base_version=$(get_snapshot_info "$package" "base_version")
+            local snap_base
+            snap_base=$(get_snapshot_info "$package" "base_version")
+            base_version="$snap_base"
             log_info "  Base version (from snapshot): $base_version"
+
+            # If a stable package is configured for this git package, prefer a newer
+            # tagged release as the base when it has moved past the snapshot base.
+            local stable_pkg
+            stable_pkg=$(echo "$config" | yq eval '.base_version.from_stable // ""' -)
+            if [[ -n "$stable_pkg" ]]; then
+                local stable_repo
+                stable_repo=$(get_upstream_repo "$stable_pkg")
+
+                if [[ -n "$stable_repo" ]]; then
+                    local latest_release_ver
+                    latest_release_ver=$(get_latest_release "$stable_repo" 2>/dev/null || echo "")
+
+                    if [[ -n "$latest_release_ver" ]] && \
+                       [[ "$(printf '%s\n' "$latest_release_ver" "$snap_base" | sort -V | tail -1)" != "$snap_base" ]]; then
+                        log_info "  Release override: $latest_release_ver is newer than snapshot base $snap_base → using tagged release as base"
+                        base_version="$latest_release_ver"
+                    fi
+                fi
+            fi
 
         elif [[ "$base_version_source" =~ ^stable:(.+)$ ]]; then
             # Get from stable package
@@ -164,20 +186,18 @@ check_package_updates() {
             local stable_repo=$(get_upstream_repo "$stable_pkg")
 
             if [[ -z "$stable_repo" ]]; then
-                log_warn "Could not find upstream repo for stable package: $stable_pkg"
-                base_version=$(echo "$config" | yq eval '.base_version.fallback' -)
-                log_warn "Using fallback: $base_version"
-            else
-                base_version=$(get_latest_release "$stable_repo" 2>/dev/null || echo "")
-
-                if [[ -z "$base_version" ]]; then
-                    # Fall back to config fallback
-                    base_version=$(echo "$config" | yq eval '.base_version.fallback' -)
-                    log_warn "Could not get stable version from $stable_repo, using fallback: $base_version"
-                else
-                    log_info "  Base version (from $stable_pkg): $base_version"
-                fi
+                log_error "Could not find upstream repo for stable package: $stable_pkg"
+                return 1
             fi
+
+            base_version=$(get_latest_release "$stable_repo" 2>/dev/null || echo "")
+
+            if [[ -z "$base_version" ]]; then
+                log_error "$package: Failed to fetch latest release for $stable_pkg (required for git base_version)"
+                return 1
+            fi
+
+            log_info "  Base version (from $stable_pkg): $base_version"
 
         elif [[ "$base_version_source" =~ ^fallback:(.+)$ ]]; then
             base_version="${BASH_REMATCH[1]}"

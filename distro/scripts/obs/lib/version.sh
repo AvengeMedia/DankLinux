@@ -94,22 +94,24 @@ increment_db_version() {
     echo "${base}.db${new_db}"
 }
 
-# Compare git versions by commit hash (ignores db suffix)
+# Compare git versions by base and commit hash (ignores db suffix)
 compare_git_versions() {
     local version1="$1"
     local version2="$2"
 
     local hash1=$(extract_commit_hash "$version1")
     local hash2=$(extract_commit_hash "$version2")
+    local base1=$(extract_base_version "$version1" "git")
+    local base2=$(extract_base_version "$version2" "git")
 
-    if [[ -z "$hash1" || -z "$hash2" ]]; then
-        log_error "Failed to extract commit hashes for comparison"
-        log_error "  Version 1: $version1 -> hash: $hash1"
-        log_error "  Version 2: $version2 -> hash: $hash2"
+    if [[ -z "$hash1" || -z "$hash2" || -z "$base1" || -z "$base2" ]]; then
+        log_error "Failed to extract components for git version comparison"
+        log_error "  Version 1: $version1 -> base: $base1 hash: $hash1"
+        log_error "  Version 2: $version2 -> base: $base2 hash: $hash2"
         return 1
     fi
 
-    if [[ "$hash1" == "$hash2" ]]; then
+    if [[ "$hash1" == "$hash2" && "$base1" == "$base2" ]]; then
         echo "equal"
     else
         echo "different"

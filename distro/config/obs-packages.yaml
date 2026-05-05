@@ -181,7 +181,6 @@ packages:
       branch: main
     base_version:
       from_stable: niri
-      fallback: "25.11"
     distros:
       - debian
       - opensuse
@@ -202,7 +201,6 @@ packages:
     base_version:
       from_snapshots: true  # Check snapshots.yaml for quickshell stable commit
       from_stable: quickshell
-      fallback: "0.2.1"
     distros:
       - debian
       - opensuse
@@ -224,7 +222,6 @@ packages:
       branch: main
     base_version:
       from_stable: xwayland-satellite
-      fallback: "0.8"
     distros:
       - debian
       - opensuse
