@@ -37,78 +37,86 @@ on:
 
 jobs:
   check-updates:
-    name: Check for package updates
+    name: Check package/series updates
     runs-on: ubuntu-latest
-    
-    permissions:
-      contents: write
-    
+
     outputs:
       has_updates: ${{ steps.check.outputs.has_updates }}
-      updated_packages: ${{ steps.check.outputs.updated_packages }}
-    
+      targets: ${{ steps.check.outputs.targets }}
+      targets_json: ${{ steps.check.outputs.targets_json }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      
+
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq curl git
-
-          # Install yq for reading snapshots.yaml
+          sudo apt-get install -y jq curl git dpkg-dev
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
-      
+
       - name: Check for updates
         id: check
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           chmod +x distro/scripts/ppa/*.sh distro/scripts/common/*.sh
-          
-          # Check for updates (PPA uses distro/ubuntu by default)
-          UPDATED=$(distro/scripts/ppa/debian-update.sh 2>&1 | tee /dev/stderr | tail -1)
-          
-          if [ -n "$UPDATED" ] && [ "$UPDATED" != " " ]; then
-            echo "has_updates=true" >> $GITHUB_OUTPUT
-            # Convert space-separated to comma-separated for consistency
-            UPDATED_CSV=$(echo "$UPDATED" | tr ' ' ',')
-            echo "updated_packages=$UPDATED_CSV" >> $GITHUB_OUTPUT
-            echo "📋 Updates found: $UPDATED"
+
+          PACKAGE="${{ github.event.inputs.package }}"
+          FORCE_UPLOAD="${{ github.event.inputs.force_upload }}"
+          REBUILD_RELEASE="${{ github.event.inputs.rebuild_release }}"
+
+          if [[ -z "$PACKAGE" ]]; then
+            PACKAGE="auto"
+          fi
+
+          ARGS=(--package "$PACKAGE" --json)
+          if [[ "$FORCE_UPLOAD" == "true" ]]; then
+            ARGS+=(--force)
+          fi
+          if [[ -n "$REBUILD_RELEASE" ]]; then
+            ARGS+=(--rebuild "$REBUILD_RELEASE")
+          fi
+
+          TARGETS_JSON=$(distro/scripts/ppa/ppa-sync-plan.sh "${ARGS[@]}" 2> ppa-audit.log)
+          cat ppa-audit.log
+
+          TARGETS=$(echo "$TARGETS_JSON" | jq -r 'join(" ")')
+          if [[ "$TARGETS_JSON" != "[]" ]]; then
+            echo "has_updates=true" >> "$GITHUB_OUTPUT"
+            echo "targets=$TARGETS" >> "$GITHUB_OUTPUT"
+            echo "targets_json=$TARGETS_JSON" >> "$GITHUB_OUTPUT"
+            echo "Package/series targets: $TARGETS"
           else
-            echo "has_updates=false" >> $GITHUB_OUTPUT
-            echo "updated_packages=" >> $GITHUB_OUTPUT
-            echo "📋 No updates found"
+            echo "has_updates=false" >> "$GITHUB_OUTPUT"
+            echo "targets=" >> "$GITHUB_OUTPUT"
+            echo "targets_json=[]" >> "$GITHUB_OUTPUT"
+            echo "No package/series uploads needed"
           fi
 
   upload-ppa:
-    name: Upload to PPA
+    name: Upload ${{ matrix.target }}
     needs: check-updates
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    if: |
-      github.event.inputs.force_upload == 'true' ||
-      (needs.check-updates.outputs.has_updates == 'true' && needs.check-updates.outputs.updated_packages != '')
-    
+    if: needs.check-updates.outputs.has_updates == 'true'
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJson(needs.check-updates.outputs.targets_json) }}
+    concurrency:
+      group: ppa-danklinux-${{ matrix.target }}
+      cancel-in-progress: false
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-
-
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      
       - name: Install build dependencies
         run: |
           sudo apt-get update
@@ -119,115 +127,36 @@ jobs:
             lftp \
             build-essential \
             fakeroot \
-            dpkg-dev
-      
+            dpkg-dev \
+            jq \
+            curl \
+            git
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
       - name: Configure GPG
         env:
           GPG_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         run: |
           echo "$GPG_KEY" | gpg --import
           GPG_KEY_ID=$(gpg --list-secret-keys --keyid-format LONG | grep sec | awk '{print $2}' | cut -d'/' -f2)
-          echo "DEBSIGN_KEYID=$GPG_KEY_ID" >> $GITHUB_ENV
-      
-      - name: Determine packages to upload
-        id: packages
-        run: |
-          if [[ "${{ github.event.inputs.force_upload }}" == "true" ]]; then
-            PKG="${{ github.event.inputs.package }}"
-            if [[ "$PKG" == "auto" ]]; then
-              PACKAGES="cliphist ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git"
-            else
-              PACKAGES="$PKG"
-            fi
-            echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
-            echo "🚀 Force upload: $PACKAGES"
-          elif [[ -n "${{ github.event.inputs.package }}" && "${{ github.event.inputs.package }}" != "auto" ]]; then
-            # Manual package selection should respect change detection
-            SELECTED_PKG="${{ github.event.inputs.package }}"
-            UPDATED_PKG="${{ needs.check-updates.outputs.updated_packages }}"
+          echo "DEBSIGN_KEYID=$GPG_KEY_ID" >> "$GITHUB_ENV"
 
-            # Check if manually selected package is in the updated list
-            if [[ "$UPDATED_PKG" == *"$SELECTED_PKG"* ]]; then
-              echo "packages=$SELECTED_PKG" >> $GITHUB_OUTPUT
-              echo "📦 Manual selection (has updates): $SELECTED_PKG"
-            else
-              echo "packages=" >> $GITHUB_OUTPUT
-              echo "⚠️ Manual selection '$SELECTED_PKG' has no updates - skipping (use force_upload to override)"
-            fi
-          elif [[ "${{ needs.check-updates.outputs.has_updates }}" == "true" ]]; then
-            # Upload only updated packages
-            UPDATED="${{ needs.check-updates.outputs.updated_packages }}"
-            if [[ -n "$UPDATED" ]]; then
-              # Convert comma-separated to space-separated
-              PACKAGES=$(echo "$UPDATED" | tr ',' ' ')
-              echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
-              echo "✨ Uploading updated packages: $PACKAGES"
-            else
-              PACKAGES="cliphist ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git"
-              echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
-            fi
-          else
-            PACKAGES="cliphist ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git"
-            echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Upload to PPA
+      - name: Upload target
         env:
-          REBUILD_RELEASE: ${{ github.event.inputs.rebuild_release }}
+          TARGET: ${{ matrix.target }}
         run: |
-          PACKAGES="${{ steps.packages.outputs.packages }}"
-          
-          for pkg in $PACKAGES; do
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "Uploading $pkg to PPA..."
-            if [ -n "$REBUILD_RELEASE" ]; then
-              echo "🔄 Using rebuild release number: ppa$REBUILD_RELEASE"
-            fi
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            if ! bash distro/scripts/ppa/ppa-upload.sh "$pkg" danklinux "" ${REBUILD_RELEASE:+"$REBUILD_RELEASE"}; then
-              echo "::error::Upload failed for $pkg"
-              exit 1
-            fi
-          done
-      
-      - name: Get changed packages
-        id: changed-packages
-        run: |
-          # Check if there are any changelog changes to commit
-          if git diff --exit-code distro/ubuntu/ >/dev/null 2>&1; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "📋 No changelog changes to commit"
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            # Get list of changed packages for commit message (deduplicate)
-            CHANGED=$(git diff --name-only distro/ubuntu/ | grep 'debian/changelog' | sed 's|/debian/changelog||' | xargs -I{} basename {} | sort -u | tr '\n' ',' | sed 's/,$//')
-            echo "packages=$CHANGED" >> $GITHUB_OUTPUT
-            echo "📋 Changed packages: $CHANGED"
-            echo "📋 Debug - Changed files:"
-            git diff --name-only distro/ubuntu/ | grep 'debian/changelog' || echo "No changelog files found"
-          fi
+          IFS=':' read -r PACKAGE UBUNTU_SERIES PPA_NUM <<< "$TARGET"
 
-      - name: Commit changelog changes
-        if: steps.changed-packages.outputs.has_changes == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add distro/ubuntu/*/debian/changelog
-          git commit -m "ci: Auto-update PPA packages [${{ steps.changed-packages.outputs.packages }}]" -m "🤖 Automated by GitHub Actions"
-          git pull --rebase origin master
-          git push
-      
+          echo "Uploading $PACKAGE to $UBUNTU_SERIES with ppa$PPA_NUM"
+          bash distro/scripts/ppa/ppa-upload.sh "$PACKAGE" danklinux "$UBUNTU_SERIES" "$PPA_NUM"
+
       - name: Summary
+        if: always()
         run: |
-          echo "### PPA Package Upload Complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [[ "${{ needs.check-updates.outputs.has_updates }}" == "true" ]]; then
-            echo "- **Updated Packages**: ${{ needs.check-updates.outputs.updated_packages }}" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "- **Uploaded Packages**: ${{ steps.packages.outputs.packages }}" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          echo "- **PPA**: https://launchpad.net/~avengemedia/+archive/ubuntu/danklinux/+packages" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Builds will appear once Launchpad processes the uploads." >> $GITHUB_STEP_SUMMARY
+          echo "### PPA Package Upload" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Target:** ${{ matrix.target }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **PPA:** https://launchpad.net/~avengemedia/+archive/ubuntu/danklinux/+packages" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Launchpad build state is checked separately after upload." >> "$GITHUB_STEP_SUMMARY"

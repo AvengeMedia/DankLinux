@@ -25,7 +25,7 @@ gh_curl() {
         fi
         
         if [ -n "$response" ] && echo "$response" | jq -e . >/dev/null 2>&1; then
-            if echo "$response" | jq -e '.message // empty' | grep -q "API rate limit exceeded"; then
+            if echo "$response" | jq -e 'if type == "object" then (.message // empty) else empty end' | grep -q "API rate limit exceeded"; then
                 echo "Error: GitHub API rate limit exceeded" >&2
                 return 1
             fi

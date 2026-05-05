@@ -24,12 +24,14 @@ done
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+source "$SCRIPT_DIR/changelog-dist.sh"
 
 # Default base directory
 if [ -z "$BASE_DIR" ]; then
     BASE_DIR="distro/ubuntu"
 fi
 BASE_DIR="$REPO_ROOT/$BASE_DIR"
+DISTRO_SERIES_LIST=(questing resolute)
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -106,9 +108,8 @@ get_git_info() {
 }
 
 get_changelog_version() {
-    local changelog="$1/debian/changelog"
-    [ ! -f "$changelog" ] && return
-    head -1 "$changelog" | sed -n 's/^[^ ]* (\([^)]*\)).*/\1/p'
+    local package_dir="$1"
+    changelog_effective_version "$package_dir"
 }
 
 extract_git_commit() {
@@ -157,15 +158,29 @@ update_changelog() {
     
     local temp_changelog
     temp_changelog=$(mktemp)
-    {
-        echo "$source_name ($new_version) unstable; urgency=medium"
-        echo ""
-        echo "  * $message"
-        echo ""
-        echo " -- Avenge Media <AvengeMedia.US@gmail.com>  $(date -R)"
-        echo ""
-        cat "$changelog"
-    } > "$temp_changelog"
+    if [[ "$package_dir" == "$REPO_ROOT/distro/ubuntu/"* ]]; then
+        {
+            for distro_series in "${DISTRO_SERIES_LIST[@]}"; do
+                echo "$source_name ($new_version) $distro_series; urgency=medium"
+                echo ""
+                echo "  * $message"
+                echo ""
+                echo " -- Avenge Media <AvengeMedia.US@gmail.com>  $(date -R)"
+                echo ""
+            done
+            cat "$changelog"
+        } > "$temp_changelog"
+    else
+        {
+            echo "$source_name ($new_version) unstable; urgency=medium"
+            echo ""
+            echo "  * $message"
+            echo ""
+            echo " -- Avenge Media <AvengeMedia.US@gmail.com>  $(date -R)"
+            echo ""
+            cat "$changelog"
+        } > "$temp_changelog"
+    fi
     
     mv "$temp_changelog" "$changelog"
     success "   Updated changelog to $new_version"

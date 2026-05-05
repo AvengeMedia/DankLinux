@@ -106,6 +106,37 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+source "$SCRIPT_DIR/changelog-dist.sh"
+
+select_changelog_series() {
+    local changelog="debian/changelog"
+    local series_version current_version current_dist source_name maintainer timestamp
+
+    series_version="$(get_changelog_version_for_distribution "$changelog" "$UBUNTU_SERIES" || true)"
+    [ -z "$series_version" ] && return 0
+
+    current_version="$(dpkg-parsechangelog -S Version 2>/dev/null || true)"
+    current_dist="$(dpkg-parsechangelog -S Distribution 2>/dev/null || true)"
+    if [[ "$current_version" == "$series_version" && "$current_dist" == "$UBUNTU_SERIES" ]]; then
+        return 0
+    fi
+
+    source_name="$(dpkg-parsechangelog -S Source)"
+    maintainer="$(dpkg-parsechangelog -S Maintainer)"
+    timestamp="$(date -R)"
+
+    info "Selecting changelog stanza for ${UBUNTU_SERIES}: ${series_version}"
+    cat > debian/changelog.new << EOF
+${source_name} (${series_version}) ${UBUNTU_SERIES}; urgency=medium
+
+  * Target ${UBUNTU_SERIES} from dual-series changelog
+
+ -- ${maintainer}  ${timestamp}
+
+EOF
+    cat "$changelog" >> debian/changelog.new
+    mv debian/changelog.new "$changelog"
+}
 
 if [[ ! -d "$REPO_ROOT/distro/ubuntu" ]]; then
     error "Cannot find distro/ubuntu directory. Run from repository root."
@@ -293,6 +324,7 @@ mkdir -p "$BUILD_DIR"
 cp -r "$PACKAGE_DIR/debian" "$BUILD_DIR/"
 
 cd "$BUILD_DIR"
+select_changelog_series
 CHANGELOG_VERSION=$(dpkg-parsechangelog -S Version)
 SOURCE_NAME=$(dpkg-parsechangelog -S Source)
 
@@ -635,8 +667,16 @@ elif [ -n "$GIT_REPO" ] && [ "${SKIP_VERSION_UPDATE:-false}" != "true" ]; then
     if [ "$PACKAGE_NAME" = "quickshell" ]; then
         if [[ "$CURRENT_VERSION" =~ \+snapshot([0-9]+)\.([a-f0-9]+) ]] || [[ "$CURRENT_VERSION" =~ ~snapshot([0-9]+)\.([a-f0-9]+) ]] || \
            [[ "$CURRENT_VERSION" =~ \+pin([0-9]+)\.([a-f0-9]+) ]] || [[ "$CURRENT_VERSION" =~ ~pin([0-9]+)\.([a-f0-9]+) ]]; then
-            info "Detected quickshell snapshot in changelog ($CURRENT_VERSION), preserving version"
-            SKIP_VERSION_UPDATE=true
+            SNAPSHOT_BASE=$(echo "$CURRENT_VERSION" | sed -E 's/^([0-9]+(\.[0-9]+)*).*/\1/')
+            LATEST_TAG=$(get_latest_tag "$GIT_REPO")
+            if [[ -n "$LATEST_TAG" ]] && dpkg --compare-versions "$LATEST_TAG" gt "$SNAPSHOT_BASE"; then
+                info "Detected quickshell snapshot ($CURRENT_VERSION), but stable $LATEST_TAG is newer than $SNAPSHOT_BASE"
+                info "Transitioning quickshell back to stable release packaging"
+                SKIP_VERSION_UPDATE=false
+            else
+                info "Detected quickshell snapshot in changelog ($CURRENT_VERSION), preserving version"
+                SKIP_VERSION_UPDATE=true
+            fi
         fi
     fi
 
@@ -1307,38 +1347,52 @@ if yes | DEBIAN_FRONTEND=noninteractive debuild -S $DEBUILD_SOURCE_FLAG -d; then
         info "  - $BUILDINFO"
         info "  - $CHANGES_BASENAME"
         echo
+
+        if [[ -n "${GITHUB_ACTIONS:-}" || -n "${CI:-}" ]] && command -v dput >/dev/null 2>&1; then
+            info "Using dput for CI upload"
+            if dput "ppa:avengemedia/$PPA_NAME" "$CHANGES_FILE"; then
+                echo
+                success "Upload successful!"
+                info "Monitor build progress at:"
+                echo "  https://launchpad.net/~avengemedia/+archive/ubuntu/$PPA_NAME/+packages"
+            else
+                error "dput upload failed!"
+                exit 1
+            fi
+        else
         
-        # Use lftp for upload (works on Fedora where dput is broken)
-        LFTP_SCRIPT=$(mktemp "$TEMP_BASE/ppa_lftp_XXXXXX")
+            # Use lftp locally (works on Fedora where dput is broken)
+            LFTP_SCRIPT=$(mktemp "$TEMP_BASE/ppa_lftp_XXXXXX")
         
-        # Build upload commands
-        UPLOAD_COMMANDS="cd ~avengemedia/ubuntu/$PPA_NAME/
+            # Build upload commands
+            UPLOAD_COMMANDS="cd ~avengemedia/ubuntu/$PPA_NAME/
 lcd $TEMP_DIR
 mput $UPLOAD_TARBALL
 mput $DSC_FILE"
 
-        if [ -f "$TEMP_DIR/$DEBIAN_TARBALL" ]; then
-            UPLOAD_COMMANDS="$UPLOAD_COMMANDS
+            if [ -f "$TEMP_DIR/$DEBIAN_TARBALL" ]; then
+                UPLOAD_COMMANDS="$UPLOAD_COMMANDS
 mput $DEBIAN_TARBALL"
-        fi
+            fi
         
-        UPLOAD_COMMANDS="$UPLOAD_COMMANDS
+            UPLOAD_COMMANDS="$UPLOAD_COMMANDS
 mput $BUILDINFO
 mput $CHANGES_BASENAME
 bye"
         
-        echo "$UPLOAD_COMMANDS" > "$LFTP_SCRIPT"
+            echo "$UPLOAD_COMMANDS" > "$LFTP_SCRIPT"
         
-        if lftp -d ftp://anonymous:@ppa.launchpad.net < "$LFTP_SCRIPT"; then
-            rm -f "$LFTP_SCRIPT"
-            echo
-            success "Upload successful!"
-            info "Monitor build progress at:"
-            echo "  https://launchpad.net/~avengemedia/+archive/ubuntu/$PPA_NAME/+packages"
-        else
-            rm -f "$LFTP_SCRIPT"
-            error "Upload failed!"
-            exit 1
+            if lftp -d ftp://anonymous:@ppa.launchpad.net < "$LFTP_SCRIPT"; then
+                rm -f "$LFTP_SCRIPT"
+                echo
+                success "Upload successful!"
+                info "Monitor build progress at:"
+                echo "  https://launchpad.net/~avengemedia/+archive/ubuntu/$PPA_NAME/+packages"
+            else
+                rm -f "$LFTP_SCRIPT"
+                error "Upload failed!"
+                exit 1
+            fi
         fi
     else
         info "Build-only mode, skipping upload"
