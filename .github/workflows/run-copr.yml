@@ -7,11 +7,6 @@ on:
 
   workflow_dispatch:
     inputs:
-      trigger_copr:
-        description: 'After updates, trigger COPR builds (off = commit spec changes only)'
-        required: false
-        default: true
-        type: boolean
       package:
         description: 'Package to rebuild (leave empty to auto-detect changes)'
         required: false
@@ -30,7 +25,7 @@ on:
           - xwayland-satellite-git
         default: ''
       rebuild_release:
-        description: 'RPM release bumps via rpmdev-bumpspec (requires package). Empty = only copr-update changes commit specs. Example: 1 = one changelog/release bump so COPR sees a new NVR.'
+        description: "Release number for COPR rebuilds (e.g., 2, 3, 4)."
         required: false
         default: ''
 
@@ -134,12 +129,12 @@ jobs:
           echo "=== DEBUG OUTPUTS ==="
           echo "has_changes: ${{ steps.update.outputs.has_changes }}"
           echo "spec_changes: ${{ steps.check_push.outputs.spec_changes }}"
-          echo "trigger_copr: ${{ github.event.inputs.trigger_copr }}"
+          echo "package: ${{ github.event.inputs.package }}"
           echo "rebuild_release: ${{ github.event.inputs.rebuild_release }}"
           echo "event_name: ${{ github.event_name }}"
           echo ""
           echo "Trigger logic:"
-          echo "  - Run COPR triggers if: trigger_copr != false AND (has_changes OR spec_changes)"
+          echo "  - Run COPR triggers if: has_changes OR spec_changes"
           echo "===================="
 
       - name: Commit and push changes
@@ -192,11 +187,8 @@ jobs:
     needs: update-packages
     runs-on: ubuntu-latest
     if: |
-      (github.event_name != 'workflow_dispatch' || github.event.inputs.trigger_copr != false) &&
-      (
-        needs.update-packages.outputs.has_changes == 'true' ||
-        needs.update-packages.outputs.spec_changes == 'true'
-      )
+      needs.update-packages.outputs.has_changes == 'true' ||
+      needs.update-packages.outputs.spec_changes == 'true'
 
     steps:
       - name: Checkout repository
