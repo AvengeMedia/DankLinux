@@ -20,14 +20,6 @@ on:
           - xwayland-satellite
           - xwayland-satellite-git
         default: 'auto'
-      force_upload:
-        description: 'Force upload without version check'
-        required: false
-        default: 'false'
-        type: choice
-        options:
-          - 'false'
-          - 'true'
       rebuild_release:
         description: 'Release number for rebuilds (e.g., 2, 3, 4 for ppa2, ppa3, ppa4)'
         required: false
@@ -66,7 +58,6 @@ jobs:
           chmod +x distro/scripts/ppa/*.sh distro/scripts/common/*.sh
 
           PACKAGE="${{ github.event.inputs.package }}"
-          FORCE_UPLOAD="${{ github.event.inputs.force_upload }}"
           REBUILD_RELEASE="${{ github.event.inputs.rebuild_release }}"
 
           if [[ -z "$PACKAGE" ]]; then
@@ -74,9 +65,6 @@ jobs:
           fi
 
           ARGS=(--package "$PACKAGE" --json)
-          if [[ "$FORCE_UPLOAD" == "true" ]]; then
-            ARGS+=(--force)
-          fi
           if [[ -n "$REBUILD_RELEASE" ]]; then
             ARGS+=(--rebuild "$REBUILD_RELEASE")
           fi
