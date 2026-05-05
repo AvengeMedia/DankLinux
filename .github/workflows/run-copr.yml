@@ -44,6 +44,8 @@ jobs:
   update-packages:
     name: Check for package updates
     runs-on: ubuntu-latest
+    container:
+      image: fedora:44
 
     permissions:
       contents: write
@@ -53,6 +55,12 @@ jobs:
       spec_changes: ${{ steps.check_push.outputs.spec_changes }}
 
     steps:
+      - name: Install dependencies
+        run: |
+          dnf install -y jq curl git rpmdevtools wget
+          wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          chmod +x /usr/local/bin/yq
+
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
@@ -62,15 +70,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq curl git rpmdevtools
-
-          # Install yq for reading snapshots.yaml
-          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-          sudo chmod +x /usr/local/bin/yq
 
       - name: Run update script
         id: update
