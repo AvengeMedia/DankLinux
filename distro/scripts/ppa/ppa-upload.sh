@@ -260,8 +260,13 @@ setup_launchpad_sftp() {
     printf '%s\n' "$LAUNCHPAD_SSH_PRIVATE_KEY" > "$key_file"
     chmod 600 "$key_file"
 
-    ssh-keyscan -H ppa.launchpad.net >> "$ssh_dir/known_hosts" 2>/dev/null
-    chmod 600 "$ssh_dir/known_hosts"
+    local strict_host_key_checking="yes"
+    if ssh-keyscan -H ppa.launchpad.net >> "$ssh_dir/known_hosts" 2>/dev/null; then
+        chmod 600 "$ssh_dir/known_hosts"
+    else
+        warn "Could not prefetch ppa.launchpad.net SSH host key; allowing OpenSSH to trust it on first SFTP connection"
+        strict_host_key_checking="accept-new"
+    fi
 
     cat > "$ssh_dir/config" <<EOF
 Host ppa.launchpad.net
@@ -269,7 +274,7 @@ Host ppa.launchpad.net
     User ${login}
     IdentityFile ${key_file}
     IdentitiesOnly yes
-    StrictHostKeyChecking yes
+    StrictHostKeyChecking ${strict_host_key_checking}
 EOF
     chmod 600 "$ssh_dir/config"
 }
