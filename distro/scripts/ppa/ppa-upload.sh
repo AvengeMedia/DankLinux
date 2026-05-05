@@ -1349,13 +1349,26 @@ if yes | DEBIAN_FRONTEND=noninteractive debuild -S $DEBUILD_SOURCE_FLAG -d; then
         echo
 
         if [[ -n "${GITHUB_ACTIONS:-}" || -n "${CI:-}" ]] && command -v dput >/dev/null 2>&1; then
-            info "Using dput for CI upload"
-            if dput "ppa:avengemedia/$PPA_NAME" "$CHANGES_FILE"; then
+            DPUT_CONFIG=$(mktemp "$TEMP_BASE/ppa_dput_XXXXXX")
+            cat >"$DPUT_CONFIG" <<EOF
+[avengemedia-${PPA_NAME}]
+fqdn = ppa.launchpad.net
+method = ftp
+incoming = ~avengemedia/ubuntu/${PPA_NAME}/
+login = anonymous
+allow_unsigned_uploads = 0
+passive_ftp = 0
+EOF
+
+            info "Using dput for CI upload (active FTP)"
+            if dput -c "$DPUT_CONFIG" "avengemedia-${PPA_NAME}" "$CHANGES_FILE"; then
                 echo
                 success "Upload successful!"
                 info "Monitor build progress at:"
                 echo "  https://launchpad.net/~avengemedia/+archive/ubuntu/$PPA_NAME/+packages"
+                rm -f "$DPUT_CONFIG"
             else
+                rm -f "$DPUT_CONFIG"
                 error "dput upload failed!"
                 exit 1
             fi
