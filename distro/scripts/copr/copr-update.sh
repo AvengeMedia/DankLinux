@@ -167,25 +167,28 @@ echo "   Current commit: ${CURRENT_COMMIT:0:7} (date: $CURRENT_SNAPDATE)"
 COMMIT_INFO=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "commit")
 IFS='|' read -r LATEST_COMMIT LATEST_SHORT_COMMIT LATEST_SNAPDATE <<< "$COMMIT_INFO"
 
+REPO_COMMIT_TOTAL=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "repo_commit_total" 2>/dev/null || echo "")
+
 if [[ -n "$LATEST_COMMIT" ]]; then
     echo "   Latest commit:  ${LATEST_SHORT_COMMIT} (date: $LATEST_SNAPDATE)"
 
     if [[ "$CURRENT_COMMIT" != "$LATEST_COMMIT" ]]; then
         echo "   ✨ Update available: ${CURRENT_COMMIT:0:7} → ${LATEST_SHORT_COMMIT}"
 
-        # Get commit count via GitHub compare API — much faster than a full clone.
-        # ahead_by = how many commits the latest is ahead of our current spec commit.
-        CURRENT_COUNT=$(grep -oP '^%global commits\s+\K[0-9]+' "$SPEC_FILE" || echo "0")
-        COMPARE_DATA=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "compare" "$CURRENT_COMMIT" "$LATEST_COMMIT" 2>/dev/null || echo "")
-        if [[ -n "$COMPARE_DATA" ]]; then
-            AHEAD=$(echo "$COMPARE_DATA" | jq -r '.ahead_by // 0')
-            COMMIT_COUNT=$((CURRENT_COUNT + AHEAD))
+        if [[ -n "$REPO_COMMIT_TOTAL" && "$REPO_COMMIT_TOTAL" != "0" ]]; then
+            COMMIT_COUNT="$REPO_COMMIT_TOTAL"
+            echo "   Commit index (repo total, PPA-aligned): $COMMIT_COUNT"
         else
-            # Fallback: increment by 1 if compare API is unavailable
-            COMMIT_COUNT=$((CURRENT_COUNT + 1))
+            CURRENT_COUNT=$(grep -oP '^%global commits\s+\K[0-9]+' "$SPEC_FILE" || echo "0")
+            COMPARE_DATA=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "compare" "$CURRENT_COMMIT" "$LATEST_COMMIT" 2>/dev/null || echo "")
+            if [[ -n "$COMPARE_DATA" ]]; then
+                AHEAD=$(echo "$COMPARE_DATA" | jq -r '.ahead_by // 0')
+                COMMIT_COUNT=$((CURRENT_COUNT + AHEAD))
+            else
+                COMMIT_COUNT=$((CURRENT_COUNT + 1))
+            fi
+            echo "   Commit count: $COMMIT_COUNT (fallback delta from $CURRENT_COUNT)"
         fi
-
-        echo "   Commit count: $COMMIT_COUNT (was $CURRENT_COUNT, +$((COMMIT_COUNT - CURRENT_COUNT)) new)"
 
         # Update the spec file
         sed -i "s/^%global commit\s\+.*/%global commit      $LATEST_COMMIT/" "$SPEC_FILE"
@@ -195,6 +198,15 @@ if [[ -n "$LATEST_COMMIT" ]]; then
         UPDATED=$((UPDATED + 1))
         UPDATED_PACKAGES+=("quickshell-git: ${CURRENT_COMMIT:0:7} → ${LATEST_SHORT_COMMIT}")
     else
+        if [[ -n "$REPO_COMMIT_TOTAL" && "$REPO_COMMIT_TOTAL" != "0" ]]; then
+            CURRENT_COUNT=$(grep -oP '^%global commits\s+\K[0-9]+' "$SPEC_FILE" || echo "0")
+            if [[ "$CURRENT_COUNT" != "$REPO_COMMIT_TOTAL" ]]; then
+                echo "   ✨ Resync commit index: $CURRENT_COUNT → $REPO_COMMIT_TOTAL (PPA/GitHub total)"
+                sed -i "s/^%global commits\s\+.*/%global commits     $REPO_COMMIT_TOTAL/" "$SPEC_FILE"
+                UPDATED=$((UPDATED + 1))
+                UPDATED_PACKAGES+=("quickshell-git: commit index → $REPO_COMMIT_TOTAL")
+            fi
+        fi
         if [[ "$TAG_UPDATED" == true ]]; then
             echo "   ✓ Latest commit; %global tag synced to stable+patch"
         else

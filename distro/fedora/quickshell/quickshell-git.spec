@@ -2,7 +2,7 @@
 
 # Updated 2025-10-30: Added glib-2.0 dependency for new Polkit service
 %global commit      59e9c47b0eb48a9e4bcf9631fa062ee939bd2e83
-%global commits     819
+%global commits     815
 %global snapdate    20260504
 %global tag         0.3.1
 
@@ -101,10 +101,10 @@ Wayland and X11.
 %{_libdir}/qt6/qml/Quickshell
 
 %changelog
-* Tue May 05 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 0.3.1^819.git59e9c47-1.2
+* Tue May 05 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 0.3.1^815.git59e9c47-1.2
 - ci: COPR rebuild bump (workflow)
 
-* Tue May 05 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 0.3.1^819.git59e9c47-1.1
+* Tue May 05 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 0.3.1^815.git59e9c47-1.1
 - ci: COPR rebuild bump (workflow)
 
 %autochangelog

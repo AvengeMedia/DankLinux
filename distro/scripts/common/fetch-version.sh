@@ -4,6 +4,7 @@
 #   type=release              → prints the latest release/tag name
 #   type=commit               → prints COMMIT|SHORT|SNAPDATE for master HEAD
 #   type=compare <base> <head> → prints the raw compare API JSON (ahead_by etc.)
+#   type=repo_commit_total    → default-branch commit index (GitHub commits API last Link page; matches PPA debian-update)
 
 set -euo pipefail
 
@@ -80,6 +81,25 @@ elif [[ "$TYPE" == "compare" ]]; then
         exit 1
     fi
     gh_curl "https://api.github.com/repos/${REPO}/compare/${BASE}...${HEAD}" || exit 1
+elif [[ "$TYPE" == "repo_commit_total" ]]; then
+    # Same semantics as distro/scripts/ppa/debian-update.sh get_git_info (Link rel=last page).
+    url="https://api.github.com/repos/${REPO}/commits?per_page=1"
+    if [ -n "${GITHUB_TOKEN:-}" ]; then
+        headers=$(curl -sI -H "Authorization: token $GITHUB_TOKEN" "$url") || exit 1
+    else
+        headers=$(curl -sI "$url") || exit 1
+    fi
+    last_page=$(printf '%s\n' "$headers" | grep -i '^link:' | sed 's/.*page=\([0-9]*\)>; rel="last".*/\1/')
+    if [[ -n "$last_page" ]]; then
+        echo "$last_page"
+    else
+        data=$(gh_curl "$url") || exit 1
+        if echo "$data" | jq -e 'type == "array" and length > 0' >/dev/null 2>&1; then
+            echo "1"
+        else
+            echo "0"
+        fi
+    fi
 else
     echo "Error: Unknown type $TYPE" >&2
     exit 1
