@@ -117,6 +117,16 @@ extract_git_commit() {
     echo "$1" | sed -n 's/.*[~+]\(git\|pin\|snapshot\)[0-9]*\.\([a-f0-9]*\).*/\2/p'
 }
 
+# Match Fedora COPR: quickshell-git is versioned one patch above latest stable tag so apt prefers -git over quickshell.
+bump_patch_triplet() {
+    local v="$1"
+    if [[ "$v" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+        echo "${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
+    else
+        printf '%s\n' "$v"
+    fi
+}
+
 extract_release_version() {
     echo "$1" | sed 's/ppa[0-9]*$//' | sed 's/-[0-9]*$//'
 }
@@ -229,6 +239,11 @@ for pkg_info in "${PACKAGES[@]}"; do
         fi
         
         IFS=':' read -r latest_commit commit_count base_version <<< "$git_info"
+        if [ "$package" = "quickshell-git" ]; then
+            _bv_prev="$base_version"
+            base_version="$(bump_patch_triplet "$base_version")"
+            info "   quickshell-git base ahead of stable tag (${_bv_prev} → $base_version)"
+        fi
         info "   Latest: commit $latest_commit (#$commit_count), base: $base_version"
         
         if [ "${current_commit:0:8}" != "${latest_commit:0:8}" ]; then

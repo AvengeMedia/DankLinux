@@ -184,6 +184,13 @@ check_package_updates() {
             log_info "  Base version (fallback): $base_version"
         fi
 
+        # Same convention as PPA / Fedora COPR: quickshell-git is one patch above latest stable tag.
+        if [[ "$package" == "quickshell-git" && -n "$base_version" ]]; then
+            local _qs_base_prev="$base_version"
+            base_version=$(bump_patch_triplet "$base_version")
+            log_info "  quickshell-git OBS base ahead of stable tag (${_qs_base_prev} → ${base_version})"
+        fi
+
         # Build git version string (without .db suffix - only add that when building)
         upstream_version="${base_version}+git${commit_count}.${upstream_commit}"
         log_info "  Upstream version: $upstream_version"
@@ -367,6 +374,11 @@ EOF
             log_info "  $obs_hash → $upstream_hash"
             needs_update=true
             reason="new_commit"
+        elif [[ "$upstream_clean" != "$obs_clean" ]]; then
+            log_success "$package: Same commit, version string differs → NEEDS UPDATE"
+            log_info "  $obs_clean → $upstream_clean"
+            needs_update=true
+            reason="version_refresh"
         else
             log_info "$package: Already at latest commit ($upstream_hash) → UP TO DATE"
         fi

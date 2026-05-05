@@ -45,6 +45,17 @@ strip_db_suffixes() {
     echo "$version" | sed -E 's/(\.?db[0-9]+)+$//'
 }
 
+# Bump patch component X.Y.Z -> X.Y.(Z+1). Used for quickshell-git so OBS Debian versions sort
+# newer than stable quickshell when both track the same upstream release tag (matches PPA / Fedora tag).
+bump_patch_triplet() {
+    local v="$1"
+    if [[ "$v" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+        echo "${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
+    else
+        printf '%s\n' "$v"
+    fi
+}
+
 # Extract commit hash from git or snapshot (+git / +pin legacy / +snapshot) version
 extract_commit_hash() {
     local version="$1"

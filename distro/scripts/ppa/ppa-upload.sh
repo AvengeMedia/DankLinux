@@ -28,6 +28,17 @@ success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
+# quickshell-git uses latest upstream release tag as a baseline but bumps patch (+1) so the
+# resulting Debian version sorts strictly newer than stable `quickshell` at the same tag (matches Fedora COPR tag convention).
+bump_patch_triplet() {
+    local v="$1"
+    if [[ "$v" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+        echo "${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
+    else
+        printf '%s\n' "$v"
+    fi
+}
+
 # Choose temp directory: use /tmp in CI, ~/tmp locally (keeps artifacts out of repo)
 if [ -n "${GITHUB_ACTIONS:-}" ] || [ -n "${CI:-}" ]; then
     TEMP_BASE="/tmp"
@@ -589,6 +600,12 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
         fi
         
         success "Got commit info: $GIT_COMMIT_COUNT ($GIT_COMMIT_HASH), upstream: $UPSTREAM_VERSION"
+
+        if [ "$PACKAGE_NAME" = "quickshell-git" ]; then
+            _QS_PRE="$UPSTREAM_VERSION"
+            UPSTREAM_VERSION="$(bump_patch_triplet "$UPSTREAM_VERSION")"
+            info "quickshell-git Debian base ahead of stable tag (${_QS_PRE} → ${UPSTREAM_VERSION})"
+        fi
         
         info "Updating changelog with git commit info..."
         BASE_VERSION="${UPSTREAM_VERSION}+git${GIT_COMMIT_COUNT}.${GIT_COMMIT_HASH}"

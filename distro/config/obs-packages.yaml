@@ -198,6 +198,7 @@ packages:
     upstream:
       repo: quickshell-mirror/quickshell
       branch: master
+    # Debian/Ubuntu/OBS: obs-check-updates bumps patch (+1) after resolving base so -git sorts above stable quickshell (see bump_patch_triplet).
     base_version:
       from_snapshots: true  # Check snapshots.yaml for quickshell stable commit
       from_stable: quickshell

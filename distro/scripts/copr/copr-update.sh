@@ -6,6 +6,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 cd "$REPO_ROOT/distro/fedora"
 
+# Match PPA/OBS: -git RPM %%global tag is one patch above latest upstream stable release tag.
+bump_patch_triplet() {
+    local v="$1"
+    if [[ "$v" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+        echo "${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
+    else
+        printf '%s\n' "$v"
+    fi
+}
+
 # Track if any packages were updated
 UPDATED=0
 UPDATED_PACKAGES=()
@@ -130,6 +140,24 @@ echo "📦 Checking quickshell-git (development)..."
 
 SPEC_FILE="quickshell/quickshell-git.spec"
 
+# Sync %global tag with latest GitHub stable release + 1 patch (sorts above quickshell stable).
+TAG_UPDATED=false
+STABLE_REL_TAG=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "release" 2>/dev/null || echo "")
+STABLE_REL_VER="${STABLE_REL_TAG#v}"
+if [[ -n "$STABLE_REL_VER" ]]; then
+    DESIRED_GIT_TAG=$(bump_patch_triplet "$STABLE_REL_VER")
+    CURRENT_GIT_TAG=$(grep -oP '^%global tag\s+\K[0-9.]+' "$SPEC_FILE" || echo "")
+    if [[ -n "$DESIRED_GIT_TAG" && "$CURRENT_GIT_TAG" != "$DESIRED_GIT_TAG" ]]; then
+        echo "   ✨ %global tag (ahead of stable $STABLE_REL_VER): $CURRENT_GIT_TAG → $DESIRED_GIT_TAG"
+        sed -i "s/^%global tag\s\+.*/%global tag         $DESIRED_GIT_TAG/" "$SPEC_FILE"
+        TAG_UPDATED=true
+        UPDATED=$((UPDATED + 1))
+        UPDATED_PACKAGES+=("quickshell-git: tag $CURRENT_GIT_TAG → $DESIRED_GIT_TAG")
+    fi
+else
+    echo "   ⚠ Could not fetch stable release for tag sync (skipping %global tag bump)"
+fi
+
 # Get current commit from spec
 CURRENT_COMMIT=$(grep -oP '^%global commit\s+\K[a-f0-9]+' "$SPEC_FILE" || echo "unknown")
 CURRENT_SNAPDATE=$(grep -oP '^%global snapdate\s+\K[0-9]+' "$SPEC_FILE" || echo "unknown")
@@ -167,10 +195,46 @@ if [[ -n "$LATEST_COMMIT" ]]; then
         UPDATED=$((UPDATED + 1))
         UPDATED_PACKAGES+=("quickshell-git: ${CURRENT_COMMIT:0:7} → ${LATEST_SHORT_COMMIT}")
     else
-        echo "   ✓ Already up to date"
+        if [[ "$TAG_UPDATED" == true ]]; then
+            echo "   ✓ Latest commit; %global tag synced to stable+patch"
+        else
+            echo "   ✓ Already up to date"
+        fi
     fi
 else
     echo "   ⚠ Could not fetch latest commit"
+fi
+
+# ---------------------------------------------------------------------------
+# OpenSUSE quickshell-git: keep Version in sync with Fedora git spec (tag + commits + hash).
+# ---------------------------------------------------------------------------
+echo ""
+echo "📦 Syncing OpenSUSE quickshell-git.spec..."
+
+FEDORA_GIT_SPEC="$REPO_ROOT/distro/fedora/quickshell/quickshell-git.spec"
+OBS_SPEC="$REPO_ROOT/distro/opensuse/quickshell-git.spec"
+
+if [[ -f "$FEDORA_GIT_SPEC" && -f "$OBS_SPEC" ]]; then
+    FG_TAG=$(grep -oP '^%global tag\s+\K[0-9.]+' "$FEDORA_GIT_SPEC" || echo "")
+    FG_COMMIT=$(grep -oP '^%global commit\s+\K[a-f0-9]+' "$FEDORA_GIT_SPEC" || echo "")
+    FG_COMMITS=$(grep -oP '^%global commits\s+\K[0-9]+' "$FEDORA_GIT_SPEC" || echo "")
+    if [[ -n "$FG_TAG" && -n "$FG_COMMIT" && -n "$FG_COMMITS" ]]; then
+        SHORT_HASH="${FG_COMMIT:0:8}"
+        NEW_OBS_VER="${FG_TAG}+git${FG_COMMITS}.${SHORT_HASH}"
+        CUR_OBS_VER=$(grep -oP '^Version:\s+\K\S+' "$OBS_SPEC" || echo "")
+        if [[ "$CUR_OBS_VER" != "$NEW_OBS_VER" ]]; then
+            echo "   ✨ OpenSUSE Version: $CUR_OBS_VER → $NEW_OBS_VER"
+            sed -i "s/^Version:.*/Version:        $NEW_OBS_VER/" "$OBS_SPEC"
+            UPDATED=$((UPDATED + 1))
+            UPDATED_PACKAGES+=("opensuse/quickshell-git: $CUR_OBS_VER → $NEW_OBS_VER")
+        else
+            echo "   ✓ OpenSUSE Version already matches Fedora ($NEW_OBS_VER)"
+        fi
+    else
+        echo "   ⚠ Missing %global tag/commit/commits in Fedora spec; skip OpenSUSE sync"
+    fi
+else
+    echo "   ⚠ Fedora or OpenSUSE quickshell-git spec missing"
 fi
 
 # ============================================================================
