@@ -467,6 +467,78 @@ echo "   Current: 1.0 (manually versioned)"
 echo "   Skipping automatic updates for font file"
 
 # ============================================================================
+# Manual COPR RPM release versioning (workflow sets COPR_REBUILD_* env vars).
+# Same mapping as copr-trigger.sh package names.
+# ============================================================================
+_copr_bump_spec_release() {
+    local spec_rel="$1"
+    local spec_path="$REPO_ROOT/$spec_rel"
+    local i
+    if [[ ! -f "$spec_path" ]]; then
+        echo "::error::Spec missing: $spec_rel" >&2
+        exit 1
+    fi
+    for ((i = 0; i < COPR_REBUILD_COUNT; i++)); do
+        rpmdev-bumpspec -c "ci: COPR rebuild bump (workflow)" "$spec_path"
+    done
+    echo "✓ Bumped ${COPR_REBUILD_COUNT}x: $spec_rel"
+}
+
+if [[ -n "${COPR_REBUILD_COUNT:-}" || -n "${COPR_REBUILD_PACKAGE:-}" ]]; then
+    if [[ -z "${COPR_REBUILD_COUNT:-}" || -z "${COPR_REBUILD_PACKAGE:-}" ]]; then
+        echo "::error::Set both COPR_REBUILD_COUNT and COPR_REBUILD_PACKAGE or neither." >&2
+        exit 1
+    fi
+    if ! [[ "${COPR_REBUILD_COUNT}" =~ ^[1-9][0-9]*$ ]]; then
+        echo "::error::COPR_REBUILD_COUNT must be a positive integer (got: ${COPR_REBUILD_COUNT})" >&2
+        exit 1
+    fi
+    if ! command -v rpmdev-bumpspec &>/dev/null; then
+        echo "::error::rpmdev-bumpspec not found; install rpmdevtools" >&2
+        exit 1
+    fi
+
+    ALL_SPECS_BUMP=(
+        distro/fedora/quickshell/quickshell.spec
+        distro/fedora/quickshell/quickshell-git.spec
+        distro/fedora/dgop/dgop.spec
+        distro/fedora/cliphist/cliphist.spec
+        distro/fedora/matugen/matugen.spec
+        distro/fedora/breakpad/breakpad.spec
+        distro/fedora/ghostty/ghostty.spec
+        distro/fedora/fonts/material-symbols-fonts.spec
+        distro/fedora/danksearch/danksearch.spec
+        distro/fedora/cli11/cli11.spec
+        distro/fedora/qt6ct-kde/qt6ct-kde.spec
+        distro/fedora/cpptrace/cpptrace.spec
+    )
+
+    case "${COPR_REBUILD_PACKAGE}" in
+        quickshell) _copr_bump_spec_release distro/fedora/quickshell/quickshell.spec ;;
+        quickshell-git) _copr_bump_spec_release distro/fedora/quickshell/quickshell-git.spec ;;
+        dgop) _copr_bump_spec_release distro/fedora/dgop/dgop.spec ;;
+        cliphist) _copr_bump_spec_release distro/fedora/cliphist/cliphist.spec ;;
+        matugen) _copr_bump_spec_release distro/fedora/matugen/matugen.spec ;;
+        breakpad) _copr_bump_spec_release distro/fedora/breakpad/breakpad.spec ;;
+        ghostty) _copr_bump_spec_release distro/fedora/ghostty/ghostty.spec ;;
+        material-symbols-fonts) _copr_bump_spec_release distro/fedora/fonts/material-symbols-fonts.spec ;;
+        danksearch) _copr_bump_spec_release distro/fedora/danksearch/danksearch.spec ;;
+        cli11) _copr_bump_spec_release distro/fedora/cli11/cli11.spec ;;
+        qt6ct-kde) _copr_bump_spec_release distro/fedora/qt6ct-kde/qt6ct-kde.spec ;;
+        cpptrace) _copr_bump_spec_release distro/fedora/cpptrace/cpptrace.spec ;;
+        all)
+            for rel in "${ALL_SPECS_BUMP[@]}"; do
+                _copr_bump_spec_release "$rel"
+            done
+            ;;
+        *)
+            echo "::error::Unknown package '${COPR_REBUILD_PACKAGE}' for COPR rebuild bump (niri/niri-git have no specs here)." >&2
+            exit 1
+            ;;
+    esac
+fi
+
+# ============================================================================
 # Summary
 # ============================================================================
 echo ""

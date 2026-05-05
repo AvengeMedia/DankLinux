@@ -7,15 +7,11 @@ on:
 
   workflow_dispatch:
     inputs:
-      trigger_builds:
-        description: 'Trigger COPR builds'
+      trigger_copr:
+        description: 'After updates, trigger COPR builds (off = commit spec changes only)'
         required: false
-        default: 'auto'
-        type: choice
-        options:
-          - 'auto'
-          - 'force'
-          - 'false'
+        default: true
+        type: boolean
       package:
         description: 'Package to rebuild (leave empty to auto-detect changes)'
         required: false
@@ -32,6 +28,10 @@ on:
           - quickshell-git
           - xwayland-satellite
           - xwayland-satellite-git
+        default: ''
+      rebuild_release:
+        description: 'RPM release bumps via rpmdev-bumpspec (requires package). Empty = only copr-update changes commit specs. Example: 1 = one changelog/release bump so COPR sees a new NVR.'
+        required: false
         default: ''
 
   push:
@@ -71,7 +71,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq curl git
+          sudo apt-get install -y jq curl git rpmdevtools
 
           # Install yq for reading snapshots.yaml
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
@@ -79,6 +79,9 @@ jobs:
 
       - name: Run update script
         id: update
+        env:
+          COPR_REBUILD_COUNT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.rebuild_release || '' }}
+          COPR_REBUILD_PACKAGE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.package || '' }}
         run: |
           chmod +x distro/scripts/copr/*.sh distro/scripts/common/*.sh
           distro/scripts/copr/copr-update.sh | tee update-log.txt
@@ -131,12 +134,12 @@ jobs:
           echo "=== DEBUG OUTPUTS ==="
           echo "has_changes: ${{ steps.update.outputs.has_changes }}"
           echo "spec_changes: ${{ steps.check_push.outputs.spec_changes }}"
-          echo "trigger_builds: ${{ github.event.inputs.trigger_builds }}"
+          echo "trigger_copr: ${{ github.event.inputs.trigger_copr }}"
+          echo "rebuild_release: ${{ github.event.inputs.rebuild_release }}"
           echo "event_name: ${{ github.event_name }}"
           echo ""
           echo "Trigger logic:"
-          echo "  - Force build if: trigger_builds == 'force'"
-          echo "  - Auto build if: trigger_builds != 'false' AND (has_changes OR spec_changes OR schedule OR push)"
+          echo "  - Run COPR triggers if: trigger_copr != false AND (has_changes OR spec_changes)"
           echo "===================="
 
       - name: Commit and push changes
@@ -189,13 +192,10 @@ jobs:
     needs: update-packages
     runs-on: ubuntu-latest
     if: |
-      github.event.inputs.trigger_builds == 'force' ||
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.trigger_copr != false) &&
       (
-        github.event.inputs.trigger_builds != 'false' &&
-        (
-          needs.update-packages.outputs.has_changes == 'true' ||
-          needs.update-packages.outputs.spec_changes == 'true'
-        )
+        needs.update-packages.outputs.has_changes == 'true' ||
+        needs.update-packages.outputs.spec_changes == 'true'
       )
 
     steps:
