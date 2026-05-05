@@ -148,20 +148,26 @@ build_package() {
     local version=""
 
     if [[ -n "$REBUILD_NUM" ]]; then
-        # For rebuilds, get current version from OBS
-        bash "$SCRIPT_DIR/obs-check-updates.sh" --json "$pkg" > "$check_output" 2>&1 || true
+        # For rebuilds, still resolve upstream_version
+        bash "$SCRIPT_DIR/obs-check-updates.sh" --json "$pkg" > "$check_output" 2>&1
 
         # Extract only the JSON part (skip log messages)
-        local json_output=$(sed -n '/^\[/,/^\]/p' "$check_output")
-        version=$(echo "$json_output" | jq -r '.[0].obs_version // empty' 2>/dev/null)
+        local json_output
+        json_output=$(sed -n '/^\[/,/^\]/p' "$check_output")
+        local obs_version
+        obs_version=$(echo "$json_output" | jq -r '.[0].obs_version // empty' 2>/dev/null)
+        version=$(echo "$json_output" | jq -r '.[0].upstream_version // empty' 2>/dev/null)
 
         if [[ -z "$version" ]]; then
-            log_error "Cannot determine current version for rebuild"
+            log_error "Cannot determine upstream version for rebuild"
             rm -f "$check_output"
             return 1
         fi
 
-        log_info "Current OBS version: $version"
+        if [[ -n "$obs_version" ]]; then
+            log_info "Current OBS version: $obs_version"
+        fi
+        log_info "Resolved upstream version for rebuild: $version"
     else
         # Normal build: check for updates
         bash "$SCRIPT_DIR/obs-check-updates.sh" --json "$pkg" > "$check_output" 2>&1
