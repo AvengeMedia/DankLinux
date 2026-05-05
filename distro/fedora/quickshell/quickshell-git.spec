@@ -8,7 +8,7 @@
 
 Name:               quickshell-git
 Version:            %{tag}^%{commits}.git%(c=%{commit}; echo ${c:0:7})
-Release:            %autorelease.2
+Release:            %autorelease.5
 Summary:            Flexible QtQuick based desktop shell toolkit
 
 License:            LGPL-3.0-only AND GPL-3.0-only
@@ -101,6 +101,15 @@ Wayland and X11.
 %{_libdir}/qt6/qml/Quickshell
 
 %changelog
+* Tue May 05 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 0.3.1^815.git59e9c47-1.5
+- ci: COPR rebuild bump (workflow)
+
+* Tue May 05 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 0.3.1^815.git59e9c47-1.4
+- ci: COPR rebuild bump (workflow)
+
+* Tue May 05 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 0.3.1^815.git59e9c47-1.3
+- ci: COPR rebuild bump (workflow)
+
 * Tue May 05 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 0.3.1^815.git59e9c47-1.2
 - ci: COPR rebuild bump (workflow)
 
