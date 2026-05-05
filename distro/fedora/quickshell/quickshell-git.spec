@@ -5,6 +5,7 @@
 %global commits     815
 %global snapdate    20260504
 %global tag         0.3.1
+%global changelog_tag 0.3.0
 
 Name:               quickshell-git
 Version:            %{tag}^%{commits}.git%(c=%{commit}; echo ${c:0:7})
@@ -93,7 +94,7 @@ Wayland and X11.
 %doc BUILD.md
 %doc CONTRIBUTING.md
 %doc README.md
-%doc changelog/v%{tag}.md
+%doc changelog/v%{changelog_tag}.md
 %{_bindir}/qs
 %{_bindir}/quickshell
 %{_datadir}/applications/org.quickshell.desktop

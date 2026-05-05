@@ -147,12 +147,25 @@ STABLE_REL_VER="${STABLE_REL_TAG#v}"
 if [[ -n "$STABLE_REL_VER" ]]; then
     DESIRED_GIT_TAG=$(bump_patch_triplet "$STABLE_REL_VER")
     CURRENT_GIT_TAG=$(grep -oP '^%global tag\s+\K[0-9.]+' "$SPEC_FILE" || echo "")
+    CURRENT_CHANGELOG_TAG=$(grep -oP '^%global changelog_tag\s+\K[0-9.]+' "$SPEC_FILE" 2>/dev/null || echo "")
+
     if [[ -n "$DESIRED_GIT_TAG" && "$CURRENT_GIT_TAG" != "$DESIRED_GIT_TAG" ]]; then
         echo "   ✨ %global tag (ahead of stable $STABLE_REL_VER): $CURRENT_GIT_TAG → $DESIRED_GIT_TAG"
         sed -i "s/^%global tag\s\+.*/%global tag         $DESIRED_GIT_TAG/" "$SPEC_FILE"
         TAG_UPDATED=true
         UPDATED=$((UPDATED + 1))
         UPDATED_PACKAGES+=("quickshell-git: tag $CURRENT_GIT_TAG → $DESIRED_GIT_TAG")
+    fi
+
+    if [[ "$CURRENT_CHANGELOG_TAG" != "$STABLE_REL_VER" ]]; then
+        if grep -q '^%global changelog_tag' "$SPEC_FILE"; then
+            sed -i "s/^%global changelog_tag\s\+.*/%global changelog_tag $STABLE_REL_VER/" "$SPEC_FILE"
+        else
+            sed -i "/^%global tag /a %global changelog_tag $STABLE_REL_VER" "$SPEC_FILE"
+        fi
+        echo "   ✨ %global changelog_tag (upstream release doc path): ${CURRENT_CHANGELOG_TAG:-∅} → $STABLE_REL_VER"
+        UPDATED=$((UPDATED + 1))
+        UPDATED_PACKAGES+=("quickshell-git: changelog_tag → $STABLE_REL_VER")
     fi
 else
     echo "   ⚠ Could not fetch stable release for tag sync (skipping %global tag bump)"
