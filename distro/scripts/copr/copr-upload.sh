@@ -43,7 +43,7 @@ if [[ $# -lt 1 ]]; then
     echo ""
     echo "Available packages:"
     echo "  cli11, quickshell, quickshell-git, dgop, cliphist, matugen,"
-    echo "  breakpad, ghostty, danksearch, material-symbols-fonts"
+    echo "  breakpad, ghostty, danksearch, material-symbols-fonts, qt6ct-kde"
     exit 1
 fi
 
@@ -115,6 +115,14 @@ else
         fi
     fi
 fi
+
+# Local patches (spectool only fetches remote Source/Patch URLs)
+SPEC_DIR=$(dirname "$SPEC_FILE")
+shopt -s nullglob
+for patch in "$SPEC_DIR"/*.patch; do
+    cp "$patch" "$HOME_RPMBUILD/SOURCES/"
+    info "Copied patch: $(basename "$patch")"
+done
 
 # Build SRPM
 info "Building SRPM with rpmbuild..."
