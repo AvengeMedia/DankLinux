@@ -58,6 +58,7 @@ BUILD_BREAKPAD=false
 BUILD_GHOSTTY=false
 BUILD_MATERIAL_SYMBOLS=false
 BUILD_DANKSEARCH=false
+BUILD_DANKCALENDAR_GIT=false
 BUILD_CLI11=false
 BUILD_QT6CT_KDE=false
 
@@ -73,6 +74,7 @@ if [[ "${FORCE_PACKAGE:-}" == "all" ]]; then
     BUILD_GHOSTTY=true
     BUILD_MATERIAL_SYMBOLS=true
     BUILD_DANKSEARCH=true
+    BUILD_DANKCALENDAR_GIT=true
     BUILD_CLI11=true
     BUILD_QT6CT_KDE=true
 fi
@@ -114,6 +116,10 @@ if echo "$CHANGED_FILES" | grep -q "distro/fedora/danksearch/danksearch.spec"; t
     BUILD_DANKSEARCH=true
 fi
 
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/dankcalendar/dankcalendar-git.spec"; then
+    BUILD_DANKCALENDAR_GIT=true
+fi
+
 # New CLI11 package
 if echo "$CHANGED_FILES" | grep -q "distro/fedora/cli11/cli11.spec"; then
     BUILD_CLI11=true
@@ -140,6 +146,7 @@ if [[ -z "$CHANGED_FILES" ]]; then
     echo "$UNCOMMITTED" | grep -q "distro/fedora/ghostty/ghostty.spec" && BUILD_GHOSTTY=true
     echo "$UNCOMMITTED" | grep -q "distro/fedora/fonts/material-symbols-fonts.spec" && BUILD_MATERIAL_SYMBOLS=true
     echo "$UNCOMMITTED" | grep -q "distro/fedora/danksearch/danksearch.spec" && BUILD_DANKSEARCH=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/dankcalendar/dankcalendar-git.spec" && BUILD_DANKCALENDAR_GIT=true
 
     # New CLI11 package
     echo "$UNCOMMITTED" | grep -q "distro/fedora/cli11/cli11.spec" && BUILD_CLI11=true
@@ -184,6 +191,10 @@ fi
 
 if [[ "$BUILD_DANKSEARCH" == true ]] || [[ "$FORCE_PACKAGE" == "danksearch" ]]; then
     trigger_build "danksearch" "distro/fedora/danksearch/danksearch.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+fi
+
+if [[ "$BUILD_DANKCALENDAR_GIT" == true ]] || [[ "$FORCE_PACKAGE" == "dankcalendar-git" ]]; then
+    trigger_build "dankcalendar-git" "distro/fedora/dankcalendar/dankcalendar-git.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
 if [[ "$BUILD_CLI11" == true ]] || [[ "$FORCE_PACKAGE" == "cli11" ]]; then

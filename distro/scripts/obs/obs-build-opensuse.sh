@@ -195,6 +195,26 @@ EOF
         log_success "Vendored dependencies created"
     fi
 
+    if [[ "$BUILD_LANGUAGE" == "go" ]] && requires_vendor_deps "$PACKAGE"; then
+        log_info "Vendoring Go dependencies..."
+        export GOTOOLCHAIN=auto
+        if [[ -f core/go.mod ]]; then
+            if ! (cd core && go mod download && go mod vendor); then
+                log_error "Failed to vendor Go dependencies in core/"
+                exit $ERR_BUILD_FAILURE
+            fi
+        elif [[ -f go.mod ]]; then
+            if ! go mod download && go mod vendor; then
+                log_error "Failed to vendor Go dependencies"
+                exit $ERR_BUILD_FAILURE
+            fi
+        else
+            log_error "No go.mod found for Go package vendoring"
+            exit $ERR_BUILD_FAILURE
+        fi
+        log_success "Go dependencies vendored"
+    fi
+
     # Remove .git directory for source package
     rm -rf .git
 

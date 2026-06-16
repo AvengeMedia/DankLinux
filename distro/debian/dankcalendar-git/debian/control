@@ -1,0 +1,23 @@
+Source: dankcalendar-git
+Section: utils
+Priority: optional
+Maintainer: Avenge Media <AvengeMedia.US@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               golang-go (>= 1.25)
+Standards-Version: 4.6.2
+Homepage: https://github.com/AvengeMedia/dankcalendar
+Vcs-Browser: https://github.com/AvengeMedia/dankcalendar
+Vcs-Git: https://github.com/AvengeMedia/dankcalendar.git
+
+Package: dankcalendar-git
+Architecture: any
+Depends: ${misc:Depends},
+         quickshell-git | quickshell,
+         libsecret-1-0,
+         libqt6quick6
+Description: Calendar app for the Dank Linux desktop (git)
+ DankCalendar brings Local, Google, Microsoft, CalDAV, and iCloud calendars
+ together in one standalone app. It runs as a lightweight daemon with a tray
+ icon, keeps accounts in sync, and reminds you about events.
+ .
+ This is the git development package built from upstream master.

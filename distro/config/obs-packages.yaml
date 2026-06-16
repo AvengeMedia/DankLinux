@@ -233,6 +233,24 @@ packages:
       directory_name: "xwayland-satellite-source"
       compression: gz
 
+  dankcalendar-git:
+    type: git
+    upstream:
+      repo: AvengeMedia/dankcalendar
+      branch: master
+    base_version:
+      fallback: "0.1.1"
+    distros:
+      - debian
+      - opensuse
+    build:
+      language: go
+      go_version: "1.25"
+      vendor_deps: true
+    tarball:
+      directory_name: "dankcalendar"
+      compression: gz
+
 # ============================================================================
 # BUILD SYSTEM DEFAULTS
 # ============================================================================
@@ -292,6 +310,7 @@ groups:
     - niri-git
     - quickshell-git
     - xwayland-satellite-git
+    - dankcalendar-git
 
   all:
     - danksearch
@@ -306,6 +325,7 @@ groups:
     - cpptrace
     - xwayland-satellite
     - xwayland-satellite-git
+    - dankcalendar-git
 
   debian-only:
     - niri  # niri stable is Debian-only; OpenSUSE uses niri-git
@@ -324,6 +344,7 @@ groups:
   go-packages:
     - danksearch
     - dgop
+    - dankcalendar-git
 
   cpp-packages:
     - quickshell

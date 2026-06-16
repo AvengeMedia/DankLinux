@@ -14,7 +14,7 @@ OBS_BASE_PROJECT="home:AvengeMedia:danklinux"
 OBS_BASE="$HOME/.cache/osc-checkouts"
 
 # Define packages (sync with obs-upload.sh)
-ALL_PACKAGES=(matugen matugen-snapshot niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git danksearch dgop ghostty)
+ALL_PACKAGES=(matugen matugen-snapshot niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git danksearch dgop ghostty dankcalendar-git)
 
 # Define repositories and architectures to check
 REPOS=("Debian_13" "Debian_Testing" "Debian_Unstable" "openSUSE_Tumbleweed" "openSUSE_Slowroll" "16.0")

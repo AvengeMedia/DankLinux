@@ -56,6 +56,7 @@ PACKAGES=(
     "matugen:InioX/matugen:release"
     "ghostty:ghostty-org/ghostty:release"
     "danksearch:AvengeMedia/danksearch:release"
+    "dankcalendar-git:AvengeMedia/dankcalendar:git"
     "dgop:AvengeMedia/dgop:release"
 )
 

@@ -208,6 +208,44 @@ EOF
         log_success "Vendored dependencies created"
     fi
 
+    if [[ "$BUILD_LANGUAGE" == "go" ]] && requires_vendor_deps "$PACKAGE"; then
+        log_info "Vendoring Go dependencies..."
+        export GOTOOLCHAIN=auto
+        if [[ -f core/go.mod ]]; then
+            if ! (cd core && go mod download && go mod vendor); then
+                log_error "Failed to vendor Go dependencies in core/"
+                exit $ERR_BUILD_FAILURE
+            fi
+        elif [[ -f go.mod ]]; then
+            if ! go mod download && go mod vendor; then
+                log_error "Failed to vendor Go dependencies"
+                exit $ERR_BUILD_FAILURE
+            fi
+        else
+            log_error "No go.mod found for Go package vendoring"
+            exit $ERR_BUILD_FAILURE
+        fi
+        log_success "Go dependencies vendored"
+
+        if [[ "$PACKAGE" == "dankcalendar-git" ]]; then
+            log_info "Bundling Go 1.25 toolchain for offline builds..."
+            go_ver="1.25.8"
+            mkdir -p "$SOURCE_DIR/.go-toolchain"
+            for arch in amd64 arm64; do
+                go_tgz="go${go_ver}.linux-${arch}.tar.gz"
+                go_url="https://go.dev/dl/${go_tgz}"
+                go_dest="$SOURCE_DIR/.go-toolchain/${go_tgz}"
+                if ! download_file_with_retry "$go_url" "$go_dest"; then
+                    log_error "Failed to download Go toolchain: $go_url"
+                    exit $ERR_NETWORK
+                fi
+                mkdir -p "$SOURCE_DIR/.go-toolchain/${arch}"
+                tar -C "$SOURCE_DIR/.go-toolchain/${arch}" -xzf "$go_dest"
+            done
+            log_success "Go toolchain bundled for amd64 and arm64"
+        fi
+    fi
+
     # Remove .git directory for source package
     rm -rf .git
 

@@ -25,6 +25,7 @@ PACKAGES=(
     "quickshell-git:quickshell-mirror/quickshell:git"
     "xwayland-satellite:Supreeeme/xwayland-satellite:release"
     "xwayland-satellite-git:Supreeeme/xwayland-satellite:git"
+    "dankcalendar-git:AvengeMedia/dankcalendar:git"
 )
 
 while [[ $# -gt 0 ]]; do

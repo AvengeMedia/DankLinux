@@ -11,6 +11,7 @@ on:
           - auto
           - all
           - cliphist
+          - dankcalendar-git
           - ghostty
           - matugen
           - niri

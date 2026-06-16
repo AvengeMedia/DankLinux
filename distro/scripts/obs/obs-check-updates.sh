@@ -211,6 +211,12 @@ check_package_updates() {
             log_info "  quickshell-git OBS base ahead of stable tag (${_qs_base_prev} → ${base_version})"
         fi
 
+        if [[ "$package" == "dankcalendar-git" && -n "$base_version" ]]; then
+            local _dc_base_prev="$base_version"
+            base_version=$(bump_patch_triplet "$base_version")
+            log_info "  dankcalendar-git OBS base ahead of stable tag (${_dc_base_prev} → ${base_version})"
+        fi
+
         # Build git version string (without .db suffix - only add that when building)
         upstream_version="${base_version}+git${commit_count}.${upstream_commit}"
         log_info "  Upstream version: $upstream_version"

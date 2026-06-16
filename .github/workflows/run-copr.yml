@@ -15,6 +15,7 @@ on:
           - ''
           - all
           - cliphist
+          - dankcalendar-git
           - ghostty
           - matugen
           - niri

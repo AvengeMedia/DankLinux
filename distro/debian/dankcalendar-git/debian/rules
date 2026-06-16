@@ -1,0 +1,50 @@
+#!/usr/bin/make -f
+
+export GOCACHE = $(CURDIR)/.cache/go-build
+export GOPATH = $(CURDIR)/.go
+export HOME = $(CURDIR)
+
+DEB_VERSION := $(shell dpkg-parsechangelog -S Version)
+UPSTREAM_VERSION := $(shell echo $(DEB_VERSION) | sed 's/\.db[0-9]*$$//' | sed 's/ppa[0-9]*$$//')
+COMMIT_HASH := $(shell echo $(UPSTREAM_VERSION) | sed -n 's/.*\.\([a-f0-9]\{8\}\)$$/\1/p')
+BUILD_TIME := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
+
+DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
+GO_HOST_ARCH := $(if $(filter arm64,$(DEB_HOST_ARCH)),arm64,amd64)
+export PATH := $(CURDIR)/.go-toolchain/$(GO_HOST_ARCH)/go/bin:$(PATH)
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	cd core && \
+		GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=vendor \
+		-ldflags="-s -w -X main.Version=$(UPSTREAM_VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.Commit=$(COMMIT_HASH)" \
+		-o ../dcal ./cmd/dcal
+	mkdir -p completions
+	./dcal completion bash > completions/dcal
+	./dcal completion zsh > completions/_dcal
+	./dcal completion fish > completions/dcal.fish
+
+override_dh_auto_install:
+	install -Dm755 dcal debian/dankcalendar-git/usr/bin/dcal
+	install -Dm644 assets/systemd/dcal.service debian/dankcalendar-git/usr/lib/systemd/user/dcal.service
+	install -Dm644 assets/com.danklinux.dankcalendar.desktop \
+		debian/dankcalendar-git/usr/share/applications/com.danklinux.dankcalendar.desktop
+	install -Dm644 quickshell/assets/dankcalendar.svg \
+		debian/dankcalendar-git/usr/share/icons/hicolor/scalable/apps/dankcalendar.svg
+	install -d debian/dankcalendar-git/usr/share/quickshell/dankcal
+	cp -a quickshell/. debian/dankcalendar-git/usr/share/quickshell/dankcal/
+	install -Dm644 completions/dcal \
+		debian/dankcalendar-git/usr/share/bash-completion/completions/dcal
+	install -Dm644 completions/_dcal \
+		debian/dankcalendar-git/usr/share/zsh/site-functions/_dcal
+	install -Dm644 completions/dcal.fish \
+		debian/dankcalendar-git/usr/share/fish/vendor_completions.d/dcal.fish
+
+override_dh_auto_test:
+	# Skip tests for git snapshot packaging
+
+override_dh_auto_clean:
+	rm -rf dcal completions .cache .go
+	dh_auto_clean

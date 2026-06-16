@@ -50,7 +50,7 @@ fi
 TEMP_DIR=$(mktemp -d "$TEMP_BASE/ppa_build_XXXXXX")
 trap "rm -rf $TEMP_DIR" EXIT
 
-AVAILABLE_PACKAGES=(cpptrace cliphist danksearch dgop ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git)
+AVAILABLE_PACKAGES=(cpptrace cliphist danksearch dgop ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git dankcalendar-git)
 KEEP_BUILDS=false
 BUILD_ONLY=false
 REBUILD_RELEASE=""
@@ -464,6 +464,11 @@ case "$PACKAGE_NAME" in
         GIT_REPO="Supreeeme/xwayland-satellite"
         SOURCE_DIR="xwayland-satellite-source"
         ;;
+    dankcalendar-git)
+        IS_GIT_PACKAGE=true
+        GIT_REPO="AvengeMedia/dankcalendar"
+        SOURCE_DIR="dankcalendar"
+        ;;
     cliphist)
         GIT_REPO="sentriz/cliphist"
         ;;
@@ -576,7 +581,10 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
     info "Cloning $GIT_REPO from GitHub (getting latest commit info)..."
     TEMP_CLONE=$(mktemp -d "$TEMP_BASE/ppa_clone_XXXXXX")
     if git clone "https://github.com/$GIT_REPO.git" "$TEMP_CLONE"; then
-        GIT_COMMIT_HASH=$(cd "$TEMP_CLONE" && git rev-parse --short HEAD)
+        # 7-char hash: appending ppaN directly after hash (e.g. 677116eppa8) keeps dpkg
+        # ordering sane. An 8-char hash before ppa (677116edppa7) can sort *below* a prior
+        # mistaken 7-char+ppa upload (677116eppa5) because 'd' < 'p' at the first diff.
+        GIT_COMMIT_HASH=$(cd "$TEMP_CLONE" && git rev-parse --short=7 HEAD)
         GIT_COMMIT_COUNT=$(cd "$TEMP_CLONE" && git rev-list --count HEAD)
         
         UPSTREAM_VERSION=$(cd "$TEMP_CLONE" && git tag -l "v*" | sed 's/^v//' | sort -V | tail -1)
@@ -605,6 +613,12 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
             _QS_PRE="$UPSTREAM_VERSION"
             UPSTREAM_VERSION="$(bump_patch_triplet "$UPSTREAM_VERSION")"
             info "quickshell-git Debian base ahead of stable tag (${_QS_PRE} → ${UPSTREAM_VERSION})"
+        fi
+
+        if [ "$PACKAGE_NAME" = "dankcalendar-git" ]; then
+            _DC_PRE="$UPSTREAM_VERSION"
+            UPSTREAM_VERSION="$(bump_patch_triplet "$UPSTREAM_VERSION")"
+            info "dankcalendar-git Debian base ahead of stable tag (${_DC_PRE} → ${UPSTREAM_VERSION})"
         fi
         
         info "Updating changelog with git commit info..."
@@ -663,8 +677,15 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
         success "Changelog written back to $PACKAGE_DIR/debian/changelog"
         
         rm -rf "$SOURCE_DIR"
-        cp -r "$TEMP_CLONE" "$SOURCE_DIR"
-        rm -rf "$SOURCE_DIR/.git"
+        if [ "$PACKAGE_NAME" = "dankcalendar-git" ]; then
+            # Native rules expect core/, assets/, etc. at package root (same as OBS)
+            cp -a "$TEMP_CLONE"/. "$BUILD_DIR/"
+            rm -rf "$BUILD_DIR/.git"
+            SOURCE_DIR="."
+        else
+            cp -r "$TEMP_CLONE" "$SOURCE_DIR"
+            rm -rf "$SOURCE_DIR/.git"
+        fi
         rm -rf "$TEMP_CLONE"
 
         if [ "$PACKAGE_NAME" = "niri-git" ] || [ "$PACKAGE_NAME" = "quickshell-git" ] || [ "$PACKAGE_NAME" = "xwayland-satellite-git" ]; then
@@ -703,6 +724,28 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
 
                 success "Rust dependencies vendored (including git dependencies)"
                 cd "$BUILD_DIR"
+            fi
+        fi
+
+        if [ "$PACKAGE_NAME" = "dankcalendar-git" ]; then
+            if [ -f "$SOURCE_DIR/core/go.mod" ]; then
+                info "Vendoring Go dependencies (Launchpad has no internet access)..."
+                cd "$SOURCE_DIR/core"
+                GOTOOLCHAIN=auto go mod download
+                go mod vendor
+                cd "$BUILD_DIR"
+                success "Go dependencies vendored"
+
+                info "Bundling Go 1.25 toolchain for offline Launchpad builds..."
+                GO_VER="1.25.8"
+                mkdir -p "$SOURCE_DIR/.go-toolchain"
+                for arch in amd64 arm64; do
+                    GO_TGZ="go${GO_VER}.linux-${arch}.tar.gz"
+                    wget -q -O "$SOURCE_DIR/.go-toolchain/${GO_TGZ}" "https://go.dev/dl/${GO_TGZ}"
+                    mkdir -p "$SOURCE_DIR/.go-toolchain/${arch}"
+                    tar -C "$SOURCE_DIR/.go-toolchain/${arch}" -xzf "$SOURCE_DIR/.go-toolchain/${GO_TGZ}"
+                done
+                success "Go toolchain bundled"
             fi
         fi
 
