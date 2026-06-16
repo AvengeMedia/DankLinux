@@ -13,7 +13,7 @@ BuildRequires:  golang >= 1.25
 BuildRequires:  systemd-rpm-macros
 
 Requires:       quickshell-git
-Requires:       libsecret1
+Requires:       libsecret-1-0
 Requires:       libQt6Quick6
 
 %description
