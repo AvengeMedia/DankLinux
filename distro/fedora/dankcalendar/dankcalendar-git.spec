@@ -1,9 +1,9 @@
 %global debug_package %{nil}
 
-%global commit      d88f1b16d40495f14b21fa032ce0ab3c18f4c770
-%global commits     19
+%global commit      72a56e35ba2f8ecd26299045da31e1976d18e6d5
+%global commits     23
 %global snapdate    20260616
-%global tag         0.1.2
+%global tag         0.1.3
 
 Name:               dankcalendar-git
 Version:            %{tag}+git%{commits}.%(c=%{commit}; echo ${c:0:8})
