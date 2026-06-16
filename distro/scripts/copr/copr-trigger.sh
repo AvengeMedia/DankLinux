@@ -4,6 +4,8 @@ set -euo pipefail
 
 COPR_OWNER="avengemedia"
 COPR_PROJECT="danklinux"
+# The SCM default source method of the existing packages
+COPR_CLONE_URL="https://github.com/AvengeMedia/danklinux.git"
 
 if ! command -v copr-cli &> /dev/null; then
     echo "❌ copr-cli not found. Install with: sudo dnf install copr-cli" >&2
@@ -15,12 +17,57 @@ if [[ ! -f ~/.config/copr ]]; then
     exit 1
 fi
 
+# Ensure the COPR package has a default SCM source method configured.
+# build-package rebuilds rely on this; newly added packages may lack it,
+# which fails with "doesn't have the default source method set".
+# edit-package-scm updates an existing package; if it doesn't exist yet,
+# fall back to add-package-scm. Idempotent and safe to re-run.
+ensure_scm() {
+    local package_name="$1"
+    local spec_file="$2"
+    local subdir spec
+
+    subdir="$(dirname "$spec_file")"
+    spec="$(basename "$spec_file")"
+
+    copr-cli edit-package-scm "$COPR_OWNER/$COPR_PROJECT" \
+        --name "$package_name" \
+        --clone-url "$COPR_CLONE_URL" \
+        --subdir "$subdir" \
+        --spec "$spec" \
+        --type git \
+        --method rpkg \
+    || copr-cli add-package-scm "$COPR_OWNER/$COPR_PROJECT" \
+        --name "$package_name" \
+        --clone-url "$COPR_CLONE_URL" \
+        --subdir "$subdir" \
+        --spec "$spec" \
+        --type git \
+        --method rpkg
+}
+
 trigger_build() {
     local package_name="$1"
     local spec_file="$2"
     
     echo "📦 Building $package_name..."
     
+    if copr-cli build-package "$COPR_OWNER/$COPR_PROJECT" \
+        --name "$package_name" \
+        --timeout 7200 \
+        --nowait; then
+        return 0
+    fi
+
+    # build-package may fail because the COPR package has no default source
+    # method (common for newly added packages). Configure the SCM source and
+    # retry once before giving up.
+    echo "   ⚠ build-package failed; ensuring SCM default source and retrying..." >&2
+    if ! ensure_scm "$package_name" "$spec_file"; then
+        echo "   ❌ Failed to configure SCM default source" >&2
+        return 1
+    fi
+
     if copr-cli build-package "$COPR_OWNER/$COPR_PROJECT" \
         --name "$package_name" \
         --timeout 7200 \
