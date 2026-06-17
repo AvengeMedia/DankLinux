@@ -3,7 +3,7 @@
 %global commit      746026cf77a34cafff00723d3c259959a7d6ad51
 %global commits     29
 %global snapdate    20260617
-%global tag         0.1.3
+%global tag         0.1.4
 
 Name:               dankcalendar-git
 Version:            %{tag}+git%{commits}.%(c=%{commit}; echo ${c:0:8})
