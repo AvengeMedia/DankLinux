@@ -66,7 +66,7 @@ sudo apt update && sudo apt install dms-git
 </details>
 
 <details>
-<summary><b>Ubuntu 25.10+ (Launchpad PPA)</b></summary>
+<summary><b>Ubuntu 26.04 LTS+ (Launchpad PPA)</b></summary>
 
 ```bash
 # 1. Add danklinux PPA for dependencies
@@ -159,7 +159,7 @@ sudo apt update && sudo apt install niri quickshell-git matugen cliphist danksea
 
 ---
 
-### Ubuntu 25.10+ (Launchpad PPA)
+### Ubuntu 26.04 LTS+ (Launchpad PPA)
 
 > **Note**: Ubuntu 25.04 and older are not supported (require Qt 6.6+)
 

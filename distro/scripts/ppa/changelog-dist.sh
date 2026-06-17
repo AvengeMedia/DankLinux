@@ -27,8 +27,8 @@ get_changelog_version_for_distribution() {
 
 changelog_max_series_version() {
     local changelog="$1"
-    local first="${2:-questing}"
-    local second="${3:-resolute}"
+    local first="${2:-resolute}"
+    local second="${3:-stonking}"
     local first_version second_version
 
     first_version="$(get_changelog_version_for_distribution "$changelog" "$first" || true)"
@@ -57,7 +57,7 @@ changelog_effective_version() {
     [ -f "$changelog" ] || return 1
 
     if [[ "$package_dir" == */distro/ubuntu/* ]]; then
-        changelog_max_series_version "$changelog" questing resolute
+        changelog_max_series_version "$changelog" resolute stonking
     else
         sed -n '1s/^[^ ]* (\([^)]*\)).*/\1/p' "$changelog"
     fi

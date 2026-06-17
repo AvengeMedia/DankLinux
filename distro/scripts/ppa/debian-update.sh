@@ -31,7 +31,7 @@ if [ -z "$BASE_DIR" ]; then
     BASE_DIR="distro/ubuntu"
 fi
 BASE_DIR="$REPO_ROOT/$BASE_DIR"
-DISTRO_SERIES_LIST=(questing resolute)
+DISTRO_SERIES_LIST=(resolute stonking)
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'

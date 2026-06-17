@@ -2,7 +2,7 @@ Source: quickshell
 Section: x11
 Priority: optional
 Maintainer: Avenge Media <AvengeMedia.US@gmail.com>
-# Requires Qt 6.6+ (Ubuntu 25.10 Questing or newer only - no non-LTS releases)
+# Requires Qt 6.6+ (Ubuntu 26.04 LTS Resolute or newer)
 Build-Depends: debhelper-compat (= 13),
                cmake,
                ninja-build,

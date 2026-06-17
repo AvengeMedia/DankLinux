@@ -1,8 +1,8 @@
-xwayland-satellite (0.8.1ppa2) resolute; urgency=medium
+xwayland-satellite (0.8.1ppa4) stonking; urgency=medium
 
-  * Rebuild for packaging fixes (ppa2)
+  * Rebuild for packaging fixes (ppa4)
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 21 Mar 2026 17:42:31 -0400
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Tue, 16 Jun 2026 22:17:30 -0400
 
 xwayland-satellite (0.7ppa4) questing; urgency=medium
 

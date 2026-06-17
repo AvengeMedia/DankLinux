@@ -10,7 +10,7 @@
 PPA_OWNER="avengemedia"
 PPA_NAME="danklinux"
 LAUNCHPAD_API="https://api.launchpad.net/1.0"
-DISTRO_SERIES_LIST=(questing resolute)
+DISTRO_SERIES_LIST=(resolute stonking)
 
 # Define packages (sync with ppa-upload.sh)
 ALL_PACKAGES=(cpptrace cliphist ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git dankcalendar-git)

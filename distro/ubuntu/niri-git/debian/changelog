@@ -1,8 +1,8 @@
-niri-git (26.04+git2789.1f07cffappa2) resolute; urgency=medium
+niri-git (26.04+git2807.fdb6d85ppa4) stonking; urgency=medium
 
-  * Git snapshot (commit 2789: 1f07cffa)
+  * Git snapshot (commit 2807: fdb6d85)
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Mon, 04 May 2026 03:38:45 +0000
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Tue, 16 Jun 2026 22:13:34 -0400
 
 niri-git (25.11+git2566.f874b2fcppa1) questing; urgency=medium
 
