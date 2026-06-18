@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
-%global commit      058080dc878abdc93d62b49f8e14f7db122af810
-%global commits     35
+%global commit      c324586640dcec7af72aa79e596bb945bf92391d
+%global commits     37
 %global snapdate    20260618
 %global tag         0.1.5
 
