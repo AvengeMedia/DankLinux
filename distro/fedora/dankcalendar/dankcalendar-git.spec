@@ -1,8 +1,8 @@
 %global debug_package %{nil}
 
-%global commit      c324586640dcec7af72aa79e596bb945bf92391d
-%global commits     37
-%global snapdate    20260618
+%global commit      9718ecf397b01cae3c07049d56a67f4199bd1836
+%global commits     40
+%global snapdate    20260622
 %global tag         0.1.5
 
 Name:               dankcalendar-git
