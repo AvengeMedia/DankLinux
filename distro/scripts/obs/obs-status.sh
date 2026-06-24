@@ -1,32 +1,129 @@
 #!/bin/bash
 # Unified OBS status checker for danklinux packages
 # Checks all platforms (Debian, OpenSUSE) and architectures (x86_64, aarch64)
-# Uses OSC API for log fetching
-# Usage: ./distro/scripts/obs-status.sh [package-name]
+# Usage: ./distro/scripts/obs/obs-status.sh [package-name] [--logs]
 #
-# Examples:
-#   ./distro/scripts/obs-status.sh              # Check all packages
-#   ./distro/scripts/obs-status.sh ghostty     # Check specific package
+# By default prints a compact status grid and brief failure hints.
+# Pass --logs for full build log tails (slower).
 
 set -euo pipefail
 
 OBS_BASE_PROJECT="home:AvengeMedia:danklinux"
 OBS_BASE="$HOME/.cache/osc-checkouts"
 
-# Define packages (sync with obs-upload.sh)
 ALL_PACKAGES=(matugen matugen-snapshot niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git danksearch dgop ghostty dankcalendar-git)
-
-# Define repositories and architectures to check
-REPOS=("Debian_13" "Debian_Testing" "Debian_Unstable" "openSUSE_Tumbleweed" "openSUSE_Slowroll" "16.0")
+REPOS=("Debian_13" "Debian_Testing" "Debian_Unstable" "openSUSE_Tumbleweed" "openSUSE_Slowroll" "16.0" "16.1")
 ARCHES=("x86_64" "aarch64")
 
-# Get packages to check
-PACKAGE_ARG="${1:-}"
+FETCH_LOGS=false
+PACKAGE_ARG=""
+
+for arg in "$@"; do
+    case "$arg" in
+        --logs) FETCH_LOGS=true ;;
+        -h|--help)
+            echo "Usage: $0 [package-name] [--logs]"
+            exit 0
+            ;;
+        *)
+            if [[ -z "$PACKAGE_ARG" ]]; then
+                PACKAGE_ARG="$arg"
+            else
+                echo "Unknown argument: $arg" >&2
+                exit 1
+            fi
+            ;;
+    esac
+done
+
 if [[ -n "$PACKAGE_ARG" ]]; then
     PACKAGES=("$PACKAGE_ARG")
 else
     PACKAGES=("${ALL_PACKAGES[@]}")
 fi
+
+TOTAL_OK=0
+TOTAL_FAIL=0
+TOTAL_UNRES=0
+TOTAL_DISABLED=0
+TOTAL_PENDING=0
+
+print_status_line() {
+    local repo="$1" arch="$2" status="$3"
+    local color symbol
+
+    case "$status" in
+        succeeded*)
+            color="\033[0;32m"; symbol="✅"
+            ((TOTAL_OK++)) || true
+            ;;
+        failed)
+            color="\033[0;31m"; symbol="❌"
+            ((TOTAL_FAIL++)) || true
+            ;;
+        unresolvable)
+            color="\033[0;33m"; symbol="⚠️"
+            ((TOTAL_UNRES++)) || true
+            ;;
+        disabled|excluded|removed)
+            color="\033[0;90m"; symbol="⏸"
+            ((TOTAL_DISABLED++)) || true
+            ;;
+        building|scheduled|finished)
+            color="\033[0;37m"; symbol="⏳"
+            ((TOTAL_PENDING++)) || true
+            ;;
+        *)
+            color="\033[0;33m"; symbol="?"
+            ;;
+    esac
+
+    echo -e "  $symbol $repo $arch: ${color}${status}\033[0m"
+}
+
+fetch_brief_failure() {
+    local pkg="$1" repo="$2" arch="$3" status="$4"
+    local results_v="$5"
+
+    echo ""
+    echo "  ── $repo $arch ($status) ──"
+
+    if [[ "$status" == "unresolvable" ]]; then
+        local detailed
+        detailed=$(echo "$results_v" | awk "/^${repo}.*${arch}.*unresolvable:/{getline; print}" | sed -e 's/^[[:space:]]*//' || true)
+        if [[ -n "$detailed" ]]; then
+            echo "  Reason: $detailed"
+        fi
+        if REASON=$(osc api "/build/$OBS_BASE_PROJECT/$repo/$arch/$pkg/_reason" 2>&1); then
+            if echo "$REASON" | grep -q "<explain>"; then
+                echo "  OBS: $(echo "$REASON" | grep -oP '<explain>\K[^<]*' || true)"
+            fi
+        fi
+        return
+    fi
+
+    # failed: grep last meaningful errors from build log (fast, no full download)
+    osc remotebuildlog "$OBS_BASE_PROJECT" "$pkg" "$repo" "$arch" 2>&1 | \
+        rg -i "error:|fatal error|unresolvable|nothing provides|failed \"build" | tail -8 || \
+        echo "  (no error lines found — try --logs)"
+}
+
+fetch_full_log() {
+    local pkg="$1" repo="$2" arch="$3" status="$4"
+    local results_v="$5"
+
+    echo ""
+    echo "  ────────────────────────────────────────────"
+    echo "  Build log: $repo $arch"
+    echo "  ────────────────────────────────────────────"
+
+    if [[ "$status" == "unresolvable" ]]; then
+        fetch_brief_failure "$pkg" "$repo" "$arch" "$status" "$results_v"
+        return
+    fi
+
+    osc remotebuildlog "$OBS_BASE_PROJECT" "$pkg" "$repo" "$arch" 2>&1 | tail -80 || true
+}
 
 mkdir -p "$OBS_BASE"
 cd "$OBS_BASE"
@@ -37,7 +134,6 @@ for pkg in "${PACKAGES[@]}"; do
     echo "=========================================="
     PKG_DIR="$OBS_BASE/$OBS_BASE_PROJECT/$pkg"
 
-    # Checkout if needed
     if [[ ! -d "$PKG_DIR" ]]; then
         if ! (cd "$OBS_BASE" && osc co "$OBS_BASE_PROJECT/$pkg" 2>&1 | tail -1); then
             echo "  Failed to checkout OBS package: $pkg"
@@ -54,7 +150,6 @@ for pkg in "${PACKAGES[@]}"; do
 
     pushd "$PKG_DIR" > /dev/null
 
-    # Get all build results
     if ! ALL_RESULTS=$(osc results 2>&1); then
         echo "  Failed to fetch build results for $pkg"
         echo "$ALL_RESULTS" | tail -20
@@ -62,128 +157,50 @@ for pkg in "${PACKAGES[@]}"; do
         popd > /dev/null
         continue
     fi
-    ALL_RESULTS_V=$(osc results -v 2>&1 || true)
 
-    # Check each repository and architecture
-    FAILED_BUILDS=()
+    NEEDS_VERBOSE=false
+    if echo "$ALL_RESULTS" | grep -q "unresolvable"; then
+        NEEDS_VERBOSE=true
+    fi
+
+    ALL_RESULTS_V=""
+    if [[ "$NEEDS_VERBOSE" == "true" ]]; then
+        ALL_RESULTS_V=$(osc results -v 2>&1 || true)
+    fi
+
+    PROBLEM_BUILDS=()
+
     for repo in "${REPOS[@]}"; do
         for arch in "${ARCHES[@]}"; do
-            STATUS=$(echo "$ALL_RESULTS" | grep "$repo.*$arch" | awk '{print $NF}' | head -1 || true)
+            STATUS=$(echo "$ALL_RESULTS" | awk -v r="$repo" -v a="$arch" '$1 == r && $2 == a { print $NF; exit }' || true)
 
             if [[ -n "$STATUS" ]]; then
-                # Color code status
+                print_status_line "$repo" "$arch" "$STATUS"
                 case "$STATUS" in
-                    succeeded*)
-                        COLOR="\033[0;32m"  # Green
-                        SYMBOL="✅"
-                        ;;
-                    failed)
-                        COLOR="\033[0;31m"  # Red
-                        SYMBOL="❌"
-                        FAILED_BUILDS+=("$repo $arch")
-                        ;;
-                    unresolvable)
-                        COLOR="\033[0;33m"  # Yellow
-                        SYMBOL="⚠️"
-                        FAILED_BUILDS+=("$repo $arch")
-                        ;;
-                    building|scheduled|finished)
-                        COLOR="\033[0;37m"  # White
-                        SYMBOL="⏳"
-                        # Don't fetch logs for in-progress or finished builds
-                        ;;
-                    *)
-                        COLOR="\033[0;33m"
-                        SYMBOL="⚠️"
-                        FAILED_BUILDS+=("$repo $arch")
+                    failed|unresolvable)
+                        PROBLEM_BUILDS+=("$repo $arch $STATUS")
                         ;;
                 esac
-                echo -e "  $SYMBOL $repo $arch: ${COLOR}$STATUS\033[0m"
             fi
         done
     done
 
-    # Pull logs for failed/unresolvable builds using OSC API
-    if [[ ${#FAILED_BUILDS[@]} -gt 0 ]]; then
-        echo ""
-        echo "  📋 Fetching logs for failed/unresolvable builds..."
-        for build in "${FAILED_BUILDS[@]}"; do
-            read -r repo arch <<< "$build"
+    if [[ ${#PROBLEM_BUILDS[@]} -gt 0 ]]; then
+        if [[ "$FETCH_LOGS" == "true" ]]; then
             echo ""
-            echo "  ────────────────────────────────────────────"
-            echo "  Build log: $repo $arch"
-            echo "  ────────────────────────────────────────────"
-
-            # Try multiple API endpoints for different types of failures
-            if BUILD_STATUS=$(osc api "/build/$OBS_BASE_PROJECT/$repo/$arch/$pkg" 2>&1); then
-                # Extract useful info from XML if available
-                if echo "$BUILD_STATUS" | grep -q "unresolvable\|failed"; then
-                    echo "  Build status details:"
-                    echo "$BUILD_STATUS" | grep -E "(code|state|details)" | head -5 | sed 's/^/    /' || true
-                    echo ""
-                fi
-            fi
-            
-            # Fetch the main build log
-            if LOG_OUTPUT=$(osc api "/build/$OBS_BASE_PROJECT/$repo/$arch/$pkg/_log" 2>&1); then
-                API_EXIT=0
-            else
-                API_EXIT=$?
-            fi
-            if [[ $API_EXIT -eq 0 && -n "${LOG_OUTPUT:-}" && "$LOG_OUTPUT" != *"<error"* && "$LOG_OUTPUT" != *"not found"* && "$LOG_OUTPUT" != *"404"* ]]; then
-                echo "$LOG_OUTPUT" | tail -100
-            else
-                if echo "$ALL_RESULTS" | grep -q "$repo.*$arch.*unresolvable"; then
-                    echo "  Attempting to fetch unresolvable reason..."
-
-                    # Fetch detailed string from -v output
-                    DETAILED_REASON=$(echo "$ALL_RESULTS_V" | awk "/^$repo.*$arch.*unresolvable:/{getline; print}" | sed -e 's/^[[:space:]]*//' || true)
-                    if [[ -n "$DETAILED_REASON" ]]; then
-                        echo "  Technical Reason: $DETAILED_REASON"
-                    fi
-
-                    if REASON=$(osc api "/build/$OBS_BASE_PROJECT/$repo/$arch/$pkg/_reason" 2>&1); then
-                        REASON_EXIT=0
-                    else
-                        REASON_EXIT=$?
-                    fi
-                    if [[ $REASON_EXIT -eq 0 && -n "${REASON:-}" && "$REASON" != *"<error"* ]]; then
-                        if echo "$REASON" | grep -q "<reason>"; then
-                            EXPLAIN=$(echo "$REASON" | grep -oP '<explain>\K[^<]*' || echo "metadata changes")
-                            echo "  Reason: $EXPLAIN"
-                            
-                            # Count package changes (one integer: wc -l can be multi-line in edge cases)
-                            PKG_CHANGE_COUNT=$(printf '%s' "$REASON" | grep -Fao -- '<packagechange' 2>/dev/null | awk 'END { print 0+NR }')
-                            if [[ ${PKG_CHANGE_COUNT:-0} -gt 0 ]]; then
-                                echo ""
-                                echo "  Package changes ($PKG_CHANGE_COUNT):"
-                                echo "$REASON" | grep -oP '<packagechange[^>]*/>' | \
-                                    sed 's/<packagechange change="\([^"]*\)" key="\([^"]*\)"\/>/    - \1: \2/' | \
-                                    head -10
-                                if [[ $PKG_CHANGE_COUNT -gt 10 ]]; then
-                                    echo "    ... (and $((PKG_CHANGE_COUNT - 10)) more)"
-                                fi
-                            fi
-                            
-                            if [[ "$EXPLAIN" == "meta change" ]]; then
-                                echo ""
-                                echo "  ℹ️  Note: This is typically a repository metadata change issue."
-                                echo "     The build may have actually succeeded (check logs below)."
-                                echo "     Updating obs-project.conf may help, but builds often work despite this status."
-                            fi
-                        else
-                            echo "$REASON"
-                        fi
-                    fi
-                fi
-                
-                # Only fallback to remotebuildlog if there was an actual build that failed
-                if ! echo "$ALL_RESULTS" | grep -q "$repo.*$arch.*unresolvable"; then
-                    echo "  (Trying remotebuildlog as fallback...)"
-                    osc remotebuildlog "$OBS_BASE_PROJECT" "$pkg" "$repo" "$arch" 2>&1 | tail -100 || true
-                fi
-            fi
-        done
+            echo "  📋 Fetching logs for failed/unresolvable builds..."
+            for build in "${PROBLEM_BUILDS[@]}"; do
+                read -r repo arch status <<< "$build"
+                fetch_full_log "$pkg" "$repo" "$arch" "$status" "$ALL_RESULTS_V"
+            done
+        else
+            echo ""
+            echo "  📋 Failure summary (use --logs for full build logs):"
+            for build in "${PROBLEM_BUILDS[@]}"; do
+                read -r repo arch status <<< "$build"
+                fetch_brief_failure "$pkg" "$repo" "$arch" "$status" "$ALL_RESULTS_V"
+            done
+        fi
     fi
 
     echo ""
@@ -192,4 +209,7 @@ done
 
 echo "=========================================="
 echo "Status check complete!"
-
+echo "  ✅ succeeded: $TOTAL_OK  ❌ failed: $TOTAL_FAIL  ⚠️ unresolvable: $TOTAL_UNRES  ⏸ disabled: $TOTAL_DISABLED  ⏳ pending: $TOTAL_PENDING"
+if [[ "$FETCH_LOGS" == "false" && $(( TOTAL_FAIL + TOTAL_UNRES )) -gt 0 ]]; then
+    echo "  Tip: re-run with --logs for full build log output"
+fi

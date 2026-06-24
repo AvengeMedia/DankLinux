@@ -648,6 +648,17 @@ fi
 
 log_info "Updated Version field to: $BASE_VERSION"
 
+# OBS Slowroll/Leap: rustc defaults to clang; OBS build roots often lack /usr/bin/clang symlink
+if grep -qE '^[[:space:]]*cargo build' "$OUTPUT_SPEC" && ! grep -q 'OBS_RUSTFLAGS' "$OUTPUT_SPEC"; then
+    sed -i '/^%build$/a\
+# OBS_RUSTFLAGS: Slowroll shares suse_version 1699 with Tumbleweed — match by repository\
+%if "%{?_repository}" == "openSUSE_Slowroll" || 0%{?suse_version} >= 1600 && 0%{?suse_version} < 1699\
+export RUSTFLAGS="${RUSTFLAGS}${RUSTFLAGS:+ }-C linker=gcc"\
+%endif
+' "$OUTPUT_SPEC"
+    log_info "Injected OBS_RUSTFLAGS export for cargo build"
+fi
+
 # Add changelog entry
 CHANGELOG_DATE=$(date "+%a %b %d %Y")
 CHANGELOG_ENTRY="* $CHANGELOG_DATE Avenge Media <AvengeMedia.US@gmail.com> - ${BASE_VERSION}-${REBUILD_NUM:-1}"
