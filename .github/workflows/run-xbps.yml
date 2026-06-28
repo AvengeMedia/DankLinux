@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -50,6 +50,10 @@ jobs:
       - name: Inject templates
         run: |
           cp -R distro/void/srcpkgs/* void-packages/srcpkgs/
+
+      - name: Enable unprivileged user namespaces (Ubuntu 24.04)
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
 
       - name: Bootstrap xbps-src
         run: |
