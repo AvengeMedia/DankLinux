@@ -22,7 +22,7 @@ Until these packages are officially merged upstream in the Void Linux repositori
 Add the repository configuration to your system:
 
 ```sh
-echo "repository=https://avengemedia.github.io/danklinux/current" | sudo tee /etc/xbps.d/danklinux.conf
+echo "repository=https://avengemedia.github.io/DankLinux/current" | sudo tee /etc/xbps.d/danklinux.conf
 ```
 
 Synchronize repositories and install the package(s):
