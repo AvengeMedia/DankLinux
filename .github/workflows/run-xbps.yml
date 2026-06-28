@@ -120,6 +120,9 @@ jobs:
         run: |
           cd gh-pages-repo/current
           
+          # Clean up any stale or dangling signature files to prevent O_CREAT ENOENT errors
+          rm -f *.sig2 *.sig
+          
           # Guard: nothing to index if no .xbps files exist
           if ! ls *.xbps 1>/dev/null 2>&1; then
             echo "⚠️ No .xbps files found to index, skipping."
