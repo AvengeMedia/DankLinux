@@ -13,7 +13,27 @@ Each builds from source from its upstream release.
 standalone app. The `dms` and `dms-greeter` packages live in the
 [DankMaterialShell repo](https://github.com/AvengeMedia/DankMaterialShell/tree/master/distro/void).
 
-## Build & install
+## Distribution
+
+Until these packages are officially merged upstream in the Void Linux repositories, you can install them from our self-hosted custom XBPS repository served via GitHub Pages.
+
+### Using the Self-Hosted Repository
+
+Add the repository configuration to your system:
+
+```sh
+echo "repository=https://avengemedia.github.io/danklinux/current" | sudo tee /etc/xbps.d/danklinux.conf
+```
+
+Synchronize repositories and install the package(s):
+
+```sh
+sudo xbps-install -S dgop danksearch dankcalendar
+```
+
+*Note: On the first sync, `xbps-install` will output our signing key fingerprint and ask you to type `y` to trust and import it. Verify that the key matches our official signing fingerprint.*
+
+## Build from Source
 
 In a [void-packages](https://github.com/void-linux/void-packages) checkout, copy
 each `srcpkgs/<pkg>` directory in, then:
@@ -24,6 +44,7 @@ each `srcpkgs/<pkg>` directory in, then:
 ./xbps-src pkg dankcalendar
 sudo xbps-install --repository=hostdir/binpkgs dankcalendar
 ```
+
 
 To lint a template, use `xlint srcpkgs/dankcalendar/template` (from the `xtools`
 package). These are Go packages and need Go ≥ 1.25 in the build environment.

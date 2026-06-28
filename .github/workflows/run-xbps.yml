@@ -1,0 +1,141 @@
+name: Void Linux XBPS Repository
+
+on:
+  push:
+    paths:
+      - 'distro/void/srcpkgs/**'
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Force rebuilding packages even if they already exist in the repository'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy XBPS packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout gh-pages branch
+        run: |
+          git clone --branch gh-pages https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git gh-pages-repo || {
+            echo "⚠️ gh-pages branch not found or empty, initializing a new one..."
+            mkdir gh-pages-repo
+            cd gh-pages-repo
+            git init
+            git checkout -b gh-pages
+            git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+            cd ..
+          }
+
+      - name: Install XBPS Static Utilities
+        run: |
+          mkdir -p ${{ github.workspace }}/xbps
+          curl -s -L https://repo-default.voidlinux.org/static/xbps-static-latest.x86_64-musl.tar.xz | tar -xJ -C ${{ github.workspace }}/xbps
+          echo "${{ github.workspace }}/xbps/usr/bin" >> $GITHUB_PATH
+
+      - name: Clone void-packages
+        run: |
+          git clone --depth=1 https://github.com/void-linux/void-packages.git
+
+      - name: Inject templates
+        run: |
+          cp -R distro/void/srcpkgs/* void-packages/srcpkgs/
+
+      - name: Bootstrap xbps-src
+        run: |
+          cd void-packages
+          ./xbps-src binary-bootstrap
+
+      - name: Configure signing keys and trust
+        run: |
+          # Write private key; extract and register the public key for
+          # host and chroot trust.
+          echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/xbps_privkey.pem
+          chmod 600 /tmp/xbps_privkey.pem
+          
+          openssl rsa -in /tmp/xbps_privkey.pem -pubout -out /tmp/dms-key.pub
+          rm -f /tmp/xbps_privkey.pem   # cleaned up; re-written only for signing step
+          
+          sudo mkdir -p /var/db/xbps/keys
+          sudo cp /tmp/dms-key.pub /var/db/xbps/keys/dms-key.pub
+          
+          mkdir -p void-packages/masterdir/var/db/xbps/keys
+          cp /tmp/dms-key.pub void-packages/masterdir/var/db/xbps/keys/dms-key.pub
+          rm -f /tmp/dms-key.pub
+
+      - name: Configure repositories
+        run: |
+          # Add any existing compiled packages to the build cache directory to avoid rebuilds
+          if [ -d "gh-pages-repo/current" ]; then
+            mkdir -p void-packages/hostdir/binpkgs
+            cp gh-pages-repo/current/*.xbps void-packages/hostdir/binpkgs/ 2>/dev/null || true
+            xbps-rindex -a void-packages/hostdir/binpkgs/*.xbps 2>/dev/null || true
+          fi
+
+      - name: Build packages
+        run: |
+          mkdir -p gh-pages-repo/current
+          
+          FORCE_REBUILD="${{ github.event.inputs.force_rebuild || 'false' }}"
+          
+          echo "=== Starting Builds ==="
+          echo "Force rebuild:        $FORCE_REBUILD"
+          
+          cd void-packages
+          
+          PACKAGES=("dgop" "danksearch" "dankcalendar")
+          
+          for pkg in "${PACKAGES[@]}"; do
+            # Read version/revision from template
+            VER=$(grep -E '^version=' srcpkgs/$pkg/template | cut -d= -f2 | tr -d '"')
+            REV=$(grep -E '^revision=' srcpkgs/$pkg/template | cut -d= -f2 | tr -d '"')
+            
+            EXPECTED_FILE="${pkg}-${VER}_${REV}.x86_64.xbps"
+            if [ -f "../gh-pages-repo/current/$EXPECTED_FILE" ] && [ "$FORCE_REBUILD" != "true" ]; then
+              echo "✅ $EXPECTED_FILE already exists, skipping build."
+            else
+              echo "🔨 Compiling $pkg ($VER)..."
+              ./xbps-src pkg "$pkg"
+              cp hostdir/binpkgs/${pkg}-${VER}_${REV}.x86_64.xbps ../gh-pages-repo/current/
+            fi
+          done
+
+      - name: Index and sign repository
+        run: |
+          cd gh-pages-repo/current
+          
+          # Guard: nothing to index if no .xbps files exist
+          if ! ls *.xbps 1>/dev/null 2>&1; then
+            echo "⚠️ No .xbps files found to index, skipping."
+            exit 0
+          fi
+          
+          # Regenerate repo index
+          xbps-rindex -a *.xbps
+          
+          # Sign repository
+          echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/xbps_privkey.pem
+          chmod 600 /tmp/xbps_privkey.pem
+          
+          xbps-rindex --sign --signedby "AvengeMedia <AvengeMedia.US@gmail.com>" --privkey /tmp/xbps_privkey.pem .
+          xbps-rindex --sign-pkg -f --privkey /tmp/xbps_privkey.pem *.xbps
+          
+          rm -f /tmp/xbps_privkey.pem
+
+      - name: Deploy to gh-pages branch
+        run: |
+          cd gh-pages-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add current/
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update XBPS packages [skip ci]" && git push origin gh-pages)
