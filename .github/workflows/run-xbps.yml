@@ -132,7 +132,7 @@ jobs:
           chmod 600 /tmp/xbps_privkey.pem
           
           xbps-rindex --sign --signedby "AvengeMedia <AvengeMedia.US@gmail.com>" --privkey /tmp/xbps_privkey.pem .
-          xbps-rindex --sign-pkg -f --privkey /tmp/xbps_privkey.pem *.xbps
+          xbps-rindex --sign-pkg -f --privkey /tmp/xbps_privkey.pem ./*.xbps
           
           rm -f /tmp/xbps_privkey.pem
 
