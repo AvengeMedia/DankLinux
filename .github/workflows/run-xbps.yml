@@ -127,14 +127,14 @@ jobs:
           fi
           
           # Regenerate repo index
-          xbps-rindex -a *.xbps
+          xbps-rindex -a $(pwd)/*.xbps
           
           # Sign repository
           echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/xbps_privkey.pem
           chmod 600 /tmp/xbps_privkey.pem
           
-          xbps-rindex --sign --signedby "AvengeMedia <AvengeMedia.US@gmail.com>" --privkey /tmp/xbps_privkey.pem .
-          xbps-rindex --sign-pkg -f --privkey /tmp/xbps_privkey.pem ./*.xbps
+          xbps-rindex --sign --signedby "AvengeMedia <AvengeMedia.US@gmail.com>" --privkey /tmp/xbps_privkey.pem $(pwd)
+          xbps-rindex --sign-pkg -f --privkey /tmp/xbps_privkey.pem $(pwd)/*.xbps
           
           rm -f /tmp/xbps_privkey.pem
 
