@@ -82,7 +82,7 @@ jobs:
           # Add any existing compiled packages to the build cache directory to avoid rebuilds
           if [ -d "gh-pages-repo/current" ]; then
             mkdir -p void-packages/hostdir/binpkgs
-            cp gh-pages-repo/current/*.xbps void-packages/hostdir/binpkgs/ 2>/dev/null || true
+            cp -L gh-pages-repo/current/*.xbps void-packages/hostdir/binpkgs/ 2>/dev/null || true
             xbps-rindex -a void-packages/hostdir/binpkgs/*.xbps 2>/dev/null || true
           fi
 
@@ -110,7 +110,9 @@ jobs:
             else
               echo "🔨 Compiling $pkg ($VER)..."
               ./xbps-src pkg "$pkg"
-              cp hostdir/binpkgs/${pkg}-${VER}_${REV}.x86_64.xbps ../gh-pages-repo/current/
+              # Delete any existing file/symlink first to ensure we write a regular file
+              rm -f "../gh-pages-repo/current/${EXPECTED_FILE}"
+              cp -L hostdir/binpkgs/${pkg}-${VER}_${REV}.x86_64.xbps ../gh-pages-repo/current/
             fi
           done
 
