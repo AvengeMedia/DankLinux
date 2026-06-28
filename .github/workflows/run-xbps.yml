@@ -123,6 +123,7 @@ jobs:
           # Clean up any stale or dangling signature files to prevent O_CREAT ENOENT errors
           rm -f *.sig2 *.sig
           
+
           # Guard: nothing to index if no .xbps files exist
           if ! ls *.xbps 1>/dev/null 2>&1; then
             echo "⚠️ No .xbps files found to index, skipping."
@@ -137,7 +138,7 @@ jobs:
           chmod 600 /tmp/xbps_privkey.pem
           
           xbps-rindex --sign --signedby "AvengeMedia <AvengeMedia.US@gmail.com>" --privkey /tmp/xbps_privkey.pem $(pwd)
-          xbps-rindex --sign-pkg -f --privkey /tmp/xbps_privkey.pem $(pwd)/*.xbps
+          xbps-rindex --sign-pkg --privkey /tmp/xbps_privkey.pem $(pwd)/*.xbps
           
           rm -f /tmp/xbps_privkey.pem
 
