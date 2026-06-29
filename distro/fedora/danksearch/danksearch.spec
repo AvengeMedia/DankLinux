@@ -4,7 +4,7 @@
 %global pkg_summary Blazingly fast and efficient file system search tool
 
 Name:           danksearch
-Version:        0.3.1
+Version:        0.3.2
 Release:        1%{?dist}
 Summary:        %{pkg_summary}
 
