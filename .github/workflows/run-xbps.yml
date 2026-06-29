@@ -1,9 +1,8 @@
 name: Void Linux XBPS Repository
 
 on:
-  push:
-    paths:
-      - 'distro/void/srcpkgs/**'
+  schedule:
+    - cron: "0 2,5,14,17,20,23 * * *" # 9am, 12pm, 3pm, 6pm, 9pm, 12am EST (UTC times shown)
   workflow_dispatch:
     inputs:
       force_rebuild:
