@@ -1,5 +1,5 @@
-cpptrace (1.0.4ppa6) stonking; urgency=medium
+cpptrace (1.0.4ppa7) stonking; urgency=medium
 
-  * Rebuild for packaging fixes (ppa6)
+  * Rebuild for packaging fixes (ppa7)
 
- -- Avenge Media <AvengeMedia.US@gmail.com>  Tue, 16 Jun 2026 21:51:36 -0400
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Tue, 07 Jul 2026 14:12:30 -0400

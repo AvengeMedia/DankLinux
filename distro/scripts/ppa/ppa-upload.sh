@@ -736,8 +736,12 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
                 cd "$BUILD_DIR"
                 success "Go dependencies vendored"
 
-                info "Bundling Go 1.25 toolchain for offline Launchpad builds..."
-                GO_VER="1.25.8"
+                GO_VER=$(grep -E '^go ' "$SOURCE_DIR/core/go.mod" | awk '{print $2}')
+                if [ -z "$GO_VER" ]; then
+                    error "Could not determine Go version from core/go.mod"
+                    exit 1
+                fi
+                info "Bundling Go ${GO_VER} toolchain for offline Launchpad builds..."
                 mkdir -p "$SOURCE_DIR/.go-toolchain"
                 for arch in amd64 arm64; do
                     GO_TGZ="go${GO_VER}.linux-${arch}.tar.gz"
