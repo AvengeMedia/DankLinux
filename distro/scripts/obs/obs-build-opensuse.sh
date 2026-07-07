@@ -213,6 +213,28 @@ EOF
             exit $ERR_BUILD_FAILURE
         fi
         log_success "Go dependencies vendored"
+
+        if [[ "$PACKAGE" == "dankcalendar-git" ]]; then
+            go_ver=$(grep -E '^go ' "$SOURCE_DIR/core/go.mod" | awk '{print $2}')
+            if [[ -z "$go_ver" ]]; then
+                log_error "Could not determine Go version from core/go.mod"
+                exit $ERR_BUILD_FAILURE
+            fi
+            log_info "Bundling Go ${go_ver} toolchain for offline builds..."
+            mkdir -p "$SOURCE_DIR/.go-toolchain"
+            for arch in amd64 arm64; do
+                go_tgz="go${go_ver}.linux-${arch}.tar.gz"
+                go_url="https://go.dev/dl/${go_tgz}"
+                go_dest="$SOURCE_DIR/.go-toolchain/${go_tgz}"
+                if ! download_file_with_retry "$go_url" "$go_dest"; then
+                    log_error "Failed to download Go toolchain: $go_url"
+                    exit $ERR_NETWORK
+                fi
+                mkdir -p "$SOURCE_DIR/.go-toolchain/${arch}"
+                tar -C "$SOURCE_DIR/.go-toolchain/${arch}" -xzf "$go_dest"
+            done
+            log_success "Go toolchain bundled for amd64 and arm64"
+        fi
     fi
 
     # Remove .git directory for source package

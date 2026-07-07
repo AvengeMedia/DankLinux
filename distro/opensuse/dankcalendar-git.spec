@@ -27,7 +27,15 @@ This is the git development package built from upstream master.
 %setup -q -n dankcalendar
 
 %build
-export GOTOOLCHAIN=auto
+# OBS has no network; distro Go may be older than go.mod requires (e.g. 16.1, Debian 13).
+# Use the Go toolchain bundled into the source tarball at OBS prep time.
+case "$(uname -m)" in
+    x86_64) GO_HOST_ARCH=amd64 ;;
+    aarch64) GO_HOST_ARCH=arm64 ;;
+    *) echo "unsupported architecture: $(uname -m)"; exit 1 ;;
+esac
+export PATH="$(pwd)/.go-toolchain/${GO_HOST_ARCH}/go/bin:${PATH}"
+export GOTOOLCHAIN=local
 export GOFLAGS="-buildmode=pie -trimpath -mod=vendor -modcacherw"
 export VERSION="%{version}"
 export BUILD_TIME="$(date -u '+%%Y-%%m-%%d_%%H:%%M:%%S')"

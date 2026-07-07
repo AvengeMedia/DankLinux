@@ -8,6 +8,8 @@ Homepage: <https://github.com/jeremy-rifkin/cpptrace>
 
 Package: libcpptrace
 Architecture: any
+Conflicts: libcpptrace1
+Replaces: libcpptrace1
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Simple, portable, and drop-in C++ stacktrace library
  cpptrace is an easy to use C++ stacktrace library providing a
@@ -16,6 +18,9 @@ Description: Simple, portable, and drop-in C++ stacktrace library
 Package: libcpptrace-dev
 Architecture: any
 Section: libdevel
+Conflicts: libcpptrace1
+Breaks: libcpptrace-dev (<< 1.0.5)
+Replaces: libcpptrace-dev (<< 1.0.5)
 Depends: libcpptrace (= ${binary:Version}), ${misc:Depends}
 Description: Development files for cpptrace
  cpptrace is an easy to use C++ stacktrace library providing a
