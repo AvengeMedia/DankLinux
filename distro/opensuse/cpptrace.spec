@@ -13,6 +13,8 @@ BuildRequires:  ninja
 BuildRequires:  libdwarf-devel
 BuildRequires:  libunwind-devel
 BuildRequires:  pkgconf
+Conflicts:      libcpptrace1
+Obsoletes:      libcpptrace1
 
 %description
 cpptrace is an easy to use C++ stacktrace library providing a 
