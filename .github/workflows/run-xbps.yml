@@ -12,29 +12,39 @@ on:
         default: false
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: void-xbps-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
     name: Build & Deploy XBPS packages
     runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      AWS_EC2_METADATA_DISABLED: true
+      R2_BUCKET: danklinux-void
+      R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      R2_PREFIX: danklinux
+      REPOSITORY_DIR: ${{ github.workspace }}/r2-repo
+      SOURCE_COMMIT: ${{ github.sha }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Checkout gh-pages branch
+      - name: Record checked-out source commit
+        run: echo "SOURCE_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Download current R2 repository
         run: |
-          git clone --branch gh-pages https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git gh-pages-repo || {
-            echo "⚠️ gh-pages branch not found or empty, initializing a new one..."
-            mkdir gh-pages-repo
-            cd gh-pages-repo
-            git init
-            git checkout -b gh-pages
-            git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-            cd ..
-          }
+          aws --version
+          bash .github/scripts/publish-void-r2.sh download
 
       - name: Install XBPS Static Utilities
         run: |
@@ -79,15 +89,15 @@ jobs:
       - name: Configure repositories
         run: |
           # Add any existing compiled packages to the build cache directory to avoid rebuilds
-          if [ -d "gh-pages-repo/current" ]; then
+          if [ -d "r2-repo/current" ]; then
             mkdir -p void-packages/hostdir/binpkgs
-            cp -L gh-pages-repo/current/*.xbps void-packages/hostdir/binpkgs/ 2>/dev/null || true
+            cp -L r2-repo/current/*.xbps void-packages/hostdir/binpkgs/ 2>/dev/null || true
             xbps-rindex -a void-packages/hostdir/binpkgs/*.xbps 2>/dev/null || true
           fi
 
       - name: Build packages
         run: |
-          mkdir -p gh-pages-repo/current
+          mkdir -p r2-repo/current
           
           FORCE_REBUILD="${{ github.event.inputs.force_rebuild || 'false' }}"
           
@@ -104,23 +114,22 @@ jobs:
             REV=$(grep -E '^revision=' srcpkgs/$pkg/template | cut -d= -f2 | tr -d '"')
             
             EXPECTED_FILE="${pkg}-${VER}_${REV}.x86_64.xbps"
-            if [ -f "../gh-pages-repo/current/$EXPECTED_FILE" ] && [ "$FORCE_REBUILD" != "true" ]; then
+            if [ -f "../r2-repo/current/$EXPECTED_FILE" ] && [ "$FORCE_REBUILD" != "true" ]; then
               echo "✅ $EXPECTED_FILE already exists, skipping build."
             else
               echo "🔨 Compiling $pkg ($VER)..."
               ./xbps-src pkg "$pkg"
               # Delete any existing file/symlink first to ensure we write a regular file
-              rm -f "../gh-pages-repo/current/${EXPECTED_FILE}"
-              cp -L hostdir/binpkgs/${pkg}-${VER}_${REV}.x86_64.xbps ../gh-pages-repo/current/
+              rm -f "../r2-repo/current/${EXPECTED_FILE}"
+              cp -L "hostdir/binpkgs/${EXPECTED_FILE}" ../r2-repo/current/
             fi
           done
 
       - name: Index and sign repository
         run: |
-          cd gh-pages-repo/current
+          cd r2-repo/current
           
-          # Clean up any stale or dangling signature files to prevent O_CREAT ENOENT errors
-          rm -f *.sig2 *.sig
+          rm -f *.sig
           
 
           # Guard: nothing to index if no .xbps files exist
@@ -131,6 +140,14 @@ jobs:
           
           # Regenerate repo index
           xbps-rindex -a $(pwd)/*.xbps
+          xbps-rindex --remove-obsoletes $(pwd)
+
+          # Remove signatures left behind by obsolete packages. Signatures for
+          # unchanged immutable packages are retained byte-for-byte.
+          for sig in *.sig2; do
+            [ -e "$sig" ] || break
+            [ -f "${sig%.sig2}" ] || rm -f "$sig"
+          done
           
           # Sign repository
           echo "${{ secrets.XBPS_PRIVATE_KEY }}" > /tmp/xbps_privkey.pem
@@ -141,10 +158,5 @@ jobs:
           
           rm -f /tmp/xbps_privkey.pem
 
-      - name: Deploy to gh-pages branch
-        run: |
-          cd gh-pages-repo
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add current/
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Update XBPS packages [skip ci]" && git push origin gh-pages)
+      - name: Publish repository to R2
+        run: bash .github/scripts/publish-void-r2.sh publish
