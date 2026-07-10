@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "repository": "danklinux",
+  "source_commit": "e8bbd3a2a0db3e915ef7e94f758a886285e6d22e",
+  "published_at": "2026-07-10T22:03:01Z",
+  "packages": [
+    {
+      "name": "dankcalendar",
+      "version": "0.1.4",
+      "revision": "1",
+      "filename": "dankcalendar-0.1.4_1.x86_64.xbps",
+      "sha256": "a4717f960ef1dc70c0d4ea2c5905ae3e06d8d884dee30c243f28d826eb52b9e5",
+      "size": 19759940
+    },
+    {
+      "name": "danksearch",
+      "version": "0.3.1",
+      "revision": "1",
+      "filename": "danksearch-0.3.1_1.x86_64.xbps",
+      "sha256": "ffd33117b28f5504f439370a785f96b90ace70e1e1d08166eb74db5788000c00",
+      "size": 6864849
+    },
+    {
+      "name": "dgop",
+      "version": "0.2.2",
+      "revision": "1",
+      "filename": "dgop-0.2.2_1.x86_64.xbps",
+      "sha256": "fdc35ba5b86b59c9b2ab4d9f80abbf57dd5e20080c461ef57784ec7e32f8e2ee",
+      "size": 3618596
+    }
+  ]
+}
