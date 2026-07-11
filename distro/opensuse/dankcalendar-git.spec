@@ -12,7 +12,7 @@ Source0:        dankcalendar.tar.gz
 BuildRequires:  golang >= 1.25
 BuildRequires:  systemd-rpm-macros
 
-Requires:       quickshell-git
+Requires:       (quickshell-git or quickshell)
 Requires:       libsecret-1-0
 Requires:       libQt6Quick6
 
