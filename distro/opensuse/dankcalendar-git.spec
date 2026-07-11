@@ -58,7 +58,7 @@ install -Dm755 dcal %{buildroot}%{_bindir}/dcal
 install -d %{buildroot}%{_datadir}/quickshell/dankcal
 cp -a quickshell/. %{buildroot}%{_datadir}/quickshell/dankcal/
 
-install -Dm644 quickshell/assets/dankcalendar.svg \
+install -Dm644 assets/dankcalendar.svg \
     %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/dankcalendar.svg
 
 install -Dm644 assets/com.danklinux.dankcalendar.desktop \
