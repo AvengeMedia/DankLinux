@@ -1,13 +1,15 @@
 # Template file for 'dankcalendar'
 #
-# Standalone DankLinux calendar app; installs the 'dcal' binary.
+# Standalone DankLinux calendar app; installs the 'dcal' binary with the
+# Quickshell UI embedded (-tags withshell).
 pkgname=dankcalendar
-version=0.1.4
+version=0.2.3
 revision=1
 build_style=go
 build_wrksrc="core"
 go_import_path="github.com/AvengeMedia/dankcalendar/core"
 go_package="${go_import_path}/cmd/dcal"
+go_build_tags="withshell"
 go_ldflags="-X main.Version=${version}"
 short_desc="Calendar app for the Dank Linux desktop (Local, Google, CalDAV, iCloud)"
 maintainer="AvengeMedia <AvengeMedia.US@gmail.com>"
@@ -15,16 +17,20 @@ license="MIT"
 homepage="https://github.com/AvengeMedia/dankcalendar"
 changelog="https://github.com/AvengeMedia/dankcalendar/releases"
 distfiles="https://github.com/AvengeMedia/dankcalendar/archive/refs/tags/v${version}.tar.gz"
-checksum=2721da439ab98bcecdc083307f7589ec0f8fa7ebca3732284b79b99ab68d9ede
+checksum=9f8e7bf67ed21f674a8d3ac49e890b129711919805411e4d0f12d1af0cf727b2
 
 depends="quickshell libsecret qt6-declarative"
 
-post_install() {
-	# QML tree (build_style=go already installed the dcal binary)
-	vmkdir usr/share/quickshell/dankcal
-	vcopy "${wrksrc}/quickshell/*" usr/share/quickshell/dankcal
+# Embed the quickshell UI and build it into the binary.
+pre_build() {
+	rm -rf internal/shellembed/dist
+	cp -a "${wrksrc}/quickshell" internal/shellembed/dist
+	rm -rf internal/shellembed/dist/scripts
+	rm -f internal/shellembed/dist/translations/extract_translations.py
+}
 
-	# Desktop entry + icon
+post_install() {
+	# Desktop entry + icon (UI is embedded in the binary; no QML install)
 	vinstall "${wrksrc}/assets/com.danklinux.dankcalendar.desktop" 644 usr/share/applications
 	vinstall "${wrksrc}/assets/dankcalendar.svg" 644 usr/share/icons/hicolor/scalable/apps
 

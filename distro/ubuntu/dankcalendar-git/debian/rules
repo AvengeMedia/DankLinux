@@ -17,8 +17,14 @@ export PATH := $(CURDIR)/.go-toolchain/$(GO_HOST_ARCH)/go/bin:$(PATH)
 	dh $@
 
 override_dh_auto_build:
+	# Embed the quickshell UI and build it into the binary.
+	rm -rf core/internal/shellembed/dist
+	cp -a quickshell core/internal/shellembed/dist
+	rm -rf core/internal/shellembed/dist/scripts
+	rm -f core/internal/shellembed/dist/translations/extract_translations.py
 	cd core && \
 		GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=vendor \
+		-tags withshell \
 		-ldflags="-s -w -X main.Version=$(UPSTREAM_VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.Commit=$(COMMIT_HASH)" \
 		-o ../dcal ./cmd/dcal
 	mkdir -p completions
@@ -33,8 +39,6 @@ override_dh_auto_install:
 		debian/dankcalendar-git/usr/share/applications/com.danklinux.dankcalendar.desktop
 	install -Dm644 assets/dankcalendar.svg \
 		debian/dankcalendar-git/usr/share/icons/hicolor/scalable/apps/dankcalendar.svg
-	install -d debian/dankcalendar-git/usr/share/quickshell/dankcal
-	cp -a quickshell/. debian/dankcalendar-git/usr/share/quickshell/dankcal/
 	install -Dm644 completions/dcal \
 		debian/dankcalendar-git/usr/share/bash-completion/completions/dcal
 	install -Dm644 completions/_dcal \
@@ -46,5 +50,5 @@ override_dh_auto_test:
 	# Skip tests for git snapshot packaging
 
 override_dh_auto_clean:
-	rm -rf dcal completions .cache .go
+	rm -rf dcal completions .cache .go core/internal/shellembed/dist
 	dh_auto_clean

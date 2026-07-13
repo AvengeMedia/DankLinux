@@ -7,7 +7,7 @@
 
 Name:               dankcalendar-git
 Version:            %{tag}+git%{commits}.%(c=%{commit}; echo ${c:0:8})
-Release:            1%{?dist}
+Release:            2%{?dist}
 Summary:            Calendar app for the Dank Linux desktop (git)
 
 License:            MIT
@@ -39,8 +39,15 @@ export VERSION="%{tag}+git%{commits}.%(c=%{commit}; echo ${c:0:8})"
 export BUILD_TIME="$(date -u '+%%Y-%%m-%%d_%%H:%%M:%%S')"
 export COMMIT="$(echo %{commit} | cut -c1-8)"
 
+# Embed the quickshell UI and build it into the binary.
+rm -rf core/internal/shellembed/dist
+cp -a quickshell core/internal/shellembed/dist
+rm -rf core/internal/shellembed/dist/scripts
+rm -f core/internal/shellembed/dist/translations/extract_translations.py
+
 cd core
 CGO_ENABLED=0 go build \
+    -tags withshell \
     -ldflags="-s -w -X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME} -X main.Commit=${COMMIT}" \
     -o ../dcal ./cmd/dcal
 cd ..
@@ -52,9 +59,6 @@ mkdir -p completions
 
 %install
 install -Dm755 dcal %{buildroot}%{_bindir}/dcal
-
-install -d %{buildroot}%{_datadir}/quickshell/dankcal
-cp -a quickshell/. %{buildroot}%{_datadir}/quickshell/dankcal/
 
 install -Dm644 assets/dankcalendar.svg \
     %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/dankcalendar.svg
@@ -81,9 +85,6 @@ install -Dm644 completions/dcal.fish \
 %dir %{_datadir}/icons/hicolor/scalable
 %dir %{_datadir}/icons/hicolor/scalable/apps
 %{_datadir}/icons/hicolor/scalable/apps/dankcalendar.svg
-%dir %{_datadir}/quickshell
-%dir %{_datadir}/quickshell/dankcal
-%{_datadir}/quickshell/dankcal/
 %dir %{_datadir}/bash-completion
 %dir %{_datadir}/bash-completion/completions
 %{_datadir}/bash-completion/completions/dcal
@@ -95,5 +96,7 @@ install -Dm644 completions/dcal.fish \
 %{_datadir}/fish/vendor_completions.d/dcal.fish
 
 %changelog
+* Mon Jul 13 2026 Avenge Media <AvengeMedia.US@gmail.com> - 0.2.4+git86.5be85575-2
+- Build with -tags withshell; stop installing QML (UI embedded in binary)
 * Mon Jun 15 2025 Avenge Media <AvengeMedia.US@gmail.com> - 0.1.2+git14.677116ed-1
 - Initial git package (commit 677116ed)
