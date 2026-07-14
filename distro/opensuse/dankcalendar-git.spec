@@ -43,7 +43,7 @@ export COMMIT="$(echo %{version} | sed -n 's/.*\.\([a-f0-9]\{8\}\)$/\1/p')"
 
 # Embed the quickshell UI and build it into the binary.
 rm -rf core/internal/shellembed/dist
-cp -a quickshell core/internal/shellembed/dist
+cp -aL quickshell core/internal/shellembed/dist
 rm -rf core/internal/shellembed/dist/scripts
 rm -f core/internal/shellembed/dist/translations/extract_translations.py
 

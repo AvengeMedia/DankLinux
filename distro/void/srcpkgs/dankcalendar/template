@@ -16,15 +16,25 @@ maintainer="AvengeMedia <AvengeMedia.US@gmail.com>"
 license="MIT"
 homepage="https://github.com/AvengeMedia/dankcalendar"
 changelog="https://github.com/AvengeMedia/dankcalendar/releases"
-distfiles="https://github.com/AvengeMedia/dankcalendar/archive/refs/tags/v${version}.tar.gz"
-checksum=9f8e7bf67ed21f674a8d3ac49e890b129711919805411e4d0f12d1af0cf727b2
+# Pin to the dank-qml-common submodule commit of the release tag:
+# git ls-tree v${version} dank-qml-common (GitHub tag archives ship submodules empty)
+_common_commit=a25a1a5fc5f95d63d03dc59a06c6a739eeefb958
+distfiles="https://github.com/AvengeMedia/dankcalendar/archive/refs/tags/v${version}.tar.gz
+ https://github.com/AvengeMedia/dank-qml-common/archive/${_common_commit}.tar.gz"
+checksum="9f8e7bf67ed21f674a8d3ac49e890b129711919805411e4d0f12d1af0cf727b2
+ c7c08652a5682ca6a09bdb29a61873d7cefb523b91cfb5f0279c2cb05c7ac757"
 
 depends="quickshell libsecret qt6-declarative"
+
+post_extract() {
+	rm -rf "${wrksrc}/dank-qml-common"
+	mv "${XBPS_BUILDDIR}/dank-qml-common-${_common_commit}" "${wrksrc}/dank-qml-common"
+}
 
 # Embed the quickshell UI and build it into the binary.
 pre_build() {
 	rm -rf internal/shellembed/dist
-	cp -a "${wrksrc}/quickshell" internal/shellembed/dist
+	cp -aL "${wrksrc}/quickshell" internal/shellembed/dist
 	rm -rf internal/shellembed/dist/scripts
 	rm -f internal/shellembed/dist/translations/extract_translations.py
 }

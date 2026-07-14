@@ -162,6 +162,15 @@ if [[ "$PACKAGE_TYPE" == "git" ]] || [[ -n "$COMMIT_HASH" ]]; then
         fi
     fi
 
+    # Materialize submodules (no-op for repos without them)
+    if [[ -f .gitmodules ]]; then
+        log_info "Initializing git submodules..."
+        if ! git submodule update --init --recursive --quiet 2>/dev/null; then
+            log_error "Failed to initialize submodules"
+            exit $ERR_NETWORK
+        fi
+    fi
+
     # Vendor dependencies for Rust packages
     if [[ "$BUILD_LANGUAGE" == "rust" ]] && requires_vendor_deps "$PACKAGE"; then
         log_info "Vendoring Rust dependencies..."
@@ -237,8 +246,8 @@ EOF
         fi
     fi
 
-    # Remove .git directory for source package
-    rm -rf .git
+    # Remove .git directories/gitfiles (including submodules) for source package
+    find . -name .git -exec rm -rf {} +
 
     cd "$WORK_DIR"
 

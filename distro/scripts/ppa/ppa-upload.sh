@@ -580,7 +580,7 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
     
     info "Cloning $GIT_REPO from GitHub (getting latest commit info)..."
     TEMP_CLONE=$(mktemp -d "$TEMP_BASE/ppa_clone_XXXXXX")
-    if git clone "https://github.com/$GIT_REPO.git" "$TEMP_CLONE"; then
+    if git clone --recurse-submodules "https://github.com/$GIT_REPO.git" "$TEMP_CLONE"; then
         # 7-char hash: appending ppaN directly after hash (e.g. 677116eppa8) keeps dpkg
         # ordering sane. An 8-char hash before ppa (677116edppa7) can sort *below* a prior
         # mistaken 7-char+ppa upload (677116eppa5) because 'd' < 'p' at the first diff.

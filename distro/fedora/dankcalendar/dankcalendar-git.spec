@@ -4,6 +4,8 @@
 %global commits     88
 %global snapdate    20260714
 %global tag         0.2.4
+# dank-qml-common submodule commit for %%{commit} (GitHub archives ship submodules empty)
+%global common_commit a25a1a5fc5f95d63d03dc59a06c6a739eeefb958
 
 Name:               dankcalendar-git
 Version:            %{tag}+git%{commits}.%(c=%{commit}; echo ${c:0:8})
@@ -13,6 +15,7 @@ Summary:            Calendar app for the Dank Linux desktop (git)
 License:            MIT
 URL:                https://github.com/AvengeMedia/dankcalendar
 Source0:            %{url}/archive/%{commit}/dankcalendar-%{commit}.tar.gz
+Source1:            https://github.com/AvengeMedia/dank-qml-common/archive/%{common_commit}/dank-qml-common-%{common_commit}.tar.gz
 
 BuildRequires:      golang >= 1.25
 BuildRequires:      git-core
@@ -31,6 +34,9 @@ This is the git development package built from upstream master.
 
 %prep
 %autosetup -n dankcalendar-%{commit} -p1
+rm -rf dank-qml-common
+tar -xzf %{SOURCE1}
+mv dank-qml-common-%{common_commit} dank-qml-common
 
 %build
 export GOTOOLCHAIN=auto
@@ -41,7 +47,7 @@ export COMMIT="$(echo %{commit} | cut -c1-8)"
 
 # Embed the quickshell UI and build it into the binary.
 rm -rf core/internal/shellembed/dist
-cp -a quickshell core/internal/shellembed/dist
+cp -aL quickshell core/internal/shellembed/dist
 rm -rf core/internal/shellembed/dist/scripts
 rm -f core/internal/shellembed/dist/translations/extract_translations.py
 

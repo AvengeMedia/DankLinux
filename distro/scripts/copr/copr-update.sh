@@ -534,6 +534,14 @@ if [[ -n "$LATEST_COMMIT" ]]; then
         sed -i "s/^%global commits\s\+.*/%global commits     $COMMIT_COUNT/" "$SPEC_FILE"
         sed -i "s/^%global snapdate\s\+.*/%global snapdate    $LATEST_SNAPDATE/" "$SPEC_FILE"
 
+        COMMON_COMMIT=$(curl -s "https://api.github.com/repos/$UPSTREAM_REPO/contents/dank-qml-common?ref=$LATEST_COMMIT" | jq -r '.sha // empty')
+        if [[ -n "$COMMON_COMMIT" ]]; then
+            sed -i "s/^%global common_commit\s\+.*/%global common_commit $COMMON_COMMIT/" "$SPEC_FILE"
+            echo "   dank-qml-common pinned: ${COMMON_COMMIT:0:7}"
+        else
+            echo "   ⚠ Could not resolve dank-qml-common submodule commit for $LATEST_COMMIT"
+        fi
+
         UPDATED=$((UPDATED + 1))
         UPDATED_PACKAGES+=("dankcalendar-git: ${CURRENT_COMMIT:0:7} → ${LATEST_SHORT_COMMIT}")
     else
