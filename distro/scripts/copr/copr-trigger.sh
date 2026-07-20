@@ -176,8 +176,8 @@ if echo "$CHANGED_FILES" | grep -q "distro/fedora/qt6ct-kde/qt6ct-kde.spec"; the
     BUILD_QT6CT_KDE=true
 fi
 
-# Note: dms-greeter builds from https://github.com/AvengeMedia/DankMaterialShell
-# and is not tracked in this repository
+# Note: dms-greeter / dms-greeter-git build from https://github.com/AvengeMedia/dank-greeter
+# and are published into avengemedia/danklinux by that repo's CI
 
 # If no git history, check for uncommitted changes
 if [[ -z "$CHANGED_FILES" ]]; then

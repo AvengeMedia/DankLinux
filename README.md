@@ -197,8 +197,8 @@ All packages support:
 
 ## Package Variants
 
-- **Stable packages** (`dms`, `niri`, `matugen`, `cliphist`) - Tagged releases
-- **Git packages** (`dms-git`, `niri-git`, `quickshell-git`) - Latest development code, updated daily
+- **Stable packages** (`dms`, `niri`, `matugen`, `cliphist`, `dms-greeter`) - Tagged releases
+- **Git packages** (`dms-git`, `niri-git`, `quickshell-git`, `dms-greeter-git`) - Latest development code, updated daily
 
 ## Getting Started
 
@@ -209,6 +209,7 @@ All packages support:
 ## Upstream Projects
 
 - [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell) - DMS desktop environment
+- [dank-greeter](https://github.com/AvengeMedia/dank-greeter) - greetd greeter (`dms-greeter` / `dms-greeter-git`), published into danklinux Copr/OBS/PPA/Void
 - [Niri](https://github.com/YaLTeR/niri) - Scrollable-tiling Wayland compositor  
 - [Quickshell](https://github.com/outfoxxed/quickshell) - QtQuick desktop shell toolkit  
 - [Matugen](https://github.com/InioX/matugen) - Material You color generator  

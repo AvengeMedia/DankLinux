@@ -10,8 +10,11 @@ Each builds from source from its upstream release.
 | `dankcalendar` | `dcal` | [AvengeMedia/dankcalendar](https://github.com/AvengeMedia/dankcalendar) | Calendar app (Local, Google, CalDAV, iCloud) |
 
 `dgop` and `danksearch` integrate with DankMaterialShell; `dankcalendar` is a
-standalone app. The `dms` and `dms-greeter` packages live in the
+standalone app. The `dms` / `dms-git` Void packages live in the
 [DankMaterialShell repo](https://github.com/AvengeMedia/DankMaterialShell/tree/master/distro/void).
+`dms-greeter` packaging lives in
+[dank-greeter](https://github.com/AvengeMedia/dank-greeter/tree/master/distro/void)
+and is published to the shared `https://void.danklinux.com/dms/current` repository.
 
 ## Distribution
 

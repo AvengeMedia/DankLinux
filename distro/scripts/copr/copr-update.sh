@@ -601,9 +601,9 @@ fi
 # ============================================================================
 echo ""
 echo "📦 Checking dms-greeter..."
-echo "   ℹ️  Builds directly from: https://github.com/AvengeMedia/DankMaterialShell"
-echo "   Not tracked in dms_copr repo - managed in separate DankMaterialShell repo"
-echo "   Skipping automatic updates (separate repository)"
+echo "   ℹ️  Builds from: https://github.com/AvengeMedia/dank-greeter"
+echo "   Published into avengemedia/danklinux by dank-greeter CI (stable + dms-greeter-git)"
+echo "   Skipping automatic updates (managed in dank-greeter)"
 
 # ============================================================================
 # MATERIAL SYMBOLS FONTS (rarely updates)
