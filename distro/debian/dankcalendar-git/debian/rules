@@ -37,8 +37,8 @@ override_dh_auto_install:
 	install -Dm644 assets/systemd/dcal.service debian/dankcalendar-git/usr/lib/systemd/user/dcal.service
 	install -Dm644 assets/com.danklinux.dankcalendar.desktop \
 		debian/dankcalendar-git/usr/share/applications/com.danklinux.dankcalendar.desktop
-	install -Dm644 assets/dankcalendar.svg \
-		debian/dankcalendar-git/usr/share/icons/hicolor/scalable/apps/dankcalendar.svg
+	install -Dm644 assets/com.danklinux.dankcalendar.svg \
+		debian/dankcalendar-git/usr/share/icons/hicolor/scalable/apps/com.danklinux.dankcalendar.svg
 	install -Dm644 completions/dcal \
 		debian/dankcalendar-git/usr/share/bash-completion/completions/dcal
 	install -Dm644 completions/_dcal \

@@ -66,8 +66,8 @@ mkdir -p completions
 %install
 install -Dm755 dcal %{buildroot}%{_bindir}/dcal
 
-install -Dm644 assets/dankcalendar.svg \
-    %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/dankcalendar.svg
+install -Dm644 assets/com.danklinux.dankcalendar.svg \
+    %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/com.danklinux.dankcalendar.svg
 
 install -Dm644 assets/com.danklinux.dankcalendar.desktop \
     %{buildroot}%{_datadir}/applications/com.danklinux.dankcalendar.desktop
@@ -90,7 +90,7 @@ install -Dm644 completions/dcal.fish \
 %dir %{_datadir}/icons/hicolor
 %dir %{_datadir}/icons/hicolor/scalable
 %dir %{_datadir}/icons/hicolor/scalable/apps
-%{_datadir}/icons/hicolor/scalable/apps/dankcalendar.svg
+%{_datadir}/icons/hicolor/scalable/apps/com.danklinux.dankcalendar.svg
 %dir %{_datadir}/bash-completion
 %dir %{_datadir}/bash-completion/completions
 %{_datadir}/bash-completion/completions/dcal
