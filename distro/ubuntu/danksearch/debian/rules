@@ -27,6 +27,10 @@ override_dh_auto_build:
 override_dh_auto_install:
 	# Install binary as danksearch
 	install -Dm755 $(BINARY_FILE) debian/danksearch/usr/bin/danksearch
+	# DMS invokes the binary as dsearch
+	ln -s danksearch debian/danksearch/usr/bin/dsearch
+	# Install the systemd user service used by the DMS installer
+	install -Dm644 debian/dsearch.service debian/danksearch/usr/lib/systemd/user/dsearch.service
 
 override_dh_auto_clean:
 	# Don't delete binaries - they're part of the source package (native format)
