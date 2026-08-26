@@ -1,8 +1,8 @@
 %bcond_with         asan
 
 # Updated 2025-10-30: Added glib-2.0 dependency for new Polkit service
-%global commit      052059fb7c742586f9fa65d78716883d3c85188b
-%global commits     851
+%global commit      0f9939ca4fac3a1db3653c51a3c23ca9812e2946
+%global commits     852
 %global snapdate    20260826
 %global tag         0.3.2
 %global changelog_tag 0.3.1
