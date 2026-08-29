@@ -3,6 +3,15 @@
 export CARGO_HOME = $(CURDIR)/.cargo
 NCPU := $(shell nproc)
 
+# Debian 13 rustc is 1.85; niri 26.4 needs 1.87. rust187 installs the
+# official toolchain here. Testing/Unstable keep using distro rustc.
+RUST187_BIN := /usr/lib/rust-1.87.0/bin
+ifneq ($(wildcard $(RUST187_BIN)/cargo),)
+export PATH := $(RUST187_BIN):$(PATH)
+export CARGO := $(RUST187_BIN)/cargo
+export RUSTC := $(RUST187_BIN)/rustc
+endif
+
 %:
 	dh $@
 

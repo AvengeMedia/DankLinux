@@ -1,0 +1,55 @@
+<!--
+  Reference snapshot of OBS project meta (osc meta prj).
+  Not applied by obs-update-prjconf.sh. That script only pushes prjconf macros.
+
+  Live 16.1 already has block="local" so aarch64 does not wait on Backports
+  cli11. Re-apply only on purpose:
+
+    osc meta prj home:AvengeMedia:danklinux -F distro/obs-project-meta.xml
+-->
+<project name="home:AvengeMedia:danklinux">
+  <title>Dank Linux Repository</title>
+  <description>The Dank Linux Repository can be used to install standalone packages or core dependencies for the DankMaterialShell desktop environment like dgop, danksearch, ghostty, matugen, niri, xwayland-satellite and quickshell. 
+
+https://github.com/AvengeMedia/DankLinux</description>
+  <url>https://danklinux.com/docs/danklinux/</url>
+  <person userid="AvengeMedia" role="maintainer"/>
+  <repository name="openSUSE_Tumbleweed">
+    <path project="openSUSE:Factory:ARM" repository="standard"/>
+    <path project="openSUSE:Factory" repository="standard"/>
+    <arch>x86_64</arch>
+    <arch>aarch64</arch>
+  </repository>
+  <repository name="openSUSE_Slowroll">
+    <path project="openSUSE:Slowroll" repository="standard"/>
+    <arch>x86_64</arch>
+  </repository>
+  <repository name="Debian_Unstable">
+    <path project="Debian:Next" repository="standard"/>
+    <arch>x86_64</arch>
+    <arch>aarch64</arch>
+  </repository>
+  <repository name="Debian_Testing">
+    <path project="Debian:Testing" repository="update"/>
+    <arch>x86_64</arch>
+    <arch>aarch64</arch>
+  </repository>
+  <repository name="Debian_13">
+    <path project="Debian:13" repository="standard"/>
+    <arch>x86_64</arch>
+    <arch>aarch64</arch>
+  </repository>
+  <!-- block=local: do not stall 16.1 aarch64 on openSUSE:Backports:SLE-16.1
+       packages that are scheduled (cli11, openssl meta rebuilds). Local
+       cli11/quickshell can build against this project's binaries. -->
+  <repository name="16.1" block="local">
+    <path project="openSUSE:Backports:SLE-16.1" repository="standard"/>
+    <arch>x86_64</arch>
+    <arch>aarch64</arch>
+  </repository>
+  <repository name="16.0">
+    <path project="openSUSE:Leap:16.0" repository="standard"/>
+    <arch>aarch64</arch>
+    <arch>x86_64</arch>
+  </repository>
+</project>

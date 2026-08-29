@@ -138,6 +138,45 @@ build_package() {
     log_info "Processing: $pkg"
     log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+    # Official binary toolchains (rust187, etc.) are not GitHub-release packages
+    if [[ "$(get_package_type "$pkg")" == "toolchain" ]]; then
+        if [[ "$CHECK_ONLY" == "true" ]]; then
+            log_info "Check-only: $pkg is a toolchain package (dedicated build script)"
+            return 0
+        fi
+
+        local build_dir
+        build_dir=$(mktemp -d -t "obs-build-$pkg-XXXXXXXXXX")
+        local debian_dir="$build_dir/debian"
+        mkdir -p "$debian_dir"
+
+        if [[ "$TARGET_DISTRO" == "opensuse" ]]; then
+            log_error "$pkg is Debian-only"
+            rm -rf "$build_dir"
+            return 1
+        fi
+
+        if ! bash "$SCRIPT_DIR/rust/build-rust-debian.sh" "$pkg" "$debian_dir"; then
+            log_error "Toolchain Debian build failed for $pkg"
+            rm -rf "$build_dir"
+            return 1
+        fi
+
+        local upload_cmd=("$SCRIPT_DIR/obs-upload.sh" "--distro=debian")
+        [[ -n "$COMMIT_MESSAGE" ]] && upload_cmd+=("--message=$COMMIT_MESSAGE")
+        upload_cmd+=("$pkg" "$debian_dir")
+
+        if ! bash "${upload_cmd[@]}"; then
+            log_error "Upload failed for $pkg"
+            rm -rf "$build_dir"
+            return 1
+        fi
+
+        rm -rf "$build_dir"
+        log_success "$pkg processed successfully"
+        return 0
+    fi
+
     # Determine version to build
     log_info "Auto-detecting version from upstream..."
 

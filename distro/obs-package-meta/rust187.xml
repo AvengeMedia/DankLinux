@@ -1,0 +1,10 @@
+<package name="rust187" project="home:AvengeMedia:danklinux">
+  <title>Rust 1.87 official toolchain (Debian 13)</title>
+  <description>Official Rust 1.87.0 binaries for OBS Debian builds. Debian 13 rustc is 1.85; niri 26.4 requires 1.87. OpenSUSE already has a new enough rustc, so this package is Debian-only.</description>
+  <build>
+    <disable repository="openSUSE_Tumbleweed"/>
+    <disable repository="openSUSE_Slowroll"/>
+    <disable repository="16.0"/>
+    <disable repository="16.1"/>
+  </build>
+</package>

@@ -221,23 +221,6 @@ fi
 
 log_success "Package checked out: $PKG_DIR"
 
-# Clean up old artifacts (remove from both filesystem and OBS)
-log_info "Cleaning up old artifacts..."
-
-# Temporarily disable failglob for cleanup
-shopt -u failglob 2>/dev/null || true
-
-# Remove all old build artifacts from OBS tracking and filesystem
-for pattern in "*.tar" "*.tar.*" "*.dsc" "*.spec" "_service"; do
-    for file in $pattern; do
-        if [[ -f "$file" ]]; then
-            log_debug "Removing old file: $file"
-            osc rm "$file" 2>/dev/null || true
-            rm -f "$file"
-        fi
-    done
-done
-
 # Determine which artifacts to upload
 UPLOAD_DEBIAN=false
 UPLOAD_OPENSUSE=false
@@ -272,6 +255,39 @@ case "$TARGET_DISTRO" in
         exit $ERR_CONFIG
         ;;
 esac
+
+# Clean up only the artifacts we are replacing, so a debian-only upload
+# does not delete the OpenSUSE spec (and vice versa).
+log_info "Cleaning up old artifacts..."
+shopt -u failglob 2>/dev/null || true
+
+remove_obs_file() {
+    local file="$1"
+    if [[ -f "$file" ]]; then
+        log_debug "Removing old file: $file"
+        osc rm "$file" 2>/dev/null || true
+        rm -f "$file"
+    fi
+}
+
+if [[ "$UPLOAD_DEBIAN" == "true" ]]; then
+    for file in *.dsc *.debian.tar.* "${PACKAGE}_"*; do
+        remove_obs_file "$file"
+    done
+fi
+
+if [[ "$UPLOAD_OPENSUSE" == "true" ]]; then
+    for file in *.spec _service; do
+        remove_obs_file "$file"
+    done
+    for file in *.tar *.tar.* *.gz; do
+        [[ -f "$file" ]] || continue
+        [[ "$file" == "${PACKAGE}_"* ]] && continue
+        [[ "$file" == *.dsc ]] && continue
+        [[ "$file" == *.debian.tar.* ]] && continue
+        remove_obs_file "$file"
+    done
+fi
 
 log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 log_info "Copying build artifacts"
@@ -337,6 +353,17 @@ if ! timeout 1800 osc commit -m "$COMMIT_MESSAGE" 2>&1 | tee /tmp/osc-commit.log
 fi
 
 log_success "Upload completed successfully!"
+
+# Apply per-package OBS meta (disable wrong distros / noarch-on-one-arch).
+META_FILE="$(cd "$SCRIPT_DIR/../.." && pwd)/obs-package-meta/${PACKAGE}.xml"
+if [[ -f "$META_FILE" ]]; then
+    log_info "Applying package meta: $META_FILE"
+    if osc meta pkg "$OBS_PROJECT" "$PACKAGE" -F "$META_FILE"; then
+        log_success "Package meta applied"
+    else
+        log_warn "Failed to apply package meta (non-fatal): $META_FILE"
+    fi
+fi
 
 # Show build URL
 BUILD_URL="https://build.opensuse.org/package/show/$OBS_PROJECT/$PACKAGE"

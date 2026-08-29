@@ -1,0 +1,9 @@
+<package name="cli11" project="home:AvengeMedia:danklinux">
+  <title>CLI11 command line parser</title>
+  <description>Header-only C++ CLI parser. Built in this project so Leap 16.1 quickshell is not blocked on openSUSE Backports cli11-devel rebuilds. Debian already has libcli11-dev. Built per-arch (not noarch) so OBS does not stall dependents waiting for identical noarch RPMs across workers.</description>
+  <build>
+    <disable repository="Debian_13"/>
+    <disable repository="Debian_Testing"/>
+    <disable repository="Debian_Unstable"/>
+  </build>
+</package>

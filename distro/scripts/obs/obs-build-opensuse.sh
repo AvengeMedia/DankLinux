@@ -307,10 +307,21 @@ else
         tar -xf "$TARBALL" -C "$WORK_DIR"
     fi
 
-    # Find extracted directory
-    EXTRACTED_DIR=$(find "$WORK_DIR" -maxdepth 1 -type d -name "${PACKAGE}*" | grep -v "^$WORK_DIR$" | head -1)
-
+    # Find extracted directory. GitHub archives often use a different
+    # directory name than the OBS package (e.g. CLI11-2.6.1 vs cli11).
+    EXTRACTED_DIR=""
+    DIR_TEMPLATE=$(get_tarball_directory "$PACKAGE")
+    if [[ -n "$DIR_TEMPLATE" ]]; then
+        WANT_DIR="${DIR_TEMPLATE//\{version\}/$BASE_VERSION}"
+        if [[ -d "$WORK_DIR/$WANT_DIR" ]]; then
+            EXTRACTED_DIR="$WORK_DIR/$WANT_DIR"
+        fi
+    fi
     if [[ -z "$EXTRACTED_DIR" ]]; then
+        EXTRACTED_DIR=$(find "$WORK_DIR" -mindepth 1 -maxdepth 1 -type d | head -1)
+    fi
+
+    if [[ -z "$EXTRACTED_DIR" || ! -d "$EXTRACTED_DIR" ]]; then
         log_error "Failed to find extracted source directory"
         exit $ERR_BUILD_FAILURE
     fi

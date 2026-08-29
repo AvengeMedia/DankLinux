@@ -1,0 +1,53 @@
+#!/usr/bin/make -f
+
+export HOME = $(CURDIR)
+RUST_VERSION := 1.87.0
+DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
+
+ifeq ($(DEB_HOST_ARCH),amd64)
+    RUST_ARCH := x86_64
+else ifeq ($(DEB_HOST_ARCH),arm64)
+    RUST_ARCH := aarch64
+else
+    $(error Unsupported architecture: $(DEB_HOST_ARCH))
+endif
+
+PREFIX := /usr/lib/rust-$(RUST_VERSION)
+DESTDIR := $(CURDIR)/debian/rust187
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	tar -xJf "rustc-$(RUST_VERSION)-$(RUST_ARCH)-unknown-linux-gnu.tar.xz"
+	tar -xJf "cargo-$(RUST_VERSION)-$(RUST_ARCH)-unknown-linux-gnu.tar.xz"
+	tar -xJf "rust-std-$(RUST_VERSION)-$(RUST_ARCH)-unknown-linux-gnu.tar.xz"
+
+override_dh_auto_build:
+	# Official binaries — nothing to compile
+
+override_dh_auto_install:
+	for comp in \
+		rustc-$(RUST_VERSION)-$(RUST_ARCH)-unknown-linux-gnu \
+		cargo-$(RUST_VERSION)-$(RUST_ARCH)-unknown-linux-gnu \
+		rust-std-$(RUST_VERSION)-$(RUST_ARCH)-unknown-linux-gnu; do \
+		( cd "$$comp" && ./install.sh \
+			--destdir="$(DESTDIR)" \
+			--prefix="$(PREFIX)" \
+			--disable-ldconfig ); \
+	done
+
+override_dh_strip:
+	# Do not strip the official toolchain
+
+override_dh_dwz:
+	# Official binaries are already optimized
+
+override_dh_shlibdeps:
+	dh_shlibdeps -- --ignore-missing-info || true
+
+override_dh_auto_clean:
+	rm -rf rustc-$(RUST_VERSION)-*-unknown-linux-gnu \
+	       cargo-$(RUST_VERSION)-*-unknown-linux-gnu \
+	       rust-std-$(RUST_VERSION)-*-unknown-linux-gnu
+	dh_auto_clean

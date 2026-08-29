@@ -123,6 +123,21 @@ check_package_updates() {
     log_debug "Package type: $package_type"
     log_debug "Upstream repo: $upstream_repo"
 
+    if [[ "$package_type" == "toolchain" ]]; then
+        log_info "$package: toolchain package (built via dedicated script, not auto-bumped)"
+        UPDATE_RESULTS+=("$(cat <<EOF
+{
+  "package": "$package",
+  "needs_update": false,
+  "reason": "toolchain",
+  "upstream_version": null,
+  "obs_version": null
+}
+EOF
+        )")
+        return 0
+    fi
+
     # Get upstream version
     local upstream_version=""
     local upstream_commit=""

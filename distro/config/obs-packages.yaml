@@ -24,6 +24,32 @@ packages:
       directory_name: "cpptrace-{version}"
       compression: gz
 
+  cli11:
+    type: stable
+    upstream:
+      repo: CLIUtils/CLI11
+      source_type: github_release
+    distros:
+      - opensuse
+    build:
+      language: cpp
+      requires:
+        - cmake
+    tarball:
+      directory_name: "CLI11-{version}"
+      compression: gz
+
+  rust187:
+    type: toolchain
+    upstream:
+      repo: rust-lang/rust
+      source_type: rust_dist
+    distros:
+      - debian
+    build:
+      language: rust-bin
+      rust_version: "1.87.0"
+
   danksearch:
     type: stable
     upstream:
@@ -330,8 +356,10 @@ groups:
   debian-only:
     - niri  # niri stable is Debian-only; OpenSUSE uses niri-git
     - matugen-snapshot
+    - rust187
 
-  opensuse-only: []
+  opensuse-only:
+    - cli11
 
   rust-packages:
     - matugen
@@ -350,6 +378,7 @@ groups:
     - quickshell
     - quickshell-git
     - cpptrace
+    - cli11
 
   binary-releases:
     - danksearch

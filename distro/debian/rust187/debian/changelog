@@ -1,0 +1,7 @@
+rust187 (1.87.0-1) unstable; urgency=medium
+
+  * Official Rust 1.87.0 binaries for Debian 13 OBS builds
+  * niri 26.4 MSRV is rustc 1.87; Debian 13 only has 1.85
+  * Installs to /usr/lib/rust-1.87.0 without replacing distro rustc
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Sat, 29 Aug 2026 01:45:00 -0400
