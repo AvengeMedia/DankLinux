@@ -234,6 +234,10 @@ All packages support:
 - **DMS Nightly**: [avengemedia/dms-git](https://copr.fedorainfracloud.org/coprs/avengemedia/dms-git/)
 - **Dependencies**: [avengemedia/danklinux](https://copr.fedorainfracloud.org/coprs/avengemedia/danklinux/)
 
+#### Automatic rebuilds on Fedora Qt updates
+
+quickshell, quickshell-git and qt6ct-kde link private Qt ABI and must be rebuilt whenever Fedora ships a new qt6-qtbase, qt6-qtdeclarative or qt6-qtwayland. The `Rebuild for Fedora Qt updates` workflow (`.github/workflows/run-qt-rebuild.yml`) runs hourly: it queries the Fedora repos for every Fedora chroot in the COPR project, compares against `distro/fedora/qt6-baseline.json`, bumps the three specs once and triggers the COPR builds. Run it by hand from the Actions tab, or fire `repository_dispatch` with event type `fedora-qt-update` (the api.danklinux.com server does this when a matching bodhi update reaches stable).
+
 ## Contributing
 
 Packaging specs and automation maintained in this repository.

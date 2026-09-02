@@ -46,16 +46,22 @@ ensure_scm() {
         --method rpkg
 }
 
+# COPR_CHROOTS: optional space-separated chroot list, limits every build in this run
+CHROOT_ARGS=()
+for chroot in ${COPR_CHROOTS:-}; do
+    CHROOT_ARGS+=(-r "$chroot")
+done
+
 trigger_build() {
     local package_name="$1"
     local spec_file="$2"
     
-    echo "📦 Building $package_name..."
+    echo "📦 Building $package_name... ${COPR_CHROOTS:+(chroots: $COPR_CHROOTS)}"
     
     if copr-cli build-package "$COPR_OWNER/$COPR_PROJECT" \
         --name "$package_name" \
         --timeout 7200 \
-        --nowait; then
+        --nowait "${CHROOT_ARGS[@]}"; then
         return 0
     fi
 
@@ -71,7 +77,7 @@ trigger_build() {
     if copr-cli build-package "$COPR_OWNER/$COPR_PROJECT" \
         --name "$package_name" \
         --timeout 7200 \
-        --nowait; then
+        --nowait "${CHROOT_ARGS[@]}"; then
         return 0
     else
         echo "   ❌ Build trigger failed" >&2
@@ -89,8 +95,10 @@ else
     FORCE_PACKAGE=""
 fi
 
-if [[ -n "$GITHUB_ACTIONS" ]]; then
-    CHANGED_FILES=$(git diff HEAD~1 --name-only 2>/dev/null || echo "")
+# COPR_SKIP_DIFF=true: HEAD is not a commit made by this run, so its diff is stale
+if [[ "${COPR_SKIP_DIFF:-false}" == "true" ]]; then
+    echo "ℹ️  Skipping HEAD~1 diff (no new commit in this run)"
+    CHANGED_FILES=""
 else
     CHANGED_FILES=$(git diff HEAD~1 --name-only 2>/dev/null || echo "")
 fi

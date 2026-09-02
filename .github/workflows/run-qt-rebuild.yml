@@ -1,0 +1,112 @@
+name: Rebuild for Fedora Qt updates
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  repository_dispatch:
+    types: [fedora-qt-update]
+  workflow_dispatch:
+
+concurrency:
+  group: qt-rebuild
+  cancel-in-progress: false
+
+jobs:
+  qt-rebuild:
+    name: Check Fedora qt6 and rebuild
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:44
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Install dependencies
+        run: dnf install -y git jq curl rpmdevtools copr-cli
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Log trigger
+        env:
+          PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+        run: |
+          echo "event: ${{ github.event_name }}"
+          if [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
+            echo "payload: $PAYLOAD"
+          fi
+
+      - name: Check Fedora qt6 versions
+        id: check
+        run: |
+          chmod +x distro/scripts/copr/qt-rebuild-check.sh
+          distro/scripts/copr/qt-rebuild-check.sh
+
+      - name: Commit and push
+        if: steps.check.outputs.dirty == 'true'
+        env:
+          BUMPED: ${{ steps.check.outputs.bumped }}
+          SUMMARY: ${{ steps.check.outputs.summary }}
+        run: |
+          git add distro/fedora/qt6-baseline.json \
+            distro/fedora/quickshell/quickshell.spec \
+            distro/fedora/quickshell/quickshell-git.spec \
+            distro/fedora/qt6ct-kde/qt6ct-kde.spec
+          if [[ "$BUMPED" == "true" ]]; then
+            git commit -m "ci: rebuild qt packages for $SUMMARY"
+          else
+            git commit -m "ci: seed qt6 baseline"
+          fi
+          for attempt in 1 2 3; do
+            if git pull --rebase origin master && git push; then
+              exit 0
+            fi
+            echo "push attempt $attempt failed, retrying"
+            sleep 5
+          done
+          exit 1
+
+      - name: Configure COPR
+        if: steps.check.outputs.bumped == 'true'
+        env:
+          COPR_CONFIG: ${{ secrets.COPR_CONFIG }}
+        run: |
+          if [[ -z "$COPR_CONFIG" ]]; then
+            echo "::error::COPR_CONFIG secret not set"
+            exit 1
+          fi
+          mkdir -p ~/.config
+          echo "$COPR_CONFIG" > ~/.config/copr
+          chmod 600 ~/.config/copr
+
+      - name: Trigger COPR builds
+        if: steps.check.outputs.bumped == 'true'
+        env:
+          COPR_CHROOTS: ${{ steps.check.outputs.chroots }}
+        run: |
+          chmod +x distro/scripts/copr/copr-trigger.sh
+          distro/scripts/copr/copr-trigger.sh
+
+      - name: Summary
+        if: steps.check.outputs.bumped == 'true'
+        env:
+          SUMMARY: ${{ steps.check.outputs.summary }}
+        run: |
+          {
+            echo "## Qt rebuild triggered"
+            echo ""
+            echo "$SUMMARY"
+            echo ""
+            echo "Chroots: ${{ steps.check.outputs.chroots }}"
+            echo ""
+            echo "[View builds](https://copr.fedorainfracloud.org/coprs/avengemedia/danklinux/builds/)"
+          } >> "$GITHUB_STEP_SUMMARY"

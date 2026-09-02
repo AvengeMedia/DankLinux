@@ -22,6 +22,7 @@ on:
           - niri-git
           - quickshell
           - quickshell-git
+          - qt6ct-kde
           - xwayland-satellite
           - xwayland-satellite-git
         default: ''
@@ -114,16 +115,9 @@ jobs:
               echo "📋 No spec files modified in push"
             fi
           elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            # For manual triggers, check if any spec files differ from previous commit
-            SPEC_CHANGES=$(git diff HEAD~1 --name-only | grep '\.spec$' || echo "")
-            if [[ -n "$SPEC_CHANGES" ]]; then
-              echo "spec_changes=true" >> $GITHUB_OUTPUT
-              echo "📋 Spec files modified in recent commit:"
-              echo "$SPEC_CHANGES" | sed 's/^/  - /'
-            else
-              echo "spec_changes=false" >> $GITHUB_OUTPUT
-              echo "📋 No spec files modified in recent commits"
-            fi
+            # Manual runs build only what this run committed (has_changes) or the selected package
+            echo "spec_changes=false" >> $GITHUB_OUTPUT
+            echo "📋 Manual run: HEAD~1 diff ignored"
           else
             echo "spec_changes=false" >> $GITHUB_OUTPUT
             echo "📋 Not a push/manual event, skipping spec change check"
@@ -139,7 +133,7 @@ jobs:
           echo "event_name: ${{ github.event_name }}"
           echo ""
           echo "Trigger logic:"
-          echo "  - Run COPR triggers if: has_changes OR spec_changes"
+          echo "  - Run COPR triggers if: has_changes OR spec_changes OR manual package"
           echo "===================="
 
       - name: Commit and push changes
@@ -193,7 +187,8 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       needs.update-packages.outputs.has_changes == 'true' ||
-      needs.update-packages.outputs.spec_changes == 'true'
+      needs.update-packages.outputs.spec_changes == 'true' ||
+      github.event.inputs.package != ''
 
     steps:
       - name: Checkout repository
@@ -226,6 +221,7 @@ jobs:
       - name: Trigger builds
         env:
           MANUAL_PACKAGE: ${{ github.event.inputs.package }}
+          COPR_SKIP_DIFF: ${{ github.event_name == 'workflow_dispatch' && needs.update-packages.outputs.has_changes != 'true' }}
         run: |
           chmod +x distro/scripts/copr/*.sh distro/scripts/common/*.sh
           distro/scripts/copr/copr-trigger.sh
