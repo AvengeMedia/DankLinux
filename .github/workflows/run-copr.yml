@@ -104,8 +104,8 @@ jobs:
         id: check_push
         run: |
           if [[ "${{ github.event_name }}" == "push" ]]; then
-            # Check if any spec files were changed in the push itself
-            SPEC_CHANGES=$(git diff HEAD~1 --name-only | grep '\.spec$' || echo "")
+            # Compare commits only: copr-update.sh already dirtied the tree above
+            SPEC_CHANGES=$(git diff HEAD~1 HEAD --name-only | grep '^distro/fedora/.*\.spec$' || echo "")
             if [[ -n "$SPEC_CHANGES" ]]; then
               echo "spec_changes=true" >> $GITHUB_OUTPUT
               echo "📋 Spec files modified in push:"

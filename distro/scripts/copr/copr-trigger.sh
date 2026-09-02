@@ -100,7 +100,7 @@ if [[ "${COPR_SKIP_DIFF:-false}" == "true" ]]; then
     echo "ℹ️  Skipping HEAD~1 diff (no new commit in this run)"
     CHANGED_FILES=""
 else
-    CHANGED_FILES=$(git diff HEAD~1 --name-only 2>/dev/null || echo "")
+    CHANGED_FILES=$(git diff HEAD~1 HEAD --name-only 2>/dev/null || echo "")
 fi
 
 # Package build flags
