@@ -1,1 +1,20 @@
-{}
+{
+  "obs": {
+    "Debian_13": {
+      "quickshell": "6.8.2",
+      "quickshell-git": "6.8.2"
+    },
+    "Debian_Testing": {
+      "quickshell": "6.10.2",
+      "quickshell-git": "6.10.2"
+    },
+    "Debian_Unstable": {
+      "quickshell": "6.10.2",
+      "quickshell-git": "6.10.2"
+    }
+  },
+  "ppa": {
+    "resolute": "6.10.2",
+    "stonking": "6.10.2"
+  }
+}
