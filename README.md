@@ -238,6 +238,8 @@ All packages support:
 
 quickshell, quickshell-git and qt6ct-kde link private Qt ABI and must be rebuilt whenever Fedora ships a new qt6-qtbase, qt6-qtdeclarative or qt6-qtwayland. The `Rebuild for Fedora Qt updates` workflow (`.github/workflows/run-qt-rebuild.yml`) runs hourly: it queries the Fedora repos for every Fedora chroot in the COPR project, compares against `distro/fedora/qt6-baseline.json`, bumps the three specs once and triggers the COPR builds. Run it by hand from the Actions tab, or fire `repository_dispatch` with event type `fedora-qt-update` (the api.danklinux.com server does this when a matching bodhi update reaches stable).
 
+Debian and Ubuntu get the same treatment from `Rebuild for Debian/Ubuntu Qt updates` (`.github/workflows/run-qt-rebuild-deb.yml`, hourly): it reads the published OBS Debian repos and the Ubuntu archive, keeps `distro/qt6-baseline-deb.json`, bumps `.dbN` on OBS (debian only, openSUSE rebuilds itself) and uploads `ppaN` for the affected Ubuntu series only. Void ships no Qt private-ABI package here.
+
 ## Contributing
 
 Packaging specs and automation maintained in this repository.

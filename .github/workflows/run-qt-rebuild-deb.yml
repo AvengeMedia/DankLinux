@@ -1,0 +1,205 @@
+name: Rebuild for Debian/Ubuntu Qt updates
+
+on:
+  schedule:
+    - cron: '37 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: qt-rebuild-deb
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check Debian and Ubuntu qt6
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      obs_plan: ${{ steps.check.outputs.obs_plan }}
+      ppa_plan: ${{ steps.check.outputs.ppa_plan }}
+      summary: ${{ steps.check.outputs.summary }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y jq curl dpkg
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Check qt6 versions
+        id: check
+        run: |
+          chmod +x distro/scripts/qt/qt-rebuild-deb-check.sh
+          distro/scripts/qt/qt-rebuild-deb-check.sh
+
+      - name: Commit baseline
+        if: steps.check.outputs.dirty == 'true'
+        env:
+          SUMMARY: ${{ steps.check.outputs.summary }}
+        run: |
+          git add distro/qt6-baseline-deb.json
+          if [[ -n "$SUMMARY" ]]; then
+            git commit -m "ci: rebuild deb qt packages for $SUMMARY"
+          else
+            git commit -m "ci: seed deb qt6 baseline"
+          fi
+          for attempt in 1 2 3; do
+            if git pull --rebase origin master && git push; then
+              exit 0
+            fi
+            echo "push attempt $attempt failed, retrying"
+            sleep 5
+          done
+          exit 1
+
+  obs-rebuild:
+    name: OBS ${{ matrix.item.package }} .db${{ matrix.item.rebuild }}
+    needs: check
+    if: needs.check.outputs.obs_plan != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        item: ${{ fromJson(needs.check.outputs.obs_plan) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y osc jq curl dpkg-dev debhelper libglib2.0-dev
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          mkdir -p ~/.config/osc
+          cat > ~/.config/osc/oscrc << EOF
+          [general]
+          apiurl = https://api.opensuse.org
+
+          [https://api.opensuse.org]
+          user = ${{ secrets.OBS_USERNAME }}
+          pass = ${{ secrets.OBS_PASSWORD }}
+          EOF
+          chmod 600 ~/.config/osc/oscrc
+
+      - name: Test OBS authentication
+        run: |
+          if ! osc api /about > /dev/null 2>&1; then
+            echo "::error::OBS authentication failed"
+            exit 1
+          fi
+
+      - name: Rebuild on OBS (debian only)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OBS_USERNAME: ${{ secrets.OBS_USERNAME }}
+          OBS_PASSWORD: ${{ secrets.OBS_PASSWORD }}
+          PACKAGE: ${{ matrix.item.package }}
+          REBUILD_NUMBER: ${{ matrix.item.rebuild }}
+          SUMMARY: ${{ needs.check.outputs.summary }}
+        run: |
+          bash distro/scripts/obs/obs-orchestrator.sh \
+            --message="Rebuild for qt6 update: $SUMMARY (rebuild $REBUILD_NUMBER)" \
+            "$PACKAGE" "$REBUILD_NUMBER" debian
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: obs-build-logs-${{ matrix.item.package }}
+          path: |
+            /tmp/obs-build-*/build.log
+            /tmp/osc-*.log
+          retention-days: 7
+
+  ppa-rebuild:
+    name: PPA ${{ matrix.target }}
+    needs: check
+    if: needs.check.outputs.ppa_plan != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJson(needs.check.outputs.ppa_plan) }}
+    concurrency:
+      group: ppa-danklinux-${{ matrix.target }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            debhelper \
+            devscripts \
+            dput \
+            lftp \
+            build-essential \
+            fakeroot \
+            dpkg-dev \
+            openssh-client \
+            jq \
+            curl \
+            git
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Configure GPG
+        env:
+          GPG_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          echo "$GPG_KEY" | gpg --import
+          GPG_KEY_ID=$(gpg --list-secret-keys --keyid-format LONG | grep sec | awk '{print $2}' | cut -d'/' -f2)
+          echo "DEBSIGN_KEYID=$GPG_KEY_ID" >> "$GITHUB_ENV"
+
+      - name: Upload target
+        env:
+          TARGET: ${{ matrix.target }}
+          LAUNCHPAD_SSH_PRIVATE_KEY: ${{ secrets.LAUNCHPAD_SSH_PRIVATE_KEY }}
+          LAUNCHPAD_SSH_LOGIN: ${{ secrets.LAUNCHPAD_SSH_LOGIN }}
+        run: |
+          IFS=':' read -r PACKAGE UBUNTU_SERIES PPA_NUM <<< "$TARGET"
+          echo "Uploading $PACKAGE to $UBUNTU_SERIES with ppa$PPA_NUM"
+          bash distro/scripts/ppa/ppa-upload.sh "$PACKAGE" danklinux "$UBUNTU_SERIES" "$PPA_NUM"
+
+  summary:
+    name: Summary
+    needs: [check, obs-rebuild, ppa-rebuild]
+    if: always() && needs.check.outputs.summary != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write summary
+        env:
+          SUMMARY: ${{ needs.check.outputs.summary }}
+          OBS_PLAN: ${{ needs.check.outputs.obs_plan }}
+          PPA_PLAN: ${{ needs.check.outputs.ppa_plan }}
+        run: |
+          {
+            echo "## Debian/Ubuntu qt rebuild"
+            echo ""
+            echo "$SUMMARY"
+            echo ""
+            echo "OBS: $OBS_PLAN (obs-rebuild: ${{ needs.obs-rebuild.result }})"
+            echo "PPA: $PPA_PLAN (ppa-rebuild: ${{ needs.ppa-rebuild.result }})"
+          } >> "$GITHUB_STEP_SUMMARY"
