@@ -96,11 +96,15 @@ else
 fi
 
 # COPR_SKIP_DIFF=true: HEAD is not a commit made by this run, so its diff is stale
+# COPR_DIFF_BASE: commit the run started from, so pushed specs survive an auto-update commit on top
+DIFF_BASE="${COPR_DIFF_BASE:-HEAD~1}"
+git cat-file -e "$DIFF_BASE^{commit}" 2>/dev/null || DIFF_BASE=HEAD~1
 if [[ "${COPR_SKIP_DIFF:-false}" == "true" ]]; then
-    echo "ℹ️  Skipping HEAD~1 diff (no new commit in this run)"
+    echo "ℹ️  Skipping $DIFF_BASE diff (no new commit in this run)"
     CHANGED_FILES=""
 else
-    CHANGED_FILES=$(git diff HEAD~1 HEAD --name-only 2>/dev/null || echo "")
+    echo "ℹ️  Comparing $DIFF_BASE..HEAD"
+    CHANGED_FILES=$(git diff "$DIFF_BASE" HEAD --name-only 2>/dev/null || echo "")
 fi
 
 # Package build flags

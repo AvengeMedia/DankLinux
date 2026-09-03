@@ -105,7 +105,9 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "push" ]]; then
             # Compare commits only: copr-update.sh already dirtied the tree above
-            SPEC_CHANGES=$(git diff HEAD~1 HEAD --name-only | grep '^distro/fedora/.*\.spec$' || echo "")
+            BASE="${{ github.event.before }}"
+            git cat-file -e "$BASE^{commit}" 2>/dev/null || BASE=HEAD~1
+            SPEC_CHANGES=$(git diff "$BASE" HEAD --name-only | grep '^distro/fedora/.*\.spec$' || echo "")
             if [[ -n "$SPEC_CHANGES" ]]; then
               echo "spec_changes=true" >> $GITHUB_OUTPUT
               echo "📋 Spec files modified in push:"
@@ -222,6 +224,7 @@ jobs:
         env:
           MANUAL_PACKAGE: ${{ github.event.inputs.package }}
           COPR_SKIP_DIFF: ${{ github.event_name == 'workflow_dispatch' && needs.update-packages.outputs.has_changes != 'true' }}
+          COPR_DIFF_BASE: ${{ github.event_name == 'push' && github.event.before || github.sha }}
         run: |
           chmod +x distro/scripts/copr/*.sh distro/scripts/common/*.sh
           distro/scripts/copr/copr-trigger.sh
