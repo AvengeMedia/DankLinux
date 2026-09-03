@@ -16,6 +16,17 @@ bump_patch_triplet() {
     fi
 }
 
+CHANGELOG_AUTHOR="github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+
+# Specs on %autorelease are left alone; COPR's rpkg method never expands it anyway
+reset_release() {
+    local spec="$1" version="$2" epoch
+    grep -qE '^Release:[[:space:]]+[0-9]+%\{\?dist\}' "$spec" || return 0
+    sed -i -E 's/^(Release:[[:space:]]+)[0-9]+(%\{\?dist\})/\11\2/' "$spec"
+    epoch=$(sed -nE 's/^Epoch:[[:space:]]+([0-9]+)$/\1:/p' "$spec")
+    sed -i "/^%changelog$/a * $(LC_ALL=C date +'%a %b %d %Y') $CHANGELOG_AUTHOR - ${epoch}${version}-1\n- update to ${version}\n" "$spec"
+}
+
 # Track if any packages were updated
 UPDATED=0
 UPDATED_PACKAGES=()
@@ -121,6 +132,7 @@ else
 
             # Update the tag version
             sed -i "s/^%global tag\s\+.*/%global tag         $LATEST_VERSION/" "$SPEC_FILE"
+            reset_release "$SPEC_FILE" "$LATEST_VERSION"
 
             UPDATED=$((UPDATED + 1))
             UPDATED_PACKAGES+=("quickshell: $CURRENT_VERSION → $LATEST_VERSION")
@@ -287,6 +299,7 @@ if [[ -n "$LATEST_VERSION" ]]; then
 
         # Update the spec file
         sed -i "s/^Version:\s\+.*/Version:        $LATEST_VERSION/" "$SPEC_FILE"
+        reset_release "$SPEC_FILE" "$LATEST_VERSION"
 
         UPDATED=$((UPDATED + 1))
         UPDATED_PACKAGES+=("dgop: $CURRENT_VERSION → $LATEST_VERSION")
@@ -322,6 +335,7 @@ if [[ -n "$LATEST_VERSION" ]]; then
 
         # Update the spec file
         sed -i "s/^Version:\s\+.*/Version:        $LATEST_VERSION/" "$SPEC_FILE"
+        reset_release "$SPEC_FILE" "$LATEST_VERSION"
 
         UPDATED=$((UPDATED + 1))
         UPDATED_PACKAGES+=("cliphist: $CURRENT_VERSION → $LATEST_VERSION")
@@ -357,6 +371,7 @@ if [[ -n "$LATEST_VERSION" ]]; then
 
         # Update the spec file
         sed -i "s/^Version:\s\+.*/Version:        $LATEST_VERSION/" "$SPEC_FILE"
+        reset_release "$SPEC_FILE" "$LATEST_VERSION"
 
         UPDATED=$((UPDATED + 1))
         UPDATED_PACKAGES+=("matugen: $CURRENT_VERSION → $LATEST_VERSION")
@@ -392,6 +407,7 @@ if [[ -n "$LATEST_VERSION" ]]; then
 
         # Update the spec file
         sed -i "s/^Version:\s\+.*/Version:            $LATEST_VERSION/" "$SPEC_FILE"
+        reset_release "$SPEC_FILE" "$LATEST_VERSION"
 
         UPDATED=$((UPDATED + 1))
         UPDATED_PACKAGES+=("breakpad: $CURRENT_VERSION → $LATEST_VERSION")
@@ -428,6 +444,7 @@ if [[ -n "$LATEST_VERSION" ]]; then
 
         # Update the spec file
         sed -i "s/^Version:\s\+.*/Version:        $LATEST_VERSION/" "$SPEC_FILE"
+        reset_release "$SPEC_FILE" "$LATEST_VERSION"
 
         UPDATED=$((UPDATED + 1))
         UPDATED_PACKAGES+=("ghostty: $CURRENT_VERSION → $LATEST_VERSION")
@@ -463,6 +480,7 @@ if [[ -n "$LATEST_VERSION" ]]; then
 
         # Update the spec file
         sed -i "s/^Version:\s\+.*/Version:        $LATEST_VERSION/" "$SPEC_FILE"
+        reset_release "$SPEC_FILE" "$LATEST_VERSION"
 
         UPDATED=$((UPDATED + 1))
         UPDATED_PACKAGES+=("danksearch: $CURRENT_VERSION → $LATEST_VERSION")
