@@ -4,7 +4,7 @@
 %global pkg_summary Blazingly fast and efficient file system search tool
 
 Name:           danksearch
-Version:        0.3.2
+Version:        1.6.0
 Release:        1%{?dist}
 Summary:        %{pkg_summary}
 
@@ -109,6 +109,9 @@ EOF
 fi
 
 %changelog
+* Thu Sep 03 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 1.6.0-1
+- update to 1.6.0
+
 * Fri Nov 1 2025 DankLinux Team <noreply@danklinux.com> - 0.0.7-1
 - Update to v0.0.7
 - Use /latest/ for automatic updates
