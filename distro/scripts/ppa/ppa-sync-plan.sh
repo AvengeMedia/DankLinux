@@ -26,6 +26,8 @@ PACKAGES=(
     "xwayland-satellite:Supreeeme/xwayland-satellite:release"
     "xwayland-satellite-git:Supreeeme/xwayland-satellite:git"
     "dankcalendar-git:AvengeMedia/dankcalendar:git"
+    "danksearch:AvengeMedia/danksearch:release"
+    "dgop:AvengeMedia/dgop:release"
 )
 
 while [[ $# -gt 0 ]]; do
