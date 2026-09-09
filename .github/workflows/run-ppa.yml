@@ -12,6 +12,8 @@ on:
           - all
           - cliphist
           - dankcalendar-git
+          - danksearch
+          - dgop
           - ghostty
           - matugen
           - niri
