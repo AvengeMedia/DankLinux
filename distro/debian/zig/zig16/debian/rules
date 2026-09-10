@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 
 export HOME = $(CURDIR)
-ZIG_VERSION := 0.14.0
+ZIG_VERSION := 0.16.0
 DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
 
 # Map Debian architectures to Zig architectures
@@ -19,20 +19,20 @@ endif
 override_dh_auto_configure:
 	# Extract Zig binary for current architecture
 	# With quilt format, binaries are in current directory
-	tar -xJf "zig-linux-$(ZIG_ARCH)-$(ZIG_VERSION).tar.xz"
+	tar -xJf "zig-$(ZIG_ARCH)-linux-$(ZIG_VERSION).tar.xz"
 
 override_dh_auto_build:
 	# No build needed - using official binaries
 
 override_dh_auto_install:
-	# Install to /usr/lib/zig-0.14.0/
-	mkdir -p $(CURDIR)/debian/zig14/usr/lib
-	mv zig-linux-$(ZIG_ARCH)-$(ZIG_VERSION) $(CURDIR)/debian/zig14/usr/lib/zig-0.14.0
+	# Install to /usr/lib/zig-0.16.0/
+	mkdir -p $(CURDIR)/debian/zig16/usr/lib
+	mv zig-$(ZIG_ARCH)-linux-$(ZIG_VERSION) $(CURDIR)/debian/zig16/usr/lib/zig-0.16.0
 	# Create versioned symlink in /usr/bin
-	mkdir -p $(CURDIR)/debian/zig14/usr/bin
-	ln -s ../lib/zig-0.14.0/zig $(CURDIR)/debian/zig14/usr/bin/zig-0.14
+	mkdir -p $(CURDIR)/debian/zig16/usr/bin
+	ln -s ../lib/zig-0.16.0/zig $(CURDIR)/debian/zig16/usr/bin/zig-0.16
 
 override_dh_auto_clean:
 	# Don't remove the binary tarballs (*.tar.xz) from orig, only extracted dirs
-	rm -rf zig-linux-x86_64-$(ZIG_VERSION) zig-linux-aarch64-$(ZIG_VERSION) zig-cache
+	rm -rf zig-x86_64-linux-$(ZIG_VERSION) zig-aarch64-linux-$(ZIG_VERSION) zig-cache
 	dh_auto_clean

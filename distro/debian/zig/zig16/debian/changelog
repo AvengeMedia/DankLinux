@@ -1,0 +1,9 @@
+zig16 (0.16.0-1) unstable; urgency=medium
+
+  * Initial release of zig16 package for danklinux
+  * Binary repackaging of official Zig 0.16.0 release
+  * Required for Ghostty 1.3.2 (minimum_zig_version = 0.16.0)
+  * Installs to /usr/lib/zig-0.16.0 with /usr/bin/zig-0.16 symlink
+  * Can coexist with zig15 and other Zig versions
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Wed, 09 Sep 2026 14:00:00 -0500

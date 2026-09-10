@@ -50,6 +50,30 @@ packages:
       language: rust-bin
       rust_version: "1.87.0"
 
+  zig15:
+    type: toolchain
+    upstream:
+      repo: ziglang/zig
+      source_type: ziglang_dist
+    distros:
+      - debian
+      - opensuse
+    build:
+      language: zig-bin
+      zig_version: "0.15.2"
+
+  zig16:
+    type: toolchain
+    upstream:
+      repo: ziglang/zig
+      source_type: ziglang_dist
+    distros:
+      - debian
+      - opensuse
+    build:
+      language: zig-bin
+      zig_version: "0.16.0"
+
   danksearch:
     type: stable
     upstream:
@@ -94,7 +118,7 @@ packages:
       - opensuse
     build:
       language: zig
-      zig_version: "0.14.0"
+      zig_version: "0.15.2"
     tarball:
       directory_name: "ghostty-{version}"
       compression: xz

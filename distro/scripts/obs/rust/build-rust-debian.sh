@@ -3,7 +3,7 @@
 # Rust Debian Package Builder for OBS
 # ==============================================================================
 #
-# Repackages official Rust standalone toolchains (same idea as zig14):
+# Repackages official Rust standalone toolchains (same idea as the zig packages):
 #   1. Download x86_64 and aarch64 tarballs from static.rust-lang.org
 #   2. Pack both into a 3.0 (quilt) orig.tar.xz
 #   3. debian/rules extracts the current-arch toolchain at OBS build time

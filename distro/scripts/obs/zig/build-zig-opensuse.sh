@@ -22,17 +22,16 @@
 #
 # SPEC FILE FLOW:
 #   %prep:
-#     - %setup -q -c creates zig14-0.14.0/ directory
-#     - tar -xJf extracts zig-linux-x86_64-0.14.0.tar.xz (on x86_64)
+#     - %setup -q -c creates zig16-0.16.0/ directory
+#     - tar -xJf extracts zig-x86_64-linux-0.16.0.tar.xz (on x86_64)
 #   %build:
 #     - Nothing (binary package)
 #   %install:
-#     - cp -a zig-linux-x86_64-0.14.0 to /usr/lib64/zig-0.14.0
-#     - ln -s to /usr/bin/zig-0.14
+#     - cp -a zig-x86_64-linux-0.16.0 to /usr/lib64/zig-0.16.0
+#     - ln -s to /usr/bin/zig-0.16
 #
 # USAGE:
-#   ./build-zig-opensuse.sh zig14 /tmp/output
-#   ./build-zig-opensuse.sh zig15 /tmp/output
+#   ./build-zig-opensuse.sh zig16 /tmp/output
 #
 # ==============================================================================
 
@@ -46,7 +45,7 @@ init_common
 
 # Check arguments
 if [[ $# -lt 1 ]]; then
-    echo "Usage: $0 <zig14|zig15> [output_dir]"
+    echo "Usage: $0 <zig15|zig16> [output_dir]"
     exit 1
 fi
 
@@ -54,20 +53,20 @@ PACKAGE="$1"
 OUTPUT_DIR="${2:-/tmp/zig-build}"
 
 # Validate package
-if [[ "$PACKAGE" != "zig14" && "$PACKAGE" != "zig15" ]]; then
-    log_error "Package must be zig14 or zig15"
+if [[ "$PACKAGE" != "zig15" && "$PACKAGE" != "zig16" ]]; then
+    log_error "Package must be zig15 or zig16"
     exit 1
 fi
 
 # Version configuration
-if [[ "$PACKAGE" == "zig14" ]]; then
-    ZIG_VERSION="0.14.0"
-    ZIG_X86_64_TARBALL="zig-linux-x86_64-${ZIG_VERSION}.tar.xz"
-    ZIG_AARCH64_TARBALL="zig-linux-aarch64-${ZIG_VERSION}.tar.xz"
+if [[ "$PACKAGE" == "zig15" ]]; then
+    ZIG_VERSION="0.15.2"
+    ZIG_X86_64_TARBALL="zig-x86_64-linux-${ZIG_VERSION}.tar.xz"
+    ZIG_AARCH64_TARBALL="zig-aarch64-linux-${ZIG_VERSION}.tar.xz"
     ZIG_X86_64_URL="https://ziglang.org/download/${ZIG_VERSION}/${ZIG_X86_64_TARBALL}"
     ZIG_AARCH64_URL="https://ziglang.org/download/${ZIG_VERSION}/${ZIG_AARCH64_TARBALL}"
 else
-    ZIG_VERSION="0.15.2"
+    ZIG_VERSION="0.16.0"
     ZIG_X86_64_TARBALL="zig-x86_64-linux-${ZIG_VERSION}.tar.xz"
     ZIG_AARCH64_TARBALL="zig-aarch64-linux-${ZIG_VERSION}.tar.xz"
     ZIG_X86_64_URL="https://ziglang.org/download/${ZIG_VERSION}/${ZIG_X86_64_TARBALL}"
@@ -120,7 +119,7 @@ log_info "━━━━━━━━━━━━━━━━━━━━━━━�
 log_info ".spec uses %setup -q -c → binaries at root level"
 
 # Create the source tarball (for OpenSUSE, use .tar.gz)
-# %setup -q -c will create zig14-0.14.0/ directory and extract into it
+# %setup -q -c will create ${PACKAGE}-${ZIG_VERSION}/ directory and extract into it
 # So we just need the binary tarballs at root level
 SOURCE_TARBALL="${PACKAGE}-${ZIG_VERSION}.tar.gz"
 log_info "Creating $SOURCE_TARBALL..."
@@ -171,7 +170,7 @@ ls -lh "$OUTPUT_DIR" | tail -n +2 | awk '{print "  " $9 " (" $5 ")"}'
 log_info ""
 log_info "HOW OBS WILL BUILD THIS:"
 log_info "  %prep:"
-log_info "    - %setup -q -c creates zig14-0.14.0/ and extracts tarball"
+log_info "    - %setup -q -c creates ${PACKAGE}-${ZIG_VERSION}/ and extracts tarball"
 log_info "    - tar -xJf extracts binary for current architecture"
 log_info "  %build:"
 log_info "    - Nothing (binary package, no compilation)"
