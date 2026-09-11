@@ -16,7 +16,7 @@
   },
   "rawhide": {
     "qt6-qtbase": "6.11.2-2.fc46",
-    "qt6-qtdeclarative": "6.11.2-1.fc46",
+    "qt6-qtdeclarative": "6.11.2-2.fc46",
     "qt6-qtwayland": "6.11.2-1.fc46"
   }
 }
