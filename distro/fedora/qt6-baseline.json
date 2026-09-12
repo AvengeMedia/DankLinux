@@ -10,9 +10,9 @@
     "qt6-qtwayland": "6.11.2-1.fc44"
   },
   "45": {
-    "qt6-qtbase": "6.11.1-5.fc45",
-    "qt6-qtdeclarative": "6.11.1-4.fc45",
-    "qt6-qtwayland": "6.11.1-2.fc45"
+    "qt6-qtbase": "6.11.2-2.fc45",
+    "qt6-qtdeclarative": "6.11.2-2.fc45",
+    "qt6-qtwayland": "6.11.2-1.fc45"
   },
   "rawhide": {
     "qt6-qtbase": "6.11.2-2.fc46",
