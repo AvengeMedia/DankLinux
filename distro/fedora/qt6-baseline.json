@@ -6,7 +6,7 @@
   },
   "44": {
     "qt6-qtbase": "6.11.2-2.fc44",
-    "qt6-qtdeclarative": "6.11.2-1.fc44",
+    "qt6-qtdeclarative": "6.11.2-2.fc44",
     "qt6-qtwayland": "6.11.2-1.fc44"
   },
   "45": {

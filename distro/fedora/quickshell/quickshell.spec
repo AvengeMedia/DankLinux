@@ -5,7 +5,7 @@
 
 Name:               quickshell
 Version:            %{tag}
-Release:            4%{?dist}
+Release:            5%{?dist}
 Summary:            Flexible QtQuick based desktop shell toolkit
 
 License:            LGPL-3.0-only AND GPL-3.0-only
@@ -97,6 +97,9 @@ Wayland and X11.
 %{_libdir}/qt6/qml/Quickshell
 
 %changelog
+* Sun Sep 13 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 0.3.1-5
+- rebuild for qt6-qtdeclarative-6.11.2-2.fc44 (f44)
+
 * Sat Sep 12 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 0.3.1-4
 - rebuild for qt6-qtbase-6.11.2-2.fc45 (f45), qt6-qtdeclarative-6.11.2-2.fc45
   (f45), qt6-qtwayland-6.11.2-1.fc45 (f45)
