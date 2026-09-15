@@ -1,11 +1,11 @@
 %global debug_package %{nil}
 
-%global commit      817c5c5eb24014acd02ab6a6a08ad0ad56ec76e8
-%global commits     195
-%global snapdate    20260914
+%global commit      f4673822cd43bb3db1e75025c2412c85cc3c8ad0
+%global commits     199
+%global snapdate    20260915
 %global tag         1.6.2
 # dank-qml-common submodule commit for %%{commit} (GitHub archives ship submodules empty)
-%global common_commit cd25d7b78386c75ec2a0b3664fb6e21d418ed735
+%global common_commit e145d7857264daa0359f83aa5cd382d76742a1bd
 
 Name:               dankcalendar-git
 Version:            %{tag}+git%{commits}.%(c=%{commit}; echo ${c:0:8})
