@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           dgop
-Version:        1.6.0
+Version:        1.6.2
 Epoch:          1
 Release:        1%{?dist}
 Summary:        System monitoring CLI and REST API
@@ -58,6 +58,9 @@ install -Dm755 dgop %{buildroot}%{_bindir}/dgop
 %{_bindir}/dgop
 
 %changelog
+* Thu Sep 17 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 1:1.6.2-1
+- update to 1.6.2
+
 * Thu Sep 03 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 1:1.6.0-1
 - update to 1.6.0
 
