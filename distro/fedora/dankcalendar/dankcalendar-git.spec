@@ -1,8 +1,8 @@
 %global debug_package %{nil}
 
-%global commit      f4673822cd43bb3db1e75025c2412c85cc3c8ad0
-%global commits     199
-%global snapdate    20260915
+%global commit      e933b27096cc4c5be85b932819234c8bc47edc69
+%global commits     200
+%global snapdate    20260917
 %global tag         1.6.2
 # dank-qml-common submodule commit for %%{commit} (GitHub archives ship submodules empty)
 %global common_commit e145d7857264daa0359f83aa5cd382d76742a1bd
