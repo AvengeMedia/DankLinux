@@ -9,8 +9,8 @@
       "quickshell-git": "6.10.2"
     },
     "Debian_Unstable": {
-      "quickshell": "6.10.2",
-      "quickshell-git": "6.10.2"
+      "quickshell": "6.11.2",
+      "quickshell-git": "6.11.2"
     }
   },
   "ppa": {
