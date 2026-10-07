@@ -2,7 +2,7 @@
 
 Name:           qt6ct-kde
 Version:        0.11
-Release:        15%{?dist}
+Release:        16%{?dist}
 Summary:        Qt 6 Configuration Utility patched for KDE applications
 
 License:        BSD-2-Clause
@@ -58,6 +58,9 @@ behavior with KDE applications.
 # KDE theming: KDE color schemes, icon engine, kdeglobals, QQC2 desktop style
 # KDE theming: single patch for qt6ct 0.11 (from opencode MR !9, adjusted for 0.11)
 %changelog
+* Wed Oct 07 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 0.11-16
+- rebuild for qt6-qtbase-6.11.2-3.fc44 (f44)
+
 * Mon Oct 05 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 0.11-15
 - rebuild for qt6-qtbase-6.11.2-3.fc45 (f45)
 

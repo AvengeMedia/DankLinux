@@ -9,7 +9,7 @@
 
 Name:               quickshell-git
 Version:            %{tag}^%{commits}.git%(c=%{commit}; echo ${c:0:7})
-Release:            %autorelease.11
+Release:            %autorelease.12
 Summary:            Flexible QtQuick based desktop shell toolkit
 
 License:            LGPL-3.0-only AND GPL-3.0-only
