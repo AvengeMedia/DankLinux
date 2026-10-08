@@ -1,11 +1,11 @@
 %bcond_with         asan
 
 %global debug_package %{nil}
-%global tag         0.3.1
+%global tag         0.3.2
 
 Name:               quickshell
 Version:            %{tag}
-Release:            8%{?dist}
+Release:            1%{?dist}
 Summary:            Flexible QtQuick based desktop shell toolkit
 
 License:            LGPL-3.0-only AND GPL-3.0-only
@@ -97,6 +97,9 @@ Wayland and X11.
 %{_libdir}/qt6/qml/Quickshell
 
 %changelog
+* Thu Oct 08 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 0.3.2-1
+- update to 0.3.2
+
 * Wed Oct 07 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 0.3.1-8
 - rebuild for qt6-qtbase-6.11.2-3.fc44 (f44)
 
