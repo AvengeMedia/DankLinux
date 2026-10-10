@@ -28,6 +28,23 @@ success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
+# go.mod may declare "1.27" with no patch level; resolve it to the newest release.
+go_toolchain_version() {
+    local declared
+    declared="$(grep -m1 '^go ' "$1" 2>/dev/null | awk '{print $2}')"
+    [[ -n "$declared" ]] || return 1
+    if [[ "$declared" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        printf '%s' "$declared"
+        return
+    fi
+    [[ "$declared" =~ ^[0-9]+\.[0-9]+$ ]] || return 1
+    curl -fsSL 'https://go.dev/dl/?mode=json&include=all' \
+        | grep -o "\"version\": *\"go${declared//./\\.}\.[0-9]*\"" \
+        | grep -o '[0-9][0-9.]*' \
+        | sort -t. -k3,3n \
+        | tail -1
+}
+
 # quickshell-git uses latest upstream release tag as a baseline but bumps patch (+1) so the
 # resulting Debian version sorts strictly newer than stable `quickshell` at the same tag (matches Fedora COPR tag convention).
 bump_patch_triplet() {
@@ -736,16 +753,19 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
                 cd "$BUILD_DIR"
                 success "Go dependencies vendored"
 
-                GO_VER=$(grep -E '^go ' "$SOURCE_DIR/core/go.mod" | awk '{print $2}')
+                GO_VER=$(go_toolchain_version "$SOURCE_DIR/core/go.mod" || true)
                 if [ -z "$GO_VER" ]; then
-                    error "Could not determine Go version from core/go.mod"
+                    error "Could not resolve a Go toolchain release from core/go.mod"
                     exit 1
                 fi
                 info "Bundling Go ${GO_VER} toolchain for offline Launchpad builds..."
                 mkdir -p "$SOURCE_DIR/.go-toolchain"
                 for arch in amd64 arm64; do
                     GO_TGZ="go${GO_VER}.linux-${arch}.tar.gz"
-                    wget -q -O "$SOURCE_DIR/.go-toolchain/${GO_TGZ}" "https://go.dev/dl/${GO_TGZ}"
+                    if ! curl -fsSL -o "$SOURCE_DIR/.go-toolchain/${GO_TGZ}" "https://go.dev/dl/${GO_TGZ}"; then
+                        error "Failed to download https://go.dev/dl/${GO_TGZ}"
+                        exit 1
+                    fi
                     mkdir -p "$SOURCE_DIR/.go-toolchain/${arch}"
                     tar -C "$SOURCE_DIR/.go-toolchain/${arch}" -xzf "$SOURCE_DIR/.go-toolchain/${GO_TGZ}"
                 done

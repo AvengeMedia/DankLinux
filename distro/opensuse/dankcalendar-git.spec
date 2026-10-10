@@ -9,7 +9,6 @@ License:        MIT
 URL:            https://github.com/AvengeMedia/dankcalendar
 Source0:        dankcalendar.tar.gz
 
-BuildRequires:  golang >= 1.25
 BuildRequires:  systemd-rpm-macros
 
 Requires:       (quickshell-git or quickshell)

@@ -237,9 +237,9 @@ EOF
         log_success "Go dependencies vendored"
 
         if [[ "$PACKAGE" == "dankcalendar-git" ]]; then
-            go_ver=$(grep -E '^go ' "$SOURCE_DIR/core/go.mod" | awk '{print $2}')
+            go_ver=$(go_toolchain_version "$SOURCE_DIR/core/go.mod" || true)
             if [[ -z "$go_ver" ]]; then
-                log_error "Could not determine Go version from core/go.mod"
+                log_error "Could not resolve a Go toolchain release from core/go.mod"
                 exit $ERR_BUILD_FAILURE
             fi
             log_info "Bundling Go ${go_ver} toolchain for offline builds..."

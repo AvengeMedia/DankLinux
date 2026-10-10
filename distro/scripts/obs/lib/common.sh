@@ -194,6 +194,23 @@ require_command() {
     fi
 }
 
+# go.mod may declare "1.27" with no patch level; resolve it to the newest release.
+go_toolchain_version() {
+    local declared
+    declared="$(grep -m1 '^go ' "$1" 2>/dev/null | awk '{print $2}')"
+    [[ -n "$declared" ]] || return 1
+    if [[ "$declared" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        printf '%s' "$declared"
+        return
+    fi
+    [[ "$declared" =~ ^[0-9]+\.[0-9]+$ ]] || return 1
+    curl -fsSL 'https://go.dev/dl/?mode=json&include=all' \
+        | grep -o "\"version\": *\"go${declared//./\\.}\.[0-9]*\"" \
+        | grep -o '[0-9][0-9.]*' \
+        | sort -t. -k3,3n \
+        | tail -1
+}
+
 # Validate required environment variables
 require_env() {
     local var="$1"
