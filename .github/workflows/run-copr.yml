@@ -14,9 +14,13 @@ on:
         options:
           - ''
           - all
+          - alacritty
+          - cava
           - cliphist
           - dankcalendar-git
           - ghostty
+          - greetd
+          - gtk4-layer-shell
           - matugen
           - niri
           - niri-git

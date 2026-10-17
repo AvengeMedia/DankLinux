@@ -17,6 +17,14 @@ if [[ ! -f ~/.config/copr ]]; then
     exit 1
 fi
 
+# Chroots a package must never build in: Fedora ships these itself, and EPEL zig is x86_64 only
+chroot_denylist() {
+    case "$1" in
+        greetd|gtk4-layer-shell|cava|alacritty|xwayland-satellite) echo "fedora-*" ;;
+        ghostty) echo "epel-10-aarch64,centos-stream-10-aarch64" ;;
+    esac
+}
+
 # Ensure the COPR package has a default SCM source method configured.
 # build-package rebuilds rely on this; newly added packages may lack it,
 # which fails with "doesn't have the default source method set".
@@ -25,25 +33,27 @@ fi
 ensure_scm() {
     local package_name="$1"
     local spec_file="$2"
-    local subdir spec
+    local subdir spec denylist
+    local scm_args=()
 
     subdir="$(dirname "$spec_file")"
     spec="$(basename "$spec_file")"
+    denylist="$(chroot_denylist "$package_name")"
 
-    copr-cli edit-package-scm "$COPR_OWNER/$COPR_PROJECT" \
-        --name "$package_name" \
-        --clone-url "$COPR_CLONE_URL" \
-        --subdir "$subdir" \
-        --spec "$spec" \
-        --type git \
-        --method rpkg \
-    || copr-cli add-package-scm "$COPR_OWNER/$COPR_PROJECT" \
-        --name "$package_name" \
-        --clone-url "$COPR_CLONE_URL" \
-        --subdir "$subdir" \
-        --spec "$spec" \
-        --type git \
+    scm_args=(
+        --name "$package_name"
+        --clone-url "$COPR_CLONE_URL"
+        --subdir "$subdir"
+        --spec "$spec"
+        --type git
         --method rpkg
+    )
+    if [[ -n "$denylist" ]]; then
+        scm_args+=(--chroot-denylist "$denylist")
+    fi
+
+    copr-cli edit-package-scm "$COPR_OWNER/$COPR_PROJECT" "${scm_args[@]}" \
+    || copr-cli add-package-scm "$COPR_OWNER/$COPR_PROJECT" "${scm_args[@]}"
 }
 
 # COPR_CHROOTS: optional space-separated chroot list, limits every build in this run
@@ -57,18 +67,7 @@ trigger_build() {
     local spec_file="$2"
     
     echo "📦 Building $package_name... ${COPR_CHROOTS:+(chroots: $COPR_CHROOTS)}"
-    
-    if copr-cli build-package "$COPR_OWNER/$COPR_PROJECT" \
-        --name "$package_name" \
-        --timeout 7200 \
-        --nowait "${CHROOT_ARGS[@]}"; then
-        return 0
-    fi
 
-    # build-package may fail because the COPR package has no default source
-    # method (common for newly added packages). Configure the SCM source and
-    # retry once before giving up.
-    echo "   ⚠ build-package failed; ensuring SCM default source and retrying..." >&2
     if ! ensure_scm "$package_name" "$spec_file"; then
         echo "   ❌ Failed to configure SCM default source" >&2
         return 1
@@ -120,6 +119,11 @@ BUILD_DANKSEARCH=false
 BUILD_DANKCALENDAR_GIT=false
 BUILD_CLI11=false
 BUILD_QT6CT_KDE=false
+BUILD_GREETD=false
+BUILD_GTK4_LAYER_SHELL=false
+BUILD_CAVA=false
+BUILD_ALACRITTY=false
+BUILD_XWAYLAND_SATELLITE=false
 
 # Handle "all" as a special force-all-packages shortcut
 if [[ "${FORCE_PACKAGE:-}" == "all" ]]; then
@@ -136,6 +140,11 @@ if [[ "${FORCE_PACKAGE:-}" == "all" ]]; then
     BUILD_DANKCALENDAR_GIT=true
     BUILD_CLI11=true
     BUILD_QT6CT_KDE=true
+    BUILD_GREETD=true
+    BUILD_GTK4_LAYER_SHELL=true
+    BUILD_CAVA=true
+    BUILD_ALACRITTY=true
+    BUILD_XWAYLAND_SATELLITE=true
 fi
 
 # Check which specs changed (paths relative to repo root)
@@ -188,6 +197,26 @@ if echo "$CHANGED_FILES" | grep -q "distro/fedora/qt6ct-kde/qt6ct-kde.spec"; the
     BUILD_QT6CT_KDE=true
 fi
 
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/greetd/greetd.spec"; then
+    BUILD_GREETD=true
+fi
+
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/gtk4-layer-shell/gtk4-layer-shell.spec"; then
+    BUILD_GTK4_LAYER_SHELL=true
+fi
+
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/cava/cava.spec"; then
+    BUILD_CAVA=true
+fi
+
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/alacritty/alacritty.spec"; then
+    BUILD_ALACRITTY=true
+fi
+
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/xwayland-satellite/xwayland-satellite.spec"; then
+    BUILD_XWAYLAND_SATELLITE=true
+fi
+
 # Note: dms-greeter / dms-greeter-git build from https://github.com/AvengeMedia/dank-greeter
 # and are published into avengemedia/danklinux by that repo's CI
 
@@ -211,6 +240,11 @@ if [[ -z "$CHANGED_FILES" ]]; then
     echo "$UNCOMMITTED" | grep -q "distro/fedora/cli11/cli11.spec" && BUILD_CLI11=true
 
     echo "$UNCOMMITTED" | grep -q "distro/fedora/qt6ct-kde/qt6ct-kde.spec" && BUILD_QT6CT_KDE=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/greetd/greetd.spec" && BUILD_GREETD=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/gtk4-layer-shell/gtk4-layer-shell.spec" && BUILD_GTK4_LAYER_SHELL=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/cava/cava.spec" && BUILD_CAVA=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/alacritty/alacritty.spec" && BUILD_ALACRITTY=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/xwayland-satellite/xwayland-satellite.spec" && BUILD_XWAYLAND_SATELLITE=true
 fi
 
 # Trigger builds
@@ -262,6 +296,26 @@ fi
 
 if [[ "$BUILD_QT6CT_KDE" == true ]] || [[ "$FORCE_PACKAGE" == "qt6ct-kde" ]]; then
     trigger_build "qt6ct-kde" "distro/fedora/qt6ct-kde/qt6ct-kde.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+fi
+
+if [[ "$BUILD_GREETD" == true ]] || [[ "$FORCE_PACKAGE" == "greetd" ]]; then
+    trigger_build "greetd" "distro/fedora/greetd/greetd.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+fi
+
+if [[ "$BUILD_GTK4_LAYER_SHELL" == true ]] || [[ "$FORCE_PACKAGE" == "gtk4-layer-shell" ]]; then
+    trigger_build "gtk4-layer-shell" "distro/fedora/gtk4-layer-shell/gtk4-layer-shell.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+fi
+
+if [[ "$BUILD_CAVA" == true ]] || [[ "$FORCE_PACKAGE" == "cava" ]]; then
+    trigger_build "cava" "distro/fedora/cava/cava.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+fi
+
+if [[ "$BUILD_ALACRITTY" == true ]] || [[ "$FORCE_PACKAGE" == "alacritty" ]]; then
+    trigger_build "alacritty" "distro/fedora/alacritty/alacritty.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+fi
+
+if [[ "$BUILD_XWAYLAND_SATELLITE" == true ]] || [[ "$FORCE_PACKAGE" == "xwayland-satellite" ]]; then
+    trigger_build "xwayland-satellite" "distro/fedora/xwayland-satellite/xwayland-satellite.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
 echo ""

@@ -6,18 +6,30 @@
 %global ghostty_libdir %{_prefix}/lib
 %global ghostty_pkgconfig_dir %{_prefix}/share/pkgconfig
 
+%if 0%{?rhel}
+%global ghostty_vendored_deps -fno-sys=harfbuzz -fno-sys=freetype -fno-sys=fontconfig -fno-sys=libpng -fno-sys=zlib -fno-sys=oniguruma
+%endif
+
 Name:           ghostty
 Version:        1.3.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Fast, feature-rich, and cross-platform terminal emulator that uses platform-native UI and GPU acceleration
 
 License:        MIT
 URL:            https://github.com/ghostty-org/ghostty
 Source0:        https://release.files.ghostty.org/%{version}/ghostty-%{version}.tar.gz
 
+%if 0%{?rhel}
+# EPEL ships zig for x86_64 only
+ExclusiveArch: x86_64
+%else
 ExclusiveArch: x86_64 aarch64
+%endif
 
 BuildRequires: zig >= %{zig_minimum_version}
+%if 0%{?rhel}
+BuildRequires: zig < 0.16
+%endif
 BuildRequires: blueprint-compiler
 BuildRequires: fontconfig-devel
 BuildRequires: freetype-devel
@@ -85,7 +97,7 @@ DESTDIR=%{_builddir}/ghostty-buildroot "$ZIG_BIN" build install \
     -Doptimize=ReleaseFast \
     -Dcpu=baseline \
     -Dpie=true \
-    -Demit-docs=false
+    -Demit-docs=false%{?ghostty_vendored_deps: %{ghostty_vendored_deps}}
 
 %install
 cp -a %{_builddir}/ghostty-buildroot/* %{buildroot}/
