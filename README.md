@@ -29,7 +29,8 @@
 - **matugen** - Material Design 3 color palette generator for themes
 - **cliphist** - Wayland clipboard manager with history support
 - **danksearch** - Fast application launcher and file search tool
-- **dankcalendar-git** - Calendar app with Local, Google, Microsoft, CalDAV, and iCloud support (`dcal`)
+- **dankcalendar** - Calendar app with Local, Google, Microsoft, CalDAV, and iCloud support (`dcal`)
+- **dankcalendar-git** - DankCalendar built from upstream master
 - **dgop** - System package manager integration tool
 
 ## Installation

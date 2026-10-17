@@ -25,6 +25,7 @@ PACKAGES=(
     "quickshell-git:quickshell-mirror/quickshell:git"
     "xwayland-satellite:Supreeeme/xwayland-satellite:release"
     "xwayland-satellite-git:Supreeeme/xwayland-satellite:git"
+    "dankcalendar:AvengeMedia/dankcalendar:release"
     "dankcalendar-git:AvengeMedia/dankcalendar:git"
     "danksearch:AvengeMedia/danksearch:release"
     "dgop:AvengeMedia/dgop:release"

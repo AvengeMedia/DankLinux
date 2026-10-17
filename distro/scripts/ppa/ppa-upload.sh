@@ -67,7 +67,7 @@ fi
 TEMP_DIR=$(mktemp -d "$TEMP_BASE/ppa_build_XXXXXX")
 trap "rm -rf $TEMP_DIR" EXIT
 
-AVAILABLE_PACKAGES=(cpptrace cliphist danksearch dgop ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git dankcalendar-git)
+AVAILABLE_PACKAGES=(cpptrace cliphist danksearch dgop ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git dankcalendar dankcalendar-git)
 KEEP_BUILDS=false
 BUILD_ONLY=false
 REBUILD_RELEASE=""
@@ -480,6 +480,10 @@ case "$PACKAGE_NAME" in
         IS_GIT_PACKAGE=true
         GIT_REPO="Supreeeme/xwayland-satellite"
         SOURCE_DIR="xwayland-satellite-source"
+        ;;
+    dankcalendar)
+        # dankcalendar uses pre-built binary releases
+        GIT_REPO="AvengeMedia/dankcalendar"
         ;;
     dankcalendar-git)
         IS_GIT_PACKAGE=true
@@ -1009,6 +1013,40 @@ case "$PACKAGE_NAME" in
                 error "Failed to download dsearch-arm64.gz"
                 exit 1
             fi
+        fi
+        ;;
+    dankcalendar)
+        info "Downloading pre-built binaries and assets for dankcalendar..."
+        VERSION=$(dpkg-parsechangelog -S Version | sed 's/-[^-]*$//' | sed 's/ppa[0-9]*$//')
+        RELEASE_URL="https://github.com/AvengeMedia/dankcalendar/releases/download/v${VERSION}"
+
+        for arch in amd64 arm64; do
+            if [ ! -f "dcal-${arch}" ]; then
+                info "Downloading dcal binary for ${arch}..."
+                if ! wget -O "dcal-${arch}.gz" "${RELEASE_URL}/dcal-linux-${arch}.gz"; then
+                    error "Failed to download dcal-linux-${arch}.gz"
+                    exit 1
+                fi
+                gunzip "dcal-${arch}.gz"
+                chmod +x "dcal-${arch}"
+                success "${arch} binary downloaded"
+            fi
+        done
+
+        # Desktop entry, icon, user unit and license come from the release source tarball
+        if [ ! -d "assets" ]; then
+            info "Extracting assets from dankcalendar-${VERSION}.tar.gz..."
+            if ! wget -O dankcalendar-src.tar.gz "${RELEASE_URL}/dankcalendar-${VERSION}.tar.gz"; then
+                error "Failed to download dankcalendar-${VERSION}.tar.gz"
+                exit 1
+            fi
+            tar -xzf dankcalendar-src.tar.gz --strip-components=1 \
+                "dankcalendar-${VERSION}/assets/com.danklinux.dankcalendar.desktop" \
+                "dankcalendar-${VERSION}/assets/com.danklinux.dankcalendar.svg" \
+                "dankcalendar-${VERSION}/assets/systemd/dcal.service" \
+                "dankcalendar-${VERSION}/LICENSE"
+            rm -f dankcalendar-src.tar.gz
+            success "Assets extracted"
         fi
         ;;
     dgop)

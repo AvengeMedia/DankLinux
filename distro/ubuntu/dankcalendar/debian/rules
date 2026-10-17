@@ -1,0 +1,44 @@
+#!/usr/bin/make -f
+
+DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
+
+# Both binaries ship in the source package; ppa-upload.sh downloads them (Launchpad has no network)
+ifeq ($(DEB_HOST_ARCH),amd64)
+    BINARY_FILE := dcal-amd64
+else ifeq ($(DEB_HOST_ARCH),arm64)
+    BINARY_FILE := dcal-arm64
+else
+    $(error Unsupported architecture: $(DEB_HOST_ARCH))
+endif
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	test -f $(BINARY_FILE) || (echo "ERROR: $(BINARY_FILE) not found!" && exit 1)
+	chmod +x $(BINARY_FILE)
+	mkdir -p completions
+	./$(BINARY_FILE) completion bash > completions/dcal
+	./$(BINARY_FILE) completion zsh > completions/_dcal
+	./$(BINARY_FILE) completion fish > completions/dcal.fish
+
+override_dh_auto_install:
+	install -Dm755 $(BINARY_FILE) debian/dankcalendar/usr/bin/dcal
+	install -Dm644 assets/systemd/dcal.service debian/dankcalendar/usr/lib/systemd/user/dcal.service
+	install -Dm644 assets/com.danklinux.dankcalendar.desktop \
+		debian/dankcalendar/usr/share/applications/com.danklinux.dankcalendar.desktop
+	install -Dm644 assets/com.danklinux.dankcalendar.svg \
+		debian/dankcalendar/usr/share/icons/hicolor/scalable/apps/com.danklinux.dankcalendar.svg
+	install -Dm644 completions/dcal \
+		debian/dankcalendar/usr/share/bash-completion/completions/dcal
+	install -Dm644 completions/_dcal \
+		debian/dankcalendar/usr/share/zsh/site-functions/_dcal
+	install -Dm644 completions/dcal.fish \
+		debian/dankcalendar/usr/share/fish/vendor_completions.d/dcal.fish
+
+override_dh_auto_test:
+	# Skip tests for binary release packages
+
+override_dh_auto_clean:
+	rm -rf completions
+	dh_auto_clean

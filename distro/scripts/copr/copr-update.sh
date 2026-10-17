@@ -492,6 +492,39 @@ else
 fi
 
 # ============================================================================
+# DANKCALENDAR (Stable Release)
+# ============================================================================
+echo ""
+echo "📦 Checking dankcalendar..."
+
+SPEC_FILE="dankcalendar/dankcalendar.spec"
+UPSTREAM_REPO="AvengeMedia/dankcalendar"
+
+CURRENT_VERSION=$(grep -oP '^Version:\s+\K[0-9.]+' "$SPEC_FILE" || echo "unknown")
+echo "   Current: $CURRENT_VERSION"
+
+LATEST_TAG=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "release")
+LATEST_VERSION="${LATEST_TAG#v}"
+
+if [[ -n "$LATEST_VERSION" ]]; then
+    echo "   Latest:  $LATEST_VERSION"
+
+    if [[ "$CURRENT_VERSION" != "$LATEST_VERSION" ]]; then
+        echo "   ✨ Update available: $CURRENT_VERSION → $LATEST_VERSION"
+
+        sed -i "s/^Version:\s\+.*/Version:            $LATEST_VERSION/" "$SPEC_FILE"
+        reset_release "$SPEC_FILE" "$LATEST_VERSION"
+
+        UPDATED=$((UPDATED + 1))
+        UPDATED_PACKAGES+=("dankcalendar: $CURRENT_VERSION → $LATEST_VERSION")
+    else
+        echo "   ✓ Already up to date"
+    fi
+else
+    echo "   ⚠ Could not fetch latest version"
+fi
+
+# ============================================================================
 # DANKCALENDAR-GIT (Latest Commit)
 # ============================================================================
 echo ""
@@ -677,6 +710,7 @@ if [[ -n "${COPR_REBUILD_COUNT:-}" || -n "${COPR_REBUILD_PACKAGE:-}" ]]; then
         distro/fedora/cli11/cli11.spec
         distro/fedora/qt6ct-kde/qt6ct-kde.spec
         distro/fedora/cpptrace/cpptrace.spec
+        distro/fedora/dankcalendar/dankcalendar.spec
         distro/fedora/dankcalendar/dankcalendar-git.spec
     )
 
@@ -693,6 +727,7 @@ if [[ -n "${COPR_REBUILD_COUNT:-}" || -n "${COPR_REBUILD_PACKAGE:-}" ]]; then
         cli11) _copr_bump_spec_release distro/fedora/cli11/cli11.spec ;;
         qt6ct-kde) _copr_bump_spec_release distro/fedora/qt6ct-kde/qt6ct-kde.spec ;;
         cpptrace) _copr_bump_spec_release distro/fedora/cpptrace/cpptrace.spec ;;
+        dankcalendar) _copr_bump_spec_release distro/fedora/dankcalendar/dankcalendar.spec ;;
         dankcalendar-git) _copr_bump_spec_release distro/fedora/dankcalendar/dankcalendar-git.spec ;;
         all)
             for rel in "${ALL_SPECS_BUMP[@]}"; do

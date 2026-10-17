@@ -120,7 +120,7 @@ Same source, incremented `.db` suffix. Use for packaging fixes, dependency updat
 
 ## Packages
 
-**Stable:** danksearch, dgop, ghostty, matugen, niri (Debian), quickshell, xwayland-satellite
+**Stable:** dankcalendar, danksearch, dgop, ghostty, matugen, niri (Debian), quickshell, xwayland-satellite
 **Git:** niri-git, quickshell-git, xwayland-satellite-git
 **Snapshot (stable):** quickshell (stable) uses [snapshots.yaml](../../snapshots.yaml) to track the upstream commit until a newer release than `base_version` appears.
 

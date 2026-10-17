@@ -116,6 +116,7 @@ BUILD_BREAKPAD=false
 BUILD_GHOSTTY=false
 BUILD_MATERIAL_SYMBOLS=false
 BUILD_DANKSEARCH=false
+BUILD_DANKCALENDAR=false
 BUILD_DANKCALENDAR_GIT=false
 BUILD_CLI11=false
 BUILD_QT6CT_KDE=false
@@ -137,6 +138,7 @@ if [[ "${FORCE_PACKAGE:-}" == "all" ]]; then
     BUILD_GHOSTTY=true
     BUILD_MATERIAL_SYMBOLS=true
     BUILD_DANKSEARCH=true
+    BUILD_DANKCALENDAR=true
     BUILD_DANKCALENDAR_GIT=true
     BUILD_CLI11=true
     BUILD_QT6CT_KDE=true
@@ -184,7 +186,12 @@ if echo "$CHANGED_FILES" | grep -q "distro/fedora/danksearch/danksearch.spec"; t
     BUILD_DANKSEARCH=true
 fi
 
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/dankcalendar/dankcalendar.spec"; then
+    BUILD_DANKCALENDAR=true
+fi
+
 if echo "$CHANGED_FILES" | grep -q "distro/fedora/dankcalendar/dankcalendar-git.spec"; then
+    BUILD_DANKCALENDAR=true
     BUILD_DANKCALENDAR_GIT=true
 fi
 
@@ -234,6 +241,7 @@ if [[ -z "$CHANGED_FILES" ]]; then
     echo "$UNCOMMITTED" | grep -q "distro/fedora/ghostty/ghostty.spec" && BUILD_GHOSTTY=true
     echo "$UNCOMMITTED" | grep -q "distro/fedora/fonts/material-symbols-fonts.spec" && BUILD_MATERIAL_SYMBOLS=true
     echo "$UNCOMMITTED" | grep -q "distro/fedora/danksearch/danksearch.spec" && BUILD_DANKSEARCH=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/dankcalendar/dankcalendar.spec" && BUILD_DANKCALENDAR=true
     echo "$UNCOMMITTED" | grep -q "distro/fedora/dankcalendar/dankcalendar-git.spec" && BUILD_DANKCALENDAR_GIT=true
 
     # New CLI11 package
@@ -284,6 +292,10 @@ fi
 
 if [[ "$BUILD_DANKSEARCH" == true ]] || [[ "$FORCE_PACKAGE" == "danksearch" ]]; then
     trigger_build "danksearch" "distro/fedora/danksearch/danksearch.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+fi
+
+if [[ "$BUILD_DANKCALENDAR" == true ]] || [[ "$FORCE_PACKAGE" == "dankcalendar" ]]; then
+    trigger_build "dankcalendar" "distro/fedora/dankcalendar/dankcalendar.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
 if [[ "$BUILD_DANKCALENDAR_GIT" == true ]] || [[ "$FORCE_PACKAGE" == "dankcalendar-git" ]]; then

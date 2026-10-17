@@ -10,6 +10,8 @@ on:
         options:
           - all
           - all-git
+          - dankcalendar
+          - dankcalendar-git
           - danksearch
           - dgop
           - ghostty
@@ -21,7 +23,6 @@ on:
           - quickshell-git
           - xwayland-satellite
           - xwayland-satellite-git
-          - dankcalendar-git
         default: "all"
       rebuild_number:
         description: "Rebuild number for .db suffix (e.g., 2, 3, 4)"

@@ -107,6 +107,22 @@ packages:
       directory_name: "dgop-{version}"
       compression: gz
 
+  dankcalendar:
+    type: stable
+    upstream:
+      repo: AvengeMedia/dankcalendar
+      source_type: github_release
+    distros:
+      - debian
+      - opensuse
+    build:
+      language: go
+      binary_release: true
+      binary_template: "dcal-linux-{arch}.gz"
+    tarball:
+      directory_name: "dankcalendar-{version}"
+      compression: gz
+
   ghostty:
     type: stable
     upstream:
@@ -289,7 +305,7 @@ packages:
       repo: AvengeMedia/dankcalendar
       branch: master
     base_version:
-      fallback: "0.1.1"
+      from_stable: dankcalendar
     distros:
       - debian
       - opensuse
@@ -347,6 +363,7 @@ defaults:
 groups:
   all-stable:
     - danksearch
+    - dankcalendar
     - dgop
     - ghostty
     - matugen
@@ -364,6 +381,7 @@ groups:
 
   all:
     - danksearch
+    - dankcalendar
     - dgop
     - ghostty
     - matugen
@@ -395,6 +413,7 @@ groups:
 
   go-packages:
     - danksearch
+    - dankcalendar
     - dgop
     - dankcalendar-git
 
@@ -406,4 +425,5 @@ groups:
 
   binary-releases:
     - danksearch
+    - dankcalendar
     - dgop

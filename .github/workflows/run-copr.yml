@@ -17,6 +17,7 @@ on:
           - alacritty
           - cava
           - cliphist
+          - dankcalendar
           - dankcalendar-git
           - ghostty
           - greetd

@@ -1,0 +1,5 @@
+dankcalendar (0.0.0ppa0) stonking; urgency=medium
+
+  * Initial packaging; ppa-upload.sh sets the release version
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Fri, 16 Oct 2026 12:00:00 +0000
