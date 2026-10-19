@@ -15,6 +15,10 @@ endif
 %:
 	dh $@
 
+DMABUF_MOD := $(shell echo vendor/smithay-*/src/wayland/dmabuf/mod.rs)
+DMABUF_V5 := if default_feedback.is_some() { 5 } else { 3 }
+DMABUF_V6 := if default_feedback.is_some() { 6 } else { 3 }
+
 override_dh_auto_build:
 	# Ensure .cargo/config.toml exists for vendored dependencies
 	if [ ! -f .cargo/config.toml ] && [ -d vendor ]; then \
@@ -33,6 +37,16 @@ override_dh_auto_build:
 			echo "{\"files\":{},\"package\":\"$$pkg\"}" > "$$checksum"; \
 		fi; \
 	done
+
+	# Advertise zwp_linux_dmabuf_v1 v5 instead of v6. GTK < 4.20 (Debian 13 ships
+	# 4.18) binds the advertised version unclamped and segfaults in gtk_init
+	# because v6 drops the main_device event. Smithay still serves v5 clients
+	# correctly. See: https://github.com/niri-wm/niri/issues/4586
+	if grep -q '$(DMABUF_V6)' "$(DMABUF_MOD)"; then \
+		sed -i "s|$(DMABUF_V6)|$(DMABUF_V5)|" "$(DMABUF_MOD)"; \
+	elif ! grep -q '$(DMABUF_V5)' "$(DMABUF_MOD)"; then \
+		echo "dmabuf v5 patch: pattern not found in $(DMABUF_MOD)" >&2; exit 1; \
+	fi
 
 	# Apply libdisplay-info patches
 	sed -i 's/< 0\.3\.0/< 0.4.0/g' vendor/libdisplay-info-sys-*/build.rs vendor/libdisplay-info-sys-*/Cargo.toml 2>/dev/null || true
