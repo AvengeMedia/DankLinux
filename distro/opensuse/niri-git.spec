@@ -62,6 +62,20 @@ for checksum in vendor/*/.cargo-checksum.json; do
     fi
 done
 
+# Leap 16 (GTK 4.18) crashes on linux-dmabuf v6; advertise v5 instead.
+# Tumbleweed and Slowroll keep v6. See: https://github.com/niri-wm/niri/issues/4586
+%if 0%{?suse_version} >= 1600 && 0%{?suse_version} < 1699
+dmabuf_mod=$(echo vendor/smithay-*/src/wayland/dmabuf/mod.rs)
+dmabuf_v6='if default_feedback.is_some() { 6 } else { 3 }'
+dmabuf_v5='if default_feedback.is_some() { 5 } else { 3 }'
+if grep -q "$dmabuf_v6" "$dmabuf_mod"; then
+    sed -i "s|$dmabuf_v6|$dmabuf_v5|" "$dmabuf_mod"
+elif ! grep -q "$dmabuf_v5" "$dmabuf_mod"; then
+    echo "dmabuf v5 patch: pattern not found in $dmabuf_mod" >&2
+    exit 1
+fi
+%endif
+
 cargo build --offline --release --features default
 
 for shell in bash fish zsh; do
