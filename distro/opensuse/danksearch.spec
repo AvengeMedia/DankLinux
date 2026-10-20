@@ -4,12 +4,12 @@ Release:        1%{?dist}
 Summary:        Fast file search utility for DMS
 
 License:        MIT
-URL:            https://github.com/AvengeMedia/danksearch
-Source0:        https://github.com/AvengeMedia/danksearch/releases/download/v%{version}/dsearch-linux-amd64.gz
-Source1:        https://github.com/AvengeMedia/danksearch/releases/download/v%{version}/dsearch-linux-arm64.gz
+URL:            https://github.com/duxlabs-dev/dux-search
+Source0:        https://github.com/duxlabs-dev/dux-search/releases/download/v%{version}/dsearch-linux-amd64.gz
+Source1:        https://github.com/duxlabs-dev/dux-search/releases/download/v%{version}/dsearch-linux-arm64.gz
 
 %description
-DankSearch is a fast file search utility designed for DankMaterialShell.
+Dux Search is a fast file search utility designed for Dux Shell.
 It provides efficient file and content search capabilities with minimal
 dependencies.
 

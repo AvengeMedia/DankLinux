@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        ## The Dank Linux Repository Feature Request
+        ## The Dux Labs Repository Feature Request
   - type: textarea
     id: feature
     attributes:

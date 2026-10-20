@@ -40,8 +40,8 @@
    ✓ Already up to date
 
 📦 Checking dms-greeter...
-   ℹ️  Builds directly from: https://github.com/AvengeMedia/DankMaterialShell
-   Not tracked in dms_copr repo - managed in separate DankMaterialShell repo
+   ℹ️  Builds directly from: https://github.com/duxlabs-dev/dux-shell
+   Not tracked in dms_copr repo - managed in separate Dux Shell repo
    Skipping automatic updates (separate repository)
 
 📦 Checking material-symbols-fonts...

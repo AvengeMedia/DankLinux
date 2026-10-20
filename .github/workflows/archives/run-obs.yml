@@ -166,10 +166,10 @@ jobs:
             local upstream_version=""
             case "$package" in
               danksearch)
-                upstream_version=$(get_github_latest_version "AvengeMedia/DankSearch")
+                upstream_version=$(get_github_latest_version "duxlabs-dev/dux-search")
                 ;;
               dgop)
-                upstream_version=$(get_github_latest_version "AvengeMedia/DGoP")
+                upstream_version=$(get_github_latest_version "duxlabs-dev/dux-gop")
                 ;;
               ghostty)
                 upstream_version=$(get_github_latest_version "ghostty-org/ghostty")
@@ -400,7 +400,7 @@ jobs:
           for pkg in ${{ steps.packages.outputs.packages }}; do
             case "$pkg" in
               danksearch)
-                VERSION=$(get_latest_version "AvengeMedia/DankSearch")
+                VERSION=$(get_latest_version "duxlabs-dev/dux-search")
                 if [[ -n "$VERSION" ]]; then
                   echo "📦 Updating danksearch to version: $VERSION"
                   [[ -f distro/opensuse/danksearch.spec ]] && sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/danksearch.spec
@@ -408,7 +408,7 @@ jobs:
                 fi
                 ;;
               dgop)
-                VERSION=$(get_latest_version "AvengeMedia/DGoP")
+                VERSION=$(get_latest_version "duxlabs-dev/dux-gop")
                 if [[ -n "$VERSION" ]]; then
                   echo "📦 Updating dgop to version: $VERSION"
                   [[ -f distro/opensuse/dgop.spec ]] && sed -i "s/^Version:.*/Version:        $VERSION/" distro/opensuse/dgop.spec

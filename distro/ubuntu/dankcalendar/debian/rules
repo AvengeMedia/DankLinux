@@ -25,10 +25,10 @@ override_dh_auto_build:
 override_dh_auto_install:
 	install -Dm755 $(BINARY_FILE) debian/dankcalendar/usr/bin/dcal
 	install -Dm644 assets/systemd/dcal.service debian/dankcalendar/usr/lib/systemd/user/dcal.service
-	install -Dm644 assets/com.danklinux.dankcalendar.desktop \
-		debian/dankcalendar/usr/share/applications/com.danklinux.dankcalendar.desktop
-	install -Dm644 assets/com.danklinux.dankcalendar.svg \
-		debian/dankcalendar/usr/share/icons/hicolor/scalable/apps/com.danklinux.dankcalendar.svg
+	install -Dm644 assets/dev.duxlabs.calendar.desktop \
+		debian/dankcalendar/usr/share/applications/dev.duxlabs.calendar.desktop
+	install -Dm644 assets/dev.duxlabs.calendar.svg \
+		debian/dankcalendar/usr/share/icons/hicolor/scalable/apps/dev.duxlabs.calendar.svg
 	install -Dm644 completions/dcal \
 		debian/dankcalendar/usr/share/bash-completion/completions/dcal
 	install -Dm644 completions/_dcal \

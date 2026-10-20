@@ -25,10 +25,10 @@ PACKAGES=(
     "quickshell-git:quickshell-mirror/quickshell:git"
     "xwayland-satellite:Supreeeme/xwayland-satellite:release"
     "xwayland-satellite-git:Supreeeme/xwayland-satellite:git"
-    "dankcalendar:AvengeMedia/dankcalendar:release"
-    "dankcalendar-git:AvengeMedia/dankcalendar:git"
-    "danksearch:AvengeMedia/danksearch:release"
-    "dgop:AvengeMedia/dgop:release"
+    "dankcalendar:duxlabs-dev/dux-calendar:release"
+    "dankcalendar-git:duxlabs-dev/dux-calendar:git"
+    "danksearch:duxlabs-dev/dux-search:release"
+    "dgop:duxlabs-dev/dux-gop:release"
 )
 
 while [[ $# -gt 0 ]]; do

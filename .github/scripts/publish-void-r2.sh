@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# This publisher mirrors the one in DankMaterialShell.
+# This publisher mirrors the one in Dux Shell.
 set -euo pipefail
 
 usage() {

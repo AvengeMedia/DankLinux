@@ -8,11 +8,11 @@
     osc meta prj home:AvengeMedia:danklinux -F distro/obs-project-meta.xml
 -->
 <project name="home:AvengeMedia:danklinux">
-  <title>Dank Linux Repository</title>
-  <description>The Dank Linux Repository can be used to install standalone packages or core dependencies for the DankMaterialShell desktop environment like dgop, danksearch, ghostty, matugen, niri, xwayland-satellite and quickshell. 
+  <title>Dux Labs Repository</title>
+  <description>The Dux Labs Repository can be used to install standalone packages or core dependencies for the Dux Shell desktop environment like dgop, danksearch, ghostty, matugen, niri, xwayland-satellite and quickshell. 
 
-https://github.com/AvengeMedia/DankLinux</description>
-  <url>https://danklinux.com/docs/danklinux/</url>
+https://github.com/duxlabs-dev/dux-packaging</description>
+  <url>https://duxlabs.dev/docs/packaging/</url>
   <person userid="AvengeMedia" role="maintainer"/>
   <repository name="openSUSE_Tumbleweed">
     <path project="openSUSE:Factory:ARM" repository="standard"/>

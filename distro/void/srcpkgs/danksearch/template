@@ -5,14 +5,14 @@ pkgname=danksearch
 version=1.6.0
 revision=1
 build_style=go
-go_import_path="github.com/AvengeMedia/danksearch"
+go_import_path="github.com/duxlabs-dev/dux-search"
 go_package="${go_import_path}/cmd/dsearch"
 go_ldflags="-X main.Version=${version}"
-short_desc="Blazingly fast filesystem search tool (DankMaterialShell)"
+short_desc="Blazingly fast filesystem search tool (Dux Shell)"
 maintainer="AvengeMedia <AvengeMedia.US@gmail.com>"
 license="MIT"
-homepage="https://danklinux.com/docs/danksearch/"
-distfiles="https://github.com/AvengeMedia/danksearch/archive/refs/tags/v${version}.tar.gz"
+homepage="https://duxlabs.dev/docs/dsearch/"
+distfiles="https://github.com/duxlabs-dev/dux-search/archive/refs/tags/v${version}.tar.gz"
 checksum=17edc8ad137c61c6c6546b0272f83a3b4ac2d277b1d753703344f53bece8b06e
 
 post_install() {

@@ -462,7 +462,7 @@ case "$PACKAGE_NAME" in
         ;;
     danksearch)
         # danksearch uses pre-built binary releases
-        GIT_REPO="AvengeMedia/danksearch"
+        GIT_REPO="duxlabs-dev/dux-search"
         ;;
     matugen)
         GIT_REPO="InioX/matugen"
@@ -483,11 +483,11 @@ case "$PACKAGE_NAME" in
         ;;
     dankcalendar)
         # dankcalendar uses pre-built binary releases
-        GIT_REPO="AvengeMedia/dankcalendar"
+        GIT_REPO="duxlabs-dev/dux-calendar"
         ;;
     dankcalendar-git)
         IS_GIT_PACKAGE=true
-        GIT_REPO="AvengeMedia/dankcalendar"
+        GIT_REPO="duxlabs-dev/dux-calendar"
         SOURCE_DIR="dankcalendar"
         ;;
     cliphist)
@@ -495,7 +495,7 @@ case "$PACKAGE_NAME" in
         ;;
     dgop)
         # dgop uses pre-built binary from releases
-        GIT_REPO="AvengeMedia/dgop"
+        GIT_REPO="duxlabs-dev/dux-gop"
         ;;
     ghostty)
         FORCE_SA="true"
@@ -993,7 +993,7 @@ case "$PACKAGE_NAME" in
         # Launchpad can't download during build, so we include both architectures
         if [ ! -f "dsearch-amd64" ]; then
             info "Downloading dsearch binary for amd64..."
-            if wget -O dsearch-amd64.gz "https://github.com/AvengeMedia/danksearch/releases/download/v${VERSION}/dsearch-linux-amd64.gz"; then
+            if wget -O dsearch-amd64.gz "https://github.com/duxlabs-dev/dux-search/releases/download/v${VERSION}/dsearch-linux-amd64.gz"; then
                 gunzip dsearch-amd64.gz
                 chmod +x dsearch-amd64
                 success "amd64 binary downloaded"
@@ -1005,7 +1005,7 @@ case "$PACKAGE_NAME" in
 
         if [ ! -f "dsearch-arm64" ]; then
             info "Downloading dsearch binary for arm64..."
-            if wget -O dsearch-arm64.gz "https://github.com/AvengeMedia/danksearch/releases/download/v${VERSION}/dsearch-linux-arm64.gz"; then
+            if wget -O dsearch-arm64.gz "https://github.com/duxlabs-dev/dux-search/releases/download/v${VERSION}/dsearch-linux-arm64.gz"; then
                 gunzip dsearch-arm64.gz
                 chmod +x dsearch-arm64
                 success "arm64 binary downloaded"
@@ -1018,7 +1018,7 @@ case "$PACKAGE_NAME" in
     dankcalendar)
         info "Downloading pre-built binaries and assets for dankcalendar..."
         VERSION=$(dpkg-parsechangelog -S Version | sed 's/-[^-]*$//' | sed 's/ppa[0-9]*$//')
-        RELEASE_URL="https://github.com/AvengeMedia/dankcalendar/releases/download/v${VERSION}"
+        RELEASE_URL="https://github.com/duxlabs-dev/dux-calendar/releases/download/v${VERSION}"
 
         for arch in amd64 arm64; do
             if [ ! -f "dcal-${arch}" ]; then
@@ -1059,7 +1059,7 @@ case "$PACKAGE_NAME" in
         # Launchpad can't download during build, so we include both architectures
         if [ ! -f "dgop-amd64" ]; then
             info "Downloading dgop binary for amd64..."
-            if wget -O dgop-amd64.gz "https://github.com/AvengeMedia/dgop/releases/download/v${VERSION}/dgop-linux-amd64.gz"; then
+            if wget -O dgop-amd64.gz "https://github.com/duxlabs-dev/dux-gop/releases/download/v${VERSION}/dgop-linux-amd64.gz"; then
                 gunzip dgop-amd64.gz
                 chmod +x dgop-amd64
                 success "amd64 binary downloaded"
@@ -1071,7 +1071,7 @@ case "$PACKAGE_NAME" in
 
         if [ ! -f "dgop-arm64" ]; then
             info "Downloading dgop binary for arm64..."
-            if wget -O dgop-arm64.gz "https://github.com/AvengeMedia/dgop/releases/download/v${VERSION}/dgop-linux-arm64.gz"; then
+            if wget -O dgop-arm64.gz "https://github.com/duxlabs-dev/dux-gop/releases/download/v${VERSION}/dgop-linux-arm64.gz"; then
                 gunzip dgop-arm64.gz
                 chmod +x dgop-arm64
                 success "arm64 binary downloaded"

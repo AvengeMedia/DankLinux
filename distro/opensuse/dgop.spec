@@ -1,16 +1,16 @@
 Name:           dgop
 Version:        0.1.12
 Release:        1%{?dist}
-Summary:        Stateless CPU/GPU monitor for DankMaterialShell
+Summary:        Stateless CPU/GPU monitor for Dux Shell
 
 License:        MIT
-URL:            https://github.com/AvengeMedia/dgop
-Source0:        https://github.com/AvengeMedia/dgop/releases/download/v%{version}/dgop-linux-amd64.gz
-Source1:        https://github.com/AvengeMedia/dgop/releases/download/v%{version}/dgop-linux-arm64.gz
+URL:            https://github.com/duxlabs-dev/dux-gop
+Source0:        https://github.com/duxlabs-dev/dux-gop/releases/download/v%{version}/dgop-linux-amd64.gz
+Source1:        https://github.com/duxlabs-dev/dux-gop/releases/download/v%{version}/dgop-linux-arm64.gz
 
 %description
 DGOP is a stateless system monitoring tool that provides CPU, GPU, memory, and 
-network statistics. Designed for integration with DankMaterialShell but can be 
+network statistics. Designed for integration with Dux Shell but can be 
 used standalone.
 
 %prep

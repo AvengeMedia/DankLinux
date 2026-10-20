@@ -1,19 +1,19 @@
 # Void Linux packaging
 
-XBPS templates for the DankLinux tools that aren't yet in the Void repositories.
+XBPS templates for the Dux Linux tools that aren't yet in the Void repositories.
 Each builds from source from its upstream release.
 
 | Package | Binary | Upstream | Description |
 | --- | --- | --- | --- |
-| `dgop` | `dgop` | [AvengeMedia/dgop](https://github.com/AvengeMedia/dgop) | System monitor / telemetry CLI |
-| `danksearch` | `dsearch` | [AvengeMedia/danksearch](https://github.com/AvengeMedia/danksearch) | Fast filesystem search |
-| `dankcalendar` | `dcal` | [AvengeMedia/dankcalendar](https://github.com/AvengeMedia/dankcalendar) | Calendar app (Local, Google, CalDAV, iCloud) |
+| `dgop` | `dgop` | [duxlabs-dev/dux-gop](https://github.com/duxlabs-dev/dux-gop) | System monitor / telemetry CLI |
+| `danksearch` | `dsearch` | [duxlabs-dev/dux-search](https://github.com/duxlabs-dev/dux-search) | Fast filesystem search |
+| `dankcalendar` | `dcal` | [duxlabs-dev/dux-calendar](https://github.com/duxlabs-dev/dux-calendar) | Calendar app (Local, Google, CalDAV, iCloud) |
 
-`dgop` and `danksearch` integrate with DankMaterialShell; `dankcalendar` is a
+`dgop` and `danksearch` integrate with Dux Shell; `dankcalendar` is a
 standalone app. The `dms` / `dms-git` Void packages live in the
-[DankMaterialShell repo](https://github.com/AvengeMedia/DankMaterialShell/tree/master/distro/void).
+[Dux Shell repo](https://github.com/duxlabs-dev/dux-shell/tree/master/distro/void).
 `dms-greeter` packaging lives in
-[dank-greeter](https://github.com/AvengeMedia/dank-greeter/tree/master/distro/void)
+[dank-greeter](https://github.com/duxlabs-dev/dux-greeter/tree/master/distro/void)
 and is published to the shared `https://void.danklinux.com/dms/current` repository.
 
 ## Distribution

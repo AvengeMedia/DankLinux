@@ -1,4 +1,4 @@
-# OBS Package Configuration for DankLinux packages
+# OBS Package Configuration for Dux Linux packages
 
 schema_version: "1.0"
 
@@ -77,7 +77,7 @@ packages:
   danksearch:
     type: stable
     upstream:
-      repo: AvengeMedia/DankSearch
+      repo: duxlabs-dev/dux-search
       source_type: github_release
     distros:
       - debian
@@ -94,7 +94,7 @@ packages:
   dgop:
     type: stable
     upstream:
-      repo: AvengeMedia/DGoP
+      repo: duxlabs-dev/dux-gop
       source_type: github_release
     distros:
       - debian
@@ -110,7 +110,7 @@ packages:
   dankcalendar:
     type: stable
     upstream:
-      repo: AvengeMedia/dankcalendar
+      repo: duxlabs-dev/dux-calendar
       source_type: github_release
     distros:
       - debian
@@ -302,7 +302,7 @@ packages:
   dankcalendar-git:
     type: git
     upstream:
-      repo: AvengeMedia/dankcalendar
+      repo: duxlabs-dev/dux-calendar
       branch: master
     base_version:
       from_stable: dankcalendar

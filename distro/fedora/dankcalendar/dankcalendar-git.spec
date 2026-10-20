@@ -10,12 +10,12 @@
 Name:               dankcalendar-git
 Version:            %{tag}+git%{commits}.%(c=%{commit}; echo ${c:0:8})
 Release:            2%{?dist}
-Summary:            Calendar app for the Dank Linux desktop (git)
+Summary:            Calendar app for the Dux Labs desktop (git)
 
 License:            MIT
-URL:                https://github.com/AvengeMedia/dankcalendar
+URL:                https://github.com/duxlabs-dev/dux-calendar
 Source0:            %{url}/archive/%{commit}/dankcalendar-%{commit}.tar.gz
-Source1:            https://github.com/AvengeMedia/dank-qml-common/archive/%{common_commit}/dank-qml-common-%{common_commit}.tar.gz
+Source1:            https://github.com/duxlabs-dev/dux-qml-common/archive/%{common_commit}/dank-qml-common-%{common_commit}.tar.gz
 
 BuildRequires:      golang >= 1.25
 BuildRequires:      git-core
@@ -26,7 +26,7 @@ Requires:          libsecret
 Requires:          qt6-qtdeclarative
 
 %description
-DankCalendar brings Local, Google, Microsoft, CalDAV, and iCloud calendars
+Dux Calendar brings Local, Google, Microsoft, CalDAV, and iCloud calendars
 together in one standalone app. It runs as a lightweight daemon with a tray
 icon, keeps accounts in sync, and reminds you about events.
 
@@ -66,11 +66,11 @@ mkdir -p completions
 %install
 install -Dm755 dcal %{buildroot}%{_bindir}/dcal
 
-install -Dm644 assets/com.danklinux.dankcalendar.svg \
-    %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/com.danklinux.dankcalendar.svg
+install -Dm644 assets/dev.duxlabs.calendar.svg \
+    %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/dev.duxlabs.calendar.svg
 
-install -Dm644 assets/com.danklinux.dankcalendar.desktop \
-    %{buildroot}%{_datadir}/applications/com.danklinux.dankcalendar.desktop
+install -Dm644 assets/dev.duxlabs.calendar.desktop \
+    %{buildroot}%{_datadir}/applications/dev.duxlabs.calendar.desktop
 
 install -Dm644 assets/systemd/dcal.service \
     %{buildroot}%{_userunitdir}/dcal.service
@@ -86,11 +86,11 @@ install -Dm644 completions/dcal.fish \
 %license LICENSE
 %{_bindir}/dcal
 %{_userunitdir}/dcal.service
-%{_datadir}/applications/com.danklinux.dankcalendar.desktop
+%{_datadir}/applications/dev.duxlabs.calendar.desktop
 %dir %{_datadir}/icons/hicolor
 %dir %{_datadir}/icons/hicolor/scalable
 %dir %{_datadir}/icons/hicolor/scalable/apps
-%{_datadir}/icons/hicolor/scalable/apps/com.danklinux.dankcalendar.svg
+%{_datadir}/icons/hicolor/scalable/apps/dev.duxlabs.calendar.svg
 %dir %{_datadir}/bash-completion
 %dir %{_datadir}/bash-completion/completions
 %{_datadir}/bash-completion/completions/dcal

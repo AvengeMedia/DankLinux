@@ -55,10 +55,10 @@ PACKAGES=(
     "cliphist:sentriz/cliphist:release"
     "matugen:InioX/matugen:release"
     "ghostty:ghostty-org/ghostty:release"
-    "danksearch:AvengeMedia/danksearch:release"
-    "dankcalendar:AvengeMedia/dankcalendar:release"
-    "dankcalendar-git:AvengeMedia/dankcalendar:git"
-    "dgop:AvengeMedia/dgop:release"
+    "danksearch:duxlabs-dev/dux-search:release"
+    "dankcalendar:duxlabs-dev/dux-calendar:release"
+    "dankcalendar-git:duxlabs-dev/dux-calendar:git"
+    "dgop:duxlabs-dev/dux-gop:release"
 )
 
 get_latest_tag() {

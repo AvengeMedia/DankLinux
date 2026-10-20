@@ -5,14 +5,14 @@ pkgname=dgop
 version=1.6.2
 revision=1
 build_style=go
-go_import_path="github.com/AvengeMedia/dgop"
+go_import_path="github.com/duxlabs-dev/dux-gop"
 go_package="${go_import_path}/cmd/dgop"
 go_ldflags="-X main.Version=${version}"
-short_desc="System monitoring CLI and REST API (DankMaterialShell telemetry)"
+short_desc="System monitoring CLI and REST API (Dux Shell telemetry)"
 maintainer="AvengeMedia <AvengeMedia.US@gmail.com>"
 license="MIT"
-homepage="https://github.com/AvengeMedia/dgop"
-distfiles="https://github.com/AvengeMedia/dgop/archive/refs/tags/v${version}.tar.gz"
+homepage="https://github.com/duxlabs-dev/dux-gop"
+distfiles="https://github.com/duxlabs-dev/dux-gop/archive/refs/tags/v${version}.tar.gz"
 checksum=1ed7295052f4c368f4e07472c4645e68a75b6d5f9b4cb5cb291a335a7f0d91e6
 
 post_install() {

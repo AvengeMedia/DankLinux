@@ -281,7 +281,7 @@ echo ""
 echo "📦 Checking dgop..."
 
 SPEC_FILE="dgop/dgop.spec"
-UPSTREAM_REPO="AvengeMedia/dgop"
+UPSTREAM_REPO="duxlabs-dev/dux-gop"
 
 # Get current version from simplified spec
 CURRENT_VERSION=$(grep -oP '^Version:\s+\K[0-9.]+' "$SPEC_FILE" || echo "unknown")
@@ -462,7 +462,7 @@ echo ""
 echo "📦 Checking danksearch..."
 
 SPEC_FILE="danksearch/danksearch.spec"
-UPSTREAM_REPO="AvengeMedia/danksearch"
+UPSTREAM_REPO="duxlabs-dev/dux-search"
 
 # Get current version from spec
 CURRENT_VERSION=$(grep -oP '^Version:\s+\K[0-9.]+' "$SPEC_FILE" || echo "unknown")
@@ -498,7 +498,7 @@ echo ""
 echo "📦 Checking dankcalendar..."
 
 SPEC_FILE="dankcalendar/dankcalendar.spec"
-UPSTREAM_REPO="AvengeMedia/dankcalendar"
+UPSTREAM_REPO="duxlabs-dev/dux-calendar"
 
 CURRENT_VERSION=$(grep -oP '^Version:\s+\K[0-9.]+' "$SPEC_FILE" || echo "unknown")
 echo "   Current: $CURRENT_VERSION"
@@ -531,7 +531,7 @@ echo ""
 echo "📦 Checking dankcalendar-git (development)..."
 
 SPEC_FILE="dankcalendar/dankcalendar-git.spec"
-UPSTREAM_REPO="AvengeMedia/dankcalendar"
+UPSTREAM_REPO="duxlabs-dev/dux-calendar"
 
 TAG_UPDATED=false
 STABLE_REL_TAG=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "release" 2>/dev/null || echo "")
@@ -652,7 +652,7 @@ fi
 # ============================================================================
 echo ""
 echo "📦 Checking dms-greeter..."
-echo "   ℹ️  Builds from: https://github.com/AvengeMedia/dank-greeter"
+echo "   ℹ️  Builds from: https://github.com/duxlabs-dev/dux-greeter"
 echo "   Published into avengemedia/danklinux by dank-greeter CI (stable + dms-greeter-git)"
 echo "   Skipping automatic updates (managed in dank-greeter)"
 

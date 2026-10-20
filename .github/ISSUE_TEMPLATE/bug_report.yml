@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        ## The Dank Linux Repository
+        ## The Dux Labs Repository
   - type: checkboxes
     id: compositor
     attributes:

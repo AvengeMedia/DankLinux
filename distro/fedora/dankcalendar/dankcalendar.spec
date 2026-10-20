@@ -3,10 +3,10 @@
 Name:               dankcalendar
 Version:            1.6.1
 Release:            1%{?dist}
-Summary:            Calendar app for the Dank Linux desktop
+Summary:            Calendar app for the Dux Labs desktop
 
 License:            MIT
-URL:                https://github.com/AvengeMedia/dankcalendar
+URL:                https://github.com/duxlabs-dev/dux-calendar
 # Release tarball ships the dank-qml-common submodule and vendored Go modules
 Source0:            %{url}/releases/download/v%{version}/dankcalendar-%{version}.tar.gz
 
@@ -20,7 +20,7 @@ Requires:          qt6-qtdeclarative
 Conflicts:         dankcalendar-git
 
 %description
-DankCalendar brings Local, Google, Microsoft, CalDAV, and iCloud calendars
+Dux Calendar brings Local, Google, Microsoft, CalDAV, and iCloud calendars
 together in one standalone app. It runs as a lightweight daemon with a tray
 icon, keeps accounts in sync, and reminds you about events.
 
@@ -53,11 +53,11 @@ mkdir -p completions
 %install
 install -Dm755 dcal %{buildroot}%{_bindir}/dcal
 
-install -Dm644 assets/com.danklinux.dankcalendar.svg \
-    %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/com.danklinux.dankcalendar.svg
+install -Dm644 assets/dev.duxlabs.calendar.svg \
+    %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/dev.duxlabs.calendar.svg
 
-install -Dm644 assets/com.danklinux.dankcalendar.desktop \
-    %{buildroot}%{_datadir}/applications/com.danklinux.dankcalendar.desktop
+install -Dm644 assets/dev.duxlabs.calendar.desktop \
+    %{buildroot}%{_datadir}/applications/dev.duxlabs.calendar.desktop
 
 install -Dm644 assets/systemd/dcal.service \
     %{buildroot}%{_userunitdir}/dcal.service
@@ -73,11 +73,11 @@ install -Dm644 completions/dcal.fish \
 %license LICENSE
 %{_bindir}/dcal
 %{_userunitdir}/dcal.service
-%{_datadir}/applications/com.danklinux.dankcalendar.desktop
+%{_datadir}/applications/dev.duxlabs.calendar.desktop
 %dir %{_datadir}/icons/hicolor
 %dir %{_datadir}/icons/hicolor/scalable
 %dir %{_datadir}/icons/hicolor/scalable/apps
-%{_datadir}/icons/hicolor/scalable/apps/com.danklinux.dankcalendar.svg
+%{_datadir}/icons/hicolor/scalable/apps/dev.duxlabs.calendar.svg
 %dir %{_datadir}/bash-completion
 %dir %{_datadir}/bash-completion/completions
 %{_datadir}/bash-completion/completions/dcal

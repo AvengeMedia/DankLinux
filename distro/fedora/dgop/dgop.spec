@@ -7,7 +7,7 @@ Release:        1%{?dist}
 Summary:        System monitoring CLI and REST API
 
 License:        MIT
-URL:            https://github.com/AvengeMedia/dgop
+URL:            https://github.com/duxlabs-dev/dux-gop
 
 # Pre-built binaries from GitHub releases - using /latest/download/ for automatic updates
 Source0:        %{url}/releases/latest/download/dgop-linux-amd64.gz

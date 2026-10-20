@@ -4,9 +4,9 @@ Priority: optional
 Maintainer: Avenge Media <AvengeMedia.US@gmail.com>
 Build-Depends: debhelper-compat (= 13)
 Standards-Version: 4.6.2
-Homepage: https://github.com/AvengeMedia/dankcalendar
-Vcs-Browser: https://github.com/AvengeMedia/dankcalendar
-Vcs-Git: https://github.com/AvengeMedia/dankcalendar.git
+Homepage: https://github.com/duxlabs-dev/dux-calendar
+Vcs-Browser: https://github.com/duxlabs-dev/dux-calendar
+Vcs-Git: https://github.com/duxlabs-dev/dux-calendar.git
 
 Package: dankcalendar
 Architecture: amd64 arm64
@@ -16,7 +16,7 @@ Depends: ${misc:Depends},
          libqt6quick6
 Conflicts: dankcalendar-git
 Replaces: dankcalendar-git
-Description: Calendar app for the Dank Linux desktop
- DankCalendar brings Local, Google, Microsoft, CalDAV, and iCloud calendars
+Description: Calendar app for the Dux Labs desktop
+ Dux Calendar brings Local, Google, Microsoft, CalDAV, and iCloud calendars
  together in one standalone app. It runs as a lightweight daemon with a tray
  icon, keeps accounts in sync, and reminds you about events.

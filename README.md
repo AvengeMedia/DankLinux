@@ -1,16 +1,16 @@
-# DankLinux Package Repository
+# Dux Linux Package Repository
 
 <div align="center">
-  <a href="https://danklinux.com">
-    <img src="assets/danklogo.svg" alt="DankLinux" width="200">
+  <a href="https://duxlabs.dev">
+    <img src="assets/danklogo.svg" alt="Dux Linux" width="200">
   </a>
 
   ### DMS Wayland desktop environment packages built for Debian, Ubuntu, Fedora, and OpenSUSE
 
   Built with [Quickshell](https://quickshell.org/) and [Go](https://go.dev/)
 
-[![GitHub stars](https://img.shields.io/github/stars/AvengeMedia/danklinux?style=for-the-badge&labelColor=101418&color=ffd700)](https://github.com/AvengeMedia/danklinux/stargazers)
-[![GitHub License](https://img.shields.io/github/license/AvengeMedia/danklinux?style=for-the-badge&labelColor=101418&color=b9c8da)](https://github.com/AvengeMedia/danklinux/blob/master/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/duxlabs-dev/dux-packaging?style=for-the-badge&labelColor=101418&color=ffd700)](https://github.com/duxlabs-dev/dux-packaging/stargazers)
+[![GitHub License](https://img.shields.io/github/license/duxlabs-dev/dux-packaging?style=for-the-badge&labelColor=101418&color=b9c8da)](https://github.com/duxlabs-dev/dux-packaging/blob/master/LICENSE)
 [![OBS Build](https://img.shields.io/badge/OBS-building-success?style=for-the-badge&labelColor=101418&color=73ba25&logo=opensuse)](https://build.opensuse.org/project/show/home:AvengeMedia:danklinux)
 [![Ko-Fi donate](https://img.shields.io/badge/donate-kofi?style=for-the-badge&logo=ko-fi&logoColor=ffffff&label=ko-fi&labelColor=101418&color=f16061)](https://ko-fi.com/avengemediallc)
 
@@ -19,7 +19,7 @@
 ## Available Packages
 
 ### Desktop Environment
-- **DMS** - DankMaterialShell desktop environment
+- **DMS** - Dux Shell desktop environment
 
 ### Core Compositor
 - **niri** - Scrollable-tiling Wayland compositor with smooth animations 
@@ -30,12 +30,12 @@
 - **cliphist** - Wayland clipboard manager with history support
 - **danksearch** - Fast application launcher and file search tool
 - **dankcalendar** - Calendar app with Local, Google, Microsoft, CalDAV, and iCloud support (`dcal`)
-- **dankcalendar-git** - DankCalendar built from upstream master
+- **dankcalendar-git** - Dux Calendar built from upstream master
 - **dgop** - System package manager integration tool
 
 ## Installation
 
-> **📖 Full installation guide**: [danklinux.com/docs/dankmaterialshell/installation](https://danklinux.com/docs/dankmaterialshell/installation)
+> **📖 Full installation guide**: [duxlabs.dev/docs/dms/installation](https://duxlabs.dev/docs/dms/installation)
 
 ### DMS Desktop Environment
 
@@ -122,7 +122,7 @@ sudo zypper refresh && sudo zypper install dms-git
 
 </details>
 
-> See [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell) for full documentation and configuration.
+> See [Dux Shell](https://github.com/duxlabs-dev/dux-shell) for full documentation and configuration.
 
 ---
 
@@ -205,18 +205,18 @@ All packages support:
 
 1. Select **niri** or **niri-git** from your display manager
 2. Configure: `~/.config/niri/config.kdl`
-3. For DMS desktop environment, see [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell)
+3. For DMS desktop environment, see [Dux Shell](https://github.com/duxlabs-dev/dux-shell)
 
 ## Upstream Projects
 
-- [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell) - DMS desktop environment
-- [dank-greeter](https://github.com/AvengeMedia/dank-greeter) - greetd greeter (`dms-greeter` / `dms-greeter-git`), published into danklinux Copr/OBS/PPA/Void
+- [Dux Shell](https://github.com/duxlabs-dev/dux-shell) - DMS desktop environment
+- [dank-greeter](https://github.com/duxlabs-dev/dux-greeter) - greetd greeter (`dms-greeter` / `dms-greeter-git`), published into danklinux Copr/OBS/PPA/Void
 - [Niri](https://github.com/YaLTeR/niri) - Scrollable-tiling Wayland compositor  
 - [Quickshell](https://github.com/outfoxxed/quickshell) - QtQuick desktop shell toolkit  
 - [Matugen](https://github.com/InioX/matugen) - Material You color generator  
 - [Cliphist](https://github.com/sentriz/cliphist) - Wayland clipboard manager  
-- [Danksearch](https://github.com/AvengeMedia/danksearch) - Application launcher  
-- [Dgop](https://github.com/AvengeMedia/dgop) - Package manager integration
+- [Danksearch](https://github.com/duxlabs-dev/dux-search) - Application launcher  
+- [Dgop](https://github.com/duxlabs-dev/dux-gop) - Package manager integration
 
 ## Build Status
 
@@ -245,7 +245,7 @@ Debian and Ubuntu get the same treatment from `Rebuild for Debian/Ubuntu Qt upda
 
 Packaging specs and automation maintained in this repository.
 
-- **Packaging issues**: [GitHub Issues](https://github.com/AvengeMedia/danklinux/issues)  
+- **Packaging issues**: [GitHub Issues](https://github.com/duxlabs-dev/dux-packaging/issues)  
 - **Upstream bugs**: Report to respective project repositories
 
 ## License

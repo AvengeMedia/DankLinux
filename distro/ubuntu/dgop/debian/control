@@ -6,17 +6,17 @@ Build-Depends: debhelper-compat (= 13),
                wget,
                gzip
 Standards-Version: 4.6.2
-Homepage: https://github.com/AvengeMedia/dgop
-Vcs-Browser: https://github.com/AvengeMedia/dgop
-Vcs-Git: https://github.com/AvengeMedia/dgop.git
+Homepage: https://github.com/duxlabs-dev/dux-gop
+Vcs-Browser: https://github.com/duxlabs-dev/dux-gop
+Vcs-Git: https://github.com/duxlabs-dev/dux-gop.git
 
 Package: dgop
 Architecture: any
 Depends: ${misc:Depends}
-Description: Stateless CPU/GPU monitor for DankMaterialShell
+Description: Stateless CPU/GPU monitor for Dux Shell
  DGOP is a stateless system monitoring tool that provides CPU, GPU,
  memory, and network statistics. Designed for integration with
- DankMaterialShell but can be used standalone.
+ Dux Shell but can be used standalone.
  .
  Features:
   - CPU usage monitoring

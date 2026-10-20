@@ -5,7 +5,7 @@ set -euo pipefail
 COPR_OWNER="avengemedia"
 COPR_PROJECT="danklinux"
 # The SCM default source method of the existing packages
-COPR_CLONE_URL="https://github.com/AvengeMedia/danklinux.git"
+COPR_CLONE_URL="https://github.com/duxlabs-dev/dux-packaging.git"
 
 if ! command -v copr-cli &> /dev/null; then
     echo "❌ copr-cli not found. Install with: sudo dnf install copr-cli" >&2
@@ -224,7 +224,7 @@ if echo "$CHANGED_FILES" | grep -q "distro/fedora/xwayland-satellite/xwayland-sa
     BUILD_XWAYLAND_SATELLITE=true
 fi
 
-# Note: dms-greeter / dms-greeter-git build from https://github.com/AvengeMedia/dank-greeter
+# Note: dms-greeter / dms-greeter-git build from https://github.com/duxlabs-dev/dux-greeter
 # and are published into avengemedia/danklinux by that repo's CI
 
 # If no git history, check for uncommitted changes
