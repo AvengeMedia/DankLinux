@@ -16,7 +16,7 @@ maintainer="AvengeMedia <AvengeMedia.US@gmail.com>"
 license="MIT"
 homepage="https://github.com/duxlabs-dev/dux-calendar"
 changelog="https://github.com/duxlabs-dev/dux-calendar/releases"
-# Release tarball ships the dank-qml-common submodule and vendored Go modules
+# Release tarball ships the dux-qml-common submodule and vendored Go modules
 distfiles="https://github.com/duxlabs-dev/dux-calendar/releases/download/v${version}/dankcalendar-${version}.tar.gz"
 checksum=4fb321efe73091305116aff0044ebf72f63a3d9204907c9e05ce2974f7f6989a
 

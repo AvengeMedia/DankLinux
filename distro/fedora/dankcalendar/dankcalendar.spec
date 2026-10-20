@@ -7,7 +7,7 @@ Summary:            Calendar app for the Dux Labs desktop
 
 License:            MIT
 URL:                https://github.com/duxlabs-dev/dux-calendar
-# Release tarball ships the dank-qml-common submodule and vendored Go modules
+# Release tarball ships the dux-qml-common submodule and vendored Go modules
 Source0:            %{url}/releases/download/v%{version}/dankcalendar-%{version}.tar.gz
 
 BuildRequires:      golang

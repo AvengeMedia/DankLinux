@@ -4,7 +4,7 @@
 %global commits     240
 %global snapdate    20261020
 %global tag         1.6.2
-# dank-qml-common submodule commit for %%{commit} (GitHub archives ship submodules empty)
+# dux-qml-common submodule commit for %%{commit} (GitHub archives ship submodules empty)
 %global common_commit be26cddd79836663744cbe93727a8e0931d99d94
 
 Name:               dankcalendar-git
@@ -15,7 +15,7 @@ Summary:            Calendar app for the Dux Labs desktop (git)
 License:            MIT
 URL:                https://github.com/duxlabs-dev/dux-calendar
 Source0:            %{url}/archive/%{commit}/dankcalendar-%{commit}.tar.gz
-Source1:            https://github.com/duxlabs-dev/dux-qml-common/archive/%{common_commit}/dank-qml-common-%{common_commit}.tar.gz
+Source1:            https://github.com/duxlabs-dev/dux-qml-common/archive/%{common_commit}/dux-qml-common-%{common_commit}.tar.gz
 
 BuildRequires:      golang >= 1.25
 BuildRequires:      git-core
@@ -33,10 +33,10 @@ icon, keeps accounts in sync, and reminds you about events.
 This is the git development package built from upstream master.
 
 %prep
-%autosetup -n dankcalendar-%{commit} -p1
-rm -rf dank-qml-common
+%autosetup -n dux-calendar-%{commit} -p1
+rm -rf dux-qml-common
 tar -xzf %{SOURCE1}
-mv dank-qml-common-%{common_commit} dank-qml-common
+mv dux-qml-common-%{common_commit} dux-qml-common
 
 %build
 export GOTOOLCHAIN=auto
