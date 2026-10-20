@@ -1,6 +1,6 @@
 # Void Linux packaging
 
-XBPS templates for the Dux Linux tools that aren't yet in the Void repositories.
+XBPS templates for the Dux Labs tools that aren't yet in the Void repositories.
 Each builds from source from its upstream release.
 
 | Package | Binary | Upstream | Description |

@@ -1,7 +1,7 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: dgop
 Upstream-Contact: Avenge Media LLC <AvengeMedia.US@gmail.com>
-Source: https://github.com/AvengeMedia/dgop
+Source: https://github.com/duxlabs-dev/dux-gop
 
 Files: *
 Copyright: 2025 Avenge Media LLC

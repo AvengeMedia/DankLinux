@@ -1,8 +1,8 @@
-# Dux Linux Package Repository
+# Dux Labs Package Repository
 
 <div align="center">
   <a href="https://duxlabs.dev">
-    <img src="assets/danklogo.svg" alt="Dux Linux" width="200">
+    <img src="assets/danklogo.svg" alt="Dux Labs" width="200">
   </a>
 
   ### DMS Wayland desktop environment packages built for Debian, Ubuntu, Fedora, and OpenSUSE

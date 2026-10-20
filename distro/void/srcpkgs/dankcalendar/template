@@ -1,6 +1,6 @@
 # Template file for 'dankcalendar'
 #
-# Standalone Dux Linux calendar app; installs the 'dcal' binary with the
+# Standalone Dux Labs calendar app; installs the 'dcal' binary with the
 # Quickshell UI embedded (-tags withshell).
 pkgname=dankcalendar
 version=1.6.1

@@ -11,7 +11,7 @@ Package: rust187
 Architecture: amd64 arm64
 Depends: ${misc:Depends}
 Description: Rust 1.87 compiler and cargo (official binaries)
- Official Rust 1.87.0 toolchain repackaged for Dux Linux OBS builds.
+ Official Rust 1.87.0 toolchain repackaged for Dux Labs OBS builds.
  Debian 13 ships rustc 1.85, which is older than the niri 26.4 MSRV
  (rustc 1.87). This package installs rustc and cargo under
  /usr/lib/rust-1.87.0/ so packages can use them without replacing the
