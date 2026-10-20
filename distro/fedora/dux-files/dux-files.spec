@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:               dux-files
-Version:            0.0.0
+Version:            2.0.0
 Release:            1%{?dist}
 Summary:            File manager for the Dux Labs desktop
 
@@ -120,5 +120,8 @@ install -Dm644 completions/dfiles.fish \
 %{_datadir}/fish/vendor_completions.d/dfiles.fish
 
 %changelog
+* Tue Oct 20 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 2.0.0-1
+- update to 2.0.0
+
 * Tue Oct 20 2026 Avenge Media <AvengeMedia.US@gmail.com> - 0.0.0-1
 - Initial stable package

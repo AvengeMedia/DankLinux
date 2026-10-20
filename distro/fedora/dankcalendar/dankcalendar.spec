@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:               dankcalendar
-Version:            1.6.1
+Version:            2.0.0
 Release:            1%{?dist}
 Summary:            Calendar app for the Dux Labs desktop
 
@@ -89,5 +89,8 @@ install -Dm644 completions/dcal.fish \
 %{_datadir}/fish/vendor_completions.d/dcal.fish
 
 %changelog
+* Tue Oct 20 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 2.0.0-1
+- update to 2.0.0
+
 * Fri Oct 16 2026 Avenge Media <AvengeMedia.US@gmail.com> - 1.6.1-1
 - Initial stable package
