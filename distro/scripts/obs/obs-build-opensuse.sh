@@ -223,7 +223,7 @@ EOF
         fi
         log_success "Go dependencies vendored"
 
-        if [[ "$PACKAGE" == "dankcalendar-git" ]]; then
+        if [[ "$PACKAGE" == "dankcalendar-git" || "$PACKAGE" == "dux-files-git" ]]; then
             go_ver=$(go_toolchain_version "$SOURCE_DIR/core/go.mod" || true)
             if [[ -z "$go_ver" ]]; then
                 log_error "Could not resolve a Go toolchain release from core/go.mod"

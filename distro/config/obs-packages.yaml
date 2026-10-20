@@ -123,6 +123,22 @@ packages:
       directory_name: "dankcalendar-{version}"
       compression: gz
 
+  dux-files:
+    type: stable
+    upstream:
+      repo: duxlabs-dev/dux-files
+      source_type: github_release
+    distros:
+      - debian
+      - opensuse
+    build:
+      language: go
+      binary_release: true
+      binary_template: "dfiles-linux-{arch}.gz"
+    tarball:
+      directory_name: "dux-files-{version}"
+      compression: gz
+
   ghostty:
     type: stable
     upstream:
@@ -317,6 +333,26 @@ packages:
       directory_name: "dankcalendar"
       compression: gz
 
+  dux-files-git:
+    type: git
+    upstream:
+      repo: duxlabs-dev/dux-files
+      branch: master
+    base_version:
+      from_stable: dux-files
+      # Used until dux-files has its first release
+      fallback: "0.0.0"
+    distros:
+      - debian
+      - opensuse
+    build:
+      language: go
+      go_version: "1.27"
+      vendor_deps: true
+    tarball:
+      directory_name: "dux-files"
+      compression: gz
+
 # ============================================================================
 # BUILD SYSTEM DEFAULTS
 # ============================================================================
@@ -364,6 +400,7 @@ groups:
   all-stable:
     - danksearch
     - dankcalendar
+    - dux-files
     - dgop
     - ghostty
     - matugen
@@ -378,10 +415,12 @@ groups:
     - quickshell-git
     - xwayland-satellite-git
     - dankcalendar-git
+    - dux-files-git
 
   all:
     - danksearch
     - dankcalendar
+    - dux-files
     - dgop
     - ghostty
     - matugen
@@ -394,6 +433,7 @@ groups:
     - xwayland-satellite
     - xwayland-satellite-git
     - dankcalendar-git
+    - dux-files-git
 
   debian-only:
     - niri  # niri stable is Debian-only; OpenSUSE uses niri-git
@@ -414,8 +454,10 @@ groups:
   go-packages:
     - danksearch
     - dankcalendar
+    - dux-files
     - dgop
     - dankcalendar-git
+    - dux-files-git
 
   cpp-packages:
     - quickshell
@@ -426,4 +468,5 @@ groups:
   binary-releases:
     - danksearch
     - dankcalendar
+    - dux-files
     - dgop

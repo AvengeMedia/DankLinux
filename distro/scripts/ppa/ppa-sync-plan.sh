@@ -27,6 +27,8 @@ PACKAGES=(
     "xwayland-satellite-git:Supreeeme/xwayland-satellite:git"
     "dankcalendar:duxlabs-dev/dux-calendar:release"
     "dankcalendar-git:duxlabs-dev/dux-calendar:git"
+    "dux-files:duxlabs-dev/dux-files:release"
+    "dux-files-git:duxlabs-dev/dux-files:git"
     "danksearch:duxlabs-dev/dux-search:release"
     "dgop:duxlabs-dev/dux-gop:release"
 )
@@ -185,6 +187,10 @@ for pkg_info in "${PACKAGES[@]}"; do
     for series in "${SERIES_LIST[@]}"; do
         if [[ "$type" == "release" ]]; then
             expected_base="$(expected_release_base "$package" "$repo" "$series")"
+            if [[ -z "$expected_base" ]]; then
+                echo "${package}/${series}: no upstream release, skipping" >&2
+                continue
+            fi
             expected_label="$expected_base"
         fi
 

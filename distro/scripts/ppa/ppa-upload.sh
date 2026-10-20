@@ -67,7 +67,7 @@ fi
 TEMP_DIR=$(mktemp -d "$TEMP_BASE/ppa_build_XXXXXX")
 trap "rm -rf $TEMP_DIR" EXIT
 
-AVAILABLE_PACKAGES=(cpptrace cliphist danksearch dgop ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git dankcalendar dankcalendar-git)
+AVAILABLE_PACKAGES=(cpptrace cliphist danksearch dgop ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git dankcalendar dankcalendar-git dux-files dux-files-git)
 KEEP_BUILDS=false
 BUILD_ONLY=false
 REBUILD_RELEASE=""
@@ -490,6 +490,15 @@ case "$PACKAGE_NAME" in
         GIT_REPO="duxlabs-dev/dux-calendar"
         SOURCE_DIR="dankcalendar"
         ;;
+    dux-files)
+        # dux-files uses pre-built binary releases
+        GIT_REPO="duxlabs-dev/dux-files"
+        ;;
+    dux-files-git)
+        IS_GIT_PACKAGE=true
+        GIT_REPO="duxlabs-dev/dux-files"
+        SOURCE_DIR="dux-files"
+        ;;
     cliphist)
         GIT_REPO="sentriz/cliphist"
         ;;
@@ -615,6 +624,8 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
         if [ -z "$UPSTREAM_VERSION" ]; then
             UPSTREAM_VERSION=$(cd "$TEMP_CLONE" && git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.1")
         fi
+        # The sed above masks git describe failing on a repo with no tags
+        UPSTREAM_VERSION="${UPSTREAM_VERSION:-0.0.0}"
         
         if [ -z "$GIT_COMMIT_COUNT" ] || [ "$GIT_COMMIT_COUNT" = "0" ]; then
             error "Failed to get commit count from $GIT_REPO"
@@ -640,6 +651,12 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
             _DC_PRE="$UPSTREAM_VERSION"
             UPSTREAM_VERSION="$(bump_patch_triplet "$UPSTREAM_VERSION")"
             info "dankcalendar-git Debian base ahead of stable tag (${_DC_PRE} → ${UPSTREAM_VERSION})"
+        fi
+
+        if [ "$PACKAGE_NAME" = "dux-files-git" ]; then
+            _DF_PRE="$UPSTREAM_VERSION"
+            UPSTREAM_VERSION="$(bump_patch_triplet "$UPSTREAM_VERSION")"
+            info "dux-files-git Debian base ahead of stable tag (${_DF_PRE} → ${UPSTREAM_VERSION})"
         fi
         
         info "Updating changelog with git commit info..."
@@ -698,7 +715,7 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
         success "Changelog written back to $PACKAGE_DIR/debian/changelog"
         
         rm -rf "$SOURCE_DIR"
-        if [ "$PACKAGE_NAME" = "dankcalendar-git" ]; then
+        if [ "$PACKAGE_NAME" = "dankcalendar-git" ] || [ "$PACKAGE_NAME" = "dux-files-git" ]; then
             # Native rules expect core/, assets/, etc. at package root (same as OBS)
             cp -a "$TEMP_CLONE"/. "$BUILD_DIR/"
             rm -rf "$BUILD_DIR/.git"
@@ -748,7 +765,7 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
             fi
         fi
 
-        if [ "$PACKAGE_NAME" = "dankcalendar-git" ]; then
+        if [ "$PACKAGE_NAME" = "dankcalendar-git" ] || [ "$PACKAGE_NAME" = "dux-files-git" ]; then
             if [ -f "$SOURCE_DIR/core/go.mod" ]; then
                 info "Vendoring Go dependencies (Launchpad has no internet access)..."
                 cd "$SOURCE_DIR/core"
@@ -1041,11 +1058,43 @@ case "$PACKAGE_NAME" in
                 exit 1
             fi
             tar -xzf dankcalendar-src.tar.gz --strip-components=1 \
-                "dankcalendar-${VERSION}/assets/com.danklinux.dankcalendar.desktop" \
-                "dankcalendar-${VERSION}/assets/com.danklinux.dankcalendar.svg" \
+                "dankcalendar-${VERSION}/assets/dev.duxlabs.calendar.desktop" \
+                "dankcalendar-${VERSION}/assets/dev.duxlabs.calendar.svg" \
                 "dankcalendar-${VERSION}/assets/systemd/dcal.service" \
                 "dankcalendar-${VERSION}/LICENSE"
             rm -f dankcalendar-src.tar.gz
+            success "Assets extracted"
+        fi
+        ;;
+    dux-files)
+        info "Downloading pre-built binaries and assets for dux-files..."
+        VERSION=$(dpkg-parsechangelog -S Version | sed 's/-[^-]*$//' | sed 's/ppa[0-9]*$//')
+        RELEASE_URL="https://github.com/duxlabs-dev/dux-files/releases/download/v${VERSION}"
+
+        for arch in amd64 arm64; do
+            if [ ! -f "dfiles-${arch}" ]; then
+                info "Downloading dfiles binary for ${arch}..."
+                if ! wget -O "dfiles-${arch}.gz" "${RELEASE_URL}/dfiles-linux-${arch}.gz"; then
+                    error "Failed to download dfiles-linux-${arch}.gz"
+                    exit 1
+                fi
+                gunzip "dfiles-${arch}.gz"
+                chmod +x "dfiles-${arch}"
+                success "${arch} binary downloaded"
+            fi
+        done
+
+        # Desktop, D-Bus, portal and polkit files and the license come from the release source tarball
+        if [ ! -d "assets" ]; then
+            info "Extracting assets from dfiles-${VERSION}.tar.gz..."
+            if ! wget -O dfiles-src.tar.gz "${RELEASE_URL}/dfiles-${VERSION}.tar.gz"; then
+                error "Failed to download dfiles-${VERSION}.tar.gz"
+                exit 1
+            fi
+            tar -xzf dfiles-src.tar.gz --strip-components=1 \
+                "dfiles-${VERSION}/assets" \
+                "dfiles-${VERSION}/LICENSE"
+            rm -f dfiles-src.tar.gz
             success "Assets extracted"
         fi
         ;;

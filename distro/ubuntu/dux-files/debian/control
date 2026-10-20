@@ -1,0 +1,31 @@
+Source: dux-files
+Section: utils
+Priority: optional
+Maintainer: Avenge Media <AvengeMedia.US@gmail.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.2
+Homepage: https://github.com/duxlabs-dev/dux-files
+Vcs-Browser: https://github.com/duxlabs-dev/dux-files
+Vcs-Git: https://github.com/duxlabs-dev/dux-files.git
+
+Package: dux-files
+Architecture: amd64 arm64
+Depends: ${misc:Depends},
+         quickshell-git | quickshell,
+         libqt6quick6
+Recommends: polkitd,
+            pkexec,
+            gvfs,
+            udisks2,
+            bubblewrap,
+            xdg-desktop-portal
+Suggests: ffmpegthumbnailer,
+          poppler-utils
+Conflicts: dux-files-git
+Replaces: dux-files-git
+Provides: dfiles
+Description: File manager for the Dux Labs desktop
+ Dux Files is a standalone file manager for Wayland. A small Go daemon does
+ the file work and a Quickshell UI sits on top of it, with tabs, split panes,
+ search, file operations with undo and archives. It also handles
+ org.freedesktop.FileManager1 and provides an xdg-desktop-portal file chooser.

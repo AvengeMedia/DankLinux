@@ -58,6 +58,8 @@ PACKAGES=(
     "danksearch:duxlabs-dev/dux-search:release"
     "dankcalendar:duxlabs-dev/dux-calendar:release"
     "dankcalendar-git:duxlabs-dev/dux-calendar:git"
+    "dux-files:duxlabs-dev/dux-files:release"
+    "dux-files-git:duxlabs-dev/dux-files:git"
     "dgop:duxlabs-dev/dux-gop:release"
 )
 
@@ -241,6 +243,7 @@ for pkg_info in "${PACKAGES[@]}"; do
         fi
         
         IFS=':' read -r latest_commit commit_count base_version <<< "$git_info"
+        base_version="${base_version:-0.0.0}"
         if [ "$package" = "quickshell-git" ]; then
             _bv_prev="$base_version"
             base_version="$(bump_patch_triplet "$base_version")"

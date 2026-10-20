@@ -14,6 +14,8 @@ on:
           - dankcalendar-git
           - danksearch
           - dgop
+          - dux-files
+          - dux-files-git
           - ghostty
           - matugen
           - matugen-snapshot

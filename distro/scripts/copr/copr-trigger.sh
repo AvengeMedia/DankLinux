@@ -118,6 +118,8 @@ BUILD_MATERIAL_SYMBOLS=false
 BUILD_DANKSEARCH=false
 BUILD_DANKCALENDAR=false
 BUILD_DANKCALENDAR_GIT=false
+BUILD_DUX_FILES=false
+BUILD_DUX_FILES_GIT=false
 BUILD_CLI11=false
 BUILD_QT6CT_KDE=false
 BUILD_GREETD=false
@@ -140,6 +142,8 @@ if [[ "${FORCE_PACKAGE:-}" == "all" ]]; then
     BUILD_DANKSEARCH=true
     BUILD_DANKCALENDAR=true
     BUILD_DANKCALENDAR_GIT=true
+    BUILD_DUX_FILES=true
+    BUILD_DUX_FILES_GIT=true
     BUILD_CLI11=true
     BUILD_QT6CT_KDE=true
     BUILD_GREETD=true
@@ -195,6 +199,15 @@ if echo "$CHANGED_FILES" | grep -q "distro/fedora/dankcalendar/dankcalendar-git.
     BUILD_DANKCALENDAR_GIT=true
 fi
 
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/dux-files/dux-files.spec"; then
+    BUILD_DUX_FILES=true
+fi
+
+# Not the stable build too: it fails until dux-files has a release
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/dux-files/dux-files-git.spec"; then
+    BUILD_DUX_FILES_GIT=true
+fi
+
 # New CLI11 package
 if echo "$CHANGED_FILES" | grep -q "distro/fedora/cli11/cli11.spec"; then
     BUILD_CLI11=true
@@ -243,6 +256,8 @@ if [[ -z "$CHANGED_FILES" ]]; then
     echo "$UNCOMMITTED" | grep -q "distro/fedora/danksearch/danksearch.spec" && BUILD_DANKSEARCH=true
     echo "$UNCOMMITTED" | grep -q "distro/fedora/dankcalendar/dankcalendar.spec" && BUILD_DANKCALENDAR=true
     echo "$UNCOMMITTED" | grep -q "distro/fedora/dankcalendar/dankcalendar-git.spec" && BUILD_DANKCALENDAR_GIT=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/dux-files/dux-files.spec" && BUILD_DUX_FILES=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/dux-files/dux-files-git.spec" && BUILD_DUX_FILES_GIT=true
 
     # New CLI11 package
     echo "$UNCOMMITTED" | grep -q "distro/fedora/cli11/cli11.spec" && BUILD_CLI11=true
@@ -300,6 +315,14 @@ fi
 
 if [[ "$BUILD_DANKCALENDAR_GIT" == true ]] || [[ "$FORCE_PACKAGE" == "dankcalendar-git" ]]; then
     trigger_build "dankcalendar-git" "distro/fedora/dankcalendar/dankcalendar-git.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+fi
+
+if [[ "$BUILD_DUX_FILES" == true ]] || [[ "$FORCE_PACKAGE" == "dux-files" ]]; then
+    trigger_build "dux-files" "distro/fedora/dux-files/dux-files.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+fi
+
+if [[ "$BUILD_DUX_FILES_GIT" == true ]] || [[ "$FORCE_PACKAGE" == "dux-files-git" ]]; then
+    trigger_build "dux-files-git" "distro/fedora/dux-files/dux-files-git.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
 if [[ "$BUILD_CLI11" == true ]] || [[ "$FORCE_PACKAGE" == "cli11" ]]; then

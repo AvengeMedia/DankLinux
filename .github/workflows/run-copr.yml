@@ -19,6 +19,8 @@ on:
           - cliphist
           - dankcalendar
           - dankcalendar-git
+          - dux-files
+          - dux-files-git
           - ghostty
           - greetd
           - gtk4-layer-shell

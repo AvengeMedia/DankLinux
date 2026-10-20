@@ -42,7 +42,8 @@ if [[ $# -lt 1 ]]; then
     error "Usage: $0 <package-name>"
     echo ""
     echo "Available packages:"
-    echo "  cli11, quickshell, quickshell-git, dankcalendar, dankcalendar-git, dgop, cliphist, matugen,"
+    echo "  cli11, quickshell, quickshell-git, dankcalendar, dankcalendar-git, dux-files, dux-files-git,"
+    echo "  dgop, cliphist, matugen,"
     echo "  breakpad, ghostty, danksearch, material-symbols-fonts, qt6ct-kde,"
     echo "  greetd, gtk4-layer-shell, cava, alacritty, xwayland-satellite (EL10 only)"
     exit 1
@@ -58,6 +59,8 @@ elif [[ "$PACKAGE" == "quickshell-git" ]]; then
     SPEC_FILE="$REPO_ROOT/distro/fedora/quickshell/quickshell-git.spec"
 elif [[ "$PACKAGE" == "dankcalendar-git" ]]; then
     SPEC_FILE="$REPO_ROOT/distro/fedora/dankcalendar/dankcalendar-git.spec"
+elif [[ "$PACKAGE" == "dux-files-git" ]]; then
+    SPEC_FILE="$REPO_ROOT/distro/fedora/dux-files/dux-files-git.spec"
 fi
 
 if [[ ! -f "$SPEC_FILE" ]]; then

@@ -31,6 +31,8 @@
 - **danksearch** - Fast application launcher and file search tool
 - **dankcalendar** - Calendar app with Local, Google, Microsoft, CalDAV, and iCloud support (`dcal`)
 - **dankcalendar-git** - Dux Calendar built from upstream master
+- **dux-files** - File manager with tabs, split panes, network shares and a portal file chooser (`dfiles`)
+- **dux-files-git** - Dux Files built from upstream master
 - **dgop** - System package manager integration tool
 
 ## Installation
@@ -141,7 +143,7 @@ echo "deb [signed-by=/etc/apt/keyrings/danklinux.gpg] https://download.opensuse.
 sudo apt update
 
 # Install packages
-sudo apt install niri quickshell-git matugen cliphist danksearch dgop dankcalendar-git
+sudo apt install niri quickshell-git matugen cliphist danksearch dgop dankcalendar-git dux-files-git
 ```
 
 <details>
@@ -153,7 +155,7 @@ curl -fsSL https://download.opensuse.org/repositories/home:AvengeMedia:danklinux
   sudo gpg --dearmor -o /etc/apt/keyrings/danklinux.gpg
 echo "deb [signed-by=/etc/apt/keyrings/danklinux.gpg] https://download.opensuse.org/repositories/home:/AvengeMedia:/danklinux/Debian_Testing/ /" | \
   sudo tee /etc/apt/sources.list.d/danklinux.list
-sudo apt update && sudo apt install niri quickshell-git matugen cliphist danksearch dgop dankcalendar-git
+sudo apt update && sudo apt install niri quickshell-git matugen cliphist danksearch dgop dankcalendar-git dux-files-git
 ```
 
 </details>
@@ -168,7 +170,7 @@ sudo apt update && sudo apt install niri quickshell-git matugen cliphist danksea
 # Add PPA and install packages
 sudo add-apt-repository ppa:avengemedia/danklinux
 sudo apt update
-sudo apt install niri quickshell-git matugen cliphist danksearch dgop dankcalendar-git
+sudo apt install niri quickshell-git matugen cliphist danksearch dgop dankcalendar-git dux-files-git
 ```
 
 ### Fedora 41+ (COPR)
@@ -176,7 +178,7 @@ sudo apt install niri quickshell-git matugen cliphist danksearch dgop dankcalend
 ```bash
 # Add COPR and install packages
 sudo dnf copr enable avengemedia/danklinux
-sudo dnf install quickshell-git matugen cliphist danksearch dgop dankcalendar-git ghostty dms-greeter
+sudo dnf install quickshell-git matugen cliphist danksearch dgop dankcalendar-git dux-files-git ghostty dms-greeter
 ```
 
 ### OpenSUSE Tumbleweed
@@ -185,7 +187,7 @@ sudo dnf install quickshell-git matugen cliphist danksearch dgop dankcalendar-gi
 # Add repository and install packages
 sudo zypper addrepo https://download.opensuse.org/repositories/home:AvengeMedia:danklinux/openSUSE_Tumbleweed/home:AvengeMedia:danklinux.repo
 sudo zypper refresh
-sudo zypper install niri quickshell-git matugen cliphist danksearch dgop dankcalendar-git
+sudo zypper install niri quickshell-git matugen cliphist danksearch dgop dankcalendar-git dux-files-git
 ```
 
 ---

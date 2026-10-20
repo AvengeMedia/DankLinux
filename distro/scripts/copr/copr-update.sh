@@ -648,6 +648,162 @@ else
 fi
 
 # ============================================================================
+# DUX-FILES (Stable Release)
+# ============================================================================
+echo ""
+echo "📦 Checking dux-files..."
+
+SPEC_FILE="dux-files/dux-files.spec"
+UPSTREAM_REPO="duxlabs-dev/dux-files"
+
+CURRENT_VERSION=$(grep -oP '^Version:\s+\K[0-9.]+' "$SPEC_FILE" || echo "unknown")
+echo "   Current: $CURRENT_VERSION"
+
+LATEST_TAG=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "release")
+LATEST_VERSION="${LATEST_TAG#v}"
+
+if [[ -n "$LATEST_VERSION" ]]; then
+    echo "   Latest:  $LATEST_VERSION"
+
+    if [[ "$CURRENT_VERSION" != "$LATEST_VERSION" ]]; then
+        echo "   ✨ Update available: $CURRENT_VERSION → $LATEST_VERSION"
+
+        sed -i "s/^Version:\s\+.*/Version:            $LATEST_VERSION/" "$SPEC_FILE"
+        reset_release "$SPEC_FILE" "$LATEST_VERSION"
+
+        UPDATED=$((UPDATED + 1))
+        UPDATED_PACKAGES+=("dux-files: $CURRENT_VERSION → $LATEST_VERSION")
+    else
+        echo "   ✓ Already up to date"
+    fi
+else
+    echo "   ⚠ Could not fetch latest version"
+fi
+
+# ============================================================================
+# DUX-FILES-GIT (Latest Commit)
+# ============================================================================
+echo ""
+echo "📦 Checking dux-files-git (development)..."
+
+SPEC_FILE="dux-files/dux-files-git.spec"
+UPSTREAM_REPO="duxlabs-dev/dux-files"
+
+TAG_UPDATED=false
+STABLE_REL_TAG=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "release" 2>/dev/null || echo "")
+STABLE_REL_VER="${STABLE_REL_TAG#v}"
+if [[ -n "$STABLE_REL_VER" ]]; then
+    DESIRED_GIT_TAG=$(bump_patch_triplet "$STABLE_REL_VER")
+    CURRENT_GIT_TAG=$(grep -oP '^%global tag\s+\K[0-9.]+' "$SPEC_FILE" || echo "")
+
+    if [[ -n "$DESIRED_GIT_TAG" && "$CURRENT_GIT_TAG" != "$DESIRED_GIT_TAG" ]]; then
+        echo "   ✨ %global tag (ahead of stable $STABLE_REL_VER): $CURRENT_GIT_TAG → $DESIRED_GIT_TAG"
+        sed -i "s/^%global tag\s\+.*/%global tag         $DESIRED_GIT_TAG/" "$SPEC_FILE"
+        TAG_UPDATED=true
+        UPDATED=$((UPDATED + 1))
+        UPDATED_PACKAGES+=("dux-files-git: tag $CURRENT_GIT_TAG → $DESIRED_GIT_TAG")
+    fi
+else
+    echo "   ⚠ Could not fetch stable release for tag sync (skipping %global tag bump)"
+fi
+
+CURRENT_COMMIT=$(grep -oP '^%global commit\s+\K[a-f0-9]+' "$SPEC_FILE" || echo "unknown")
+CURRENT_SNAPDATE=$(grep -oP '^%global snapdate\s+\K[0-9]+' "$SPEC_FILE" || echo "unknown")
+echo "   Current commit: ${CURRENT_COMMIT:0:7} (date: $CURRENT_SNAPDATE)"
+
+COMMIT_INFO=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "commit")
+IFS='|' read -r LATEST_COMMIT LATEST_SHORT_COMMIT LATEST_SNAPDATE <<< "$COMMIT_INFO"
+
+REPO_COMMIT_TOTAL=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "repo_commit_total" 2>/dev/null || echo "")
+
+if [[ -n "$LATEST_COMMIT" ]]; then
+    echo "   Latest commit:  ${LATEST_SHORT_COMMIT} (date: $LATEST_SNAPDATE)"
+
+    if [[ "$CURRENT_COMMIT" != "$LATEST_COMMIT" ]]; then
+        echo "   ✨ Update available: ${CURRENT_COMMIT:0:7} → ${LATEST_SHORT_COMMIT}"
+
+        if [[ -n "$REPO_COMMIT_TOTAL" && "$REPO_COMMIT_TOTAL" != "0" ]]; then
+            COMMIT_COUNT="$REPO_COMMIT_TOTAL"
+            echo "   Commit index (repo total, PPA-aligned): $COMMIT_COUNT"
+        else
+            CURRENT_COUNT=$(grep -oP '^%global commits\s+\K[0-9]+' "$SPEC_FILE" || echo "0")
+            COMPARE_DATA=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "compare" "$CURRENT_COMMIT" "$LATEST_COMMIT" 2>/dev/null || echo "")
+            if [[ -n "$COMPARE_DATA" ]]; then
+                AHEAD=$(echo "$COMPARE_DATA" | jq -r '.ahead_by // 0')
+                COMMIT_COUNT=$((CURRENT_COUNT + AHEAD))
+            else
+                COMMIT_COUNT=$((CURRENT_COUNT + 1))
+            fi
+            echo "   Commit count: $COMMIT_COUNT (fallback delta from $CURRENT_COUNT)"
+        fi
+
+        sed -i "s/^%global commit\s\+.*/%global commit      $LATEST_COMMIT/" "$SPEC_FILE"
+        sed -i "s/^%global commits\s\+.*/%global commits     $COMMIT_COUNT/" "$SPEC_FILE"
+        sed -i "s/^%global snapdate\s\+.*/%global snapdate    $LATEST_SNAPDATE/" "$SPEC_FILE"
+
+        COMMON_COMMIT=$(curl -s "https://api.github.com/repos/$UPSTREAM_REPO/contents/dux-qml-common?ref=$LATEST_COMMIT" | jq -r '.sha // empty')
+        if [[ -n "$COMMON_COMMIT" ]]; then
+            sed -i "s/^%global common_commit\s\+.*/%global common_commit $COMMON_COMMIT/" "$SPEC_FILE"
+            echo "   dux-qml-common pinned: ${COMMON_COMMIT:0:7}"
+        else
+            echo "   ⚠ Could not resolve dux-qml-common submodule commit for $LATEST_COMMIT"
+        fi
+
+        UPDATED=$((UPDATED + 1))
+        UPDATED_PACKAGES+=("dux-files-git: ${CURRENT_COMMIT:0:7} → ${LATEST_SHORT_COMMIT}")
+    else
+        if [[ -n "$REPO_COMMIT_TOTAL" && "$REPO_COMMIT_TOTAL" != "0" ]]; then
+            CURRENT_COUNT=$(grep -oP '^%global commits\s+\K[0-9]+' "$SPEC_FILE" || echo "0")
+            if [[ "$CURRENT_COUNT" != "$REPO_COMMIT_TOTAL" ]]; then
+                echo "   ✨ Resync commit index: $CURRENT_COUNT → $REPO_COMMIT_TOTAL (PPA/GitHub total)"
+                sed -i "s/^%global commits\s\+.*/%global commits     $REPO_COMMIT_TOTAL/" "$SPEC_FILE"
+                UPDATED=$((UPDATED + 1))
+                UPDATED_PACKAGES+=("dux-files-git: commit index → $REPO_COMMIT_TOTAL")
+            fi
+        fi
+        if [[ "$TAG_UPDATED" == true ]]; then
+            echo "   ✓ Latest commit; %global tag synced to stable+patch"
+        else
+            echo "   ✓ Already up to date"
+        fi
+    fi
+else
+    echo "   ⚠ Could not fetch latest commit"
+fi
+
+# ---------------------------------------------------------------------------
+# OpenSUSE dux-files-git: keep Version in sync with Fedora git spec.
+# ---------------------------------------------------------------------------
+echo ""
+echo "📦 Syncing OpenSUSE dux-files-git.spec..."
+
+FEDORA_GIT_SPEC="$REPO_ROOT/distro/fedora/dux-files/dux-files-git.spec"
+OBS_SPEC="$REPO_ROOT/distro/opensuse/dux-files-git.spec"
+
+if [[ -f "$FEDORA_GIT_SPEC" && -f "$OBS_SPEC" ]]; then
+    FG_TAG=$(grep -oP '^%global tag\s+\K[0-9.]+' "$FEDORA_GIT_SPEC" || echo "")
+    FG_COMMIT=$(grep -oP '^%global commit\s+\K[a-f0-9]+' "$FEDORA_GIT_SPEC" || echo "")
+    FG_COMMITS=$(grep -oP '^%global commits\s+\K[0-9]+' "$FEDORA_GIT_SPEC" || echo "")
+    if [[ -n "$FG_TAG" && -n "$FG_COMMIT" && -n "$FG_COMMITS" ]]; then
+        SHORT_HASH="${FG_COMMIT:0:8}"
+        NEW_OBS_VER="${FG_TAG}+git${FG_COMMITS}.${SHORT_HASH}"
+        CUR_OBS_VER=$(grep -oP '^Version:\s+\K\S+' "$OBS_SPEC" || echo "")
+        if [[ "$CUR_OBS_VER" != "$NEW_OBS_VER" ]]; then
+            echo "   ✨ OpenSUSE Version: $CUR_OBS_VER → $NEW_OBS_VER"
+            sed -i "s/^Version:.*/Version:        $NEW_OBS_VER/" "$OBS_SPEC"
+            UPDATED=$((UPDATED + 1))
+            UPDATED_PACKAGES+=("opensuse/dux-files-git: $CUR_OBS_VER → $NEW_OBS_VER")
+        else
+            echo "   ✓ OpenSUSE Version already matches Fedora ($NEW_OBS_VER)"
+        fi
+    else
+        echo "   ⚠ Missing %global tag/commit/commits in Fedora spec; skip OpenSUSE sync"
+    fi
+else
+    echo "   ⚠ Fedora or OpenSUSE dux-files-git spec missing"
+fi
+
+# ============================================================================
 # DMS-GREETER (Managed separately)
 # ============================================================================
 echo ""
@@ -712,6 +868,8 @@ if [[ -n "${COPR_REBUILD_COUNT:-}" || -n "${COPR_REBUILD_PACKAGE:-}" ]]; then
         distro/fedora/cpptrace/cpptrace.spec
         distro/fedora/dankcalendar/dankcalendar.spec
         distro/fedora/dankcalendar/dankcalendar-git.spec
+        distro/fedora/dux-files/dux-files.spec
+        distro/fedora/dux-files/dux-files-git.spec
     )
 
     case "${COPR_REBUILD_PACKAGE}" in
@@ -729,6 +887,8 @@ if [[ -n "${COPR_REBUILD_COUNT:-}" || -n "${COPR_REBUILD_PACKAGE:-}" ]]; then
         cpptrace) _copr_bump_spec_release distro/fedora/cpptrace/cpptrace.spec ;;
         dankcalendar) _copr_bump_spec_release distro/fedora/dankcalendar/dankcalendar.spec ;;
         dankcalendar-git) _copr_bump_spec_release distro/fedora/dankcalendar/dankcalendar-git.spec ;;
+        dux-files) _copr_bump_spec_release distro/fedora/dux-files/dux-files.spec ;;
+        dux-files-git) _copr_bump_spec_release distro/fedora/dux-files/dux-files-git.spec ;;
         all)
             for rel in "${ALL_SPECS_BUMP[@]}"; do
                 _copr_bump_spec_release "$rel"

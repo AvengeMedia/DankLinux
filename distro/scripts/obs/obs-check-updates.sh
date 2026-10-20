@@ -208,6 +208,11 @@ EOF
             base_version=$(get_latest_release "$stable_repo" 2>/dev/null || echo "")
 
             if [[ -z "$base_version" ]]; then
+                base_version=$(echo "$config" | yq eval '.base_version.fallback // ""' -)
+                log_info "  No $stable_pkg release yet, fallback base: ${base_version:-none}"
+            fi
+
+            if [[ -z "$base_version" ]]; then
                 log_error "$package: Failed to fetch latest release for $stable_pkg (required for git base_version)"
                 return 1
             fi
@@ -230,6 +235,12 @@ EOF
             local _dc_base_prev="$base_version"
             base_version=$(bump_patch_triplet "$base_version")
             log_info "  dankcalendar-git OBS base ahead of stable tag (${_dc_base_prev} → ${base_version})"
+        fi
+
+        if [[ "$package" == "dux-files-git" && -n "$base_version" ]]; then
+            local _df_base_prev="$base_version"
+            base_version=$(bump_patch_triplet "$base_version")
+            log_info "  dux-files-git OBS base ahead of stable tag (${_df_base_prev} → ${base_version})"
         fi
 
         # Build git version string (without .db suffix - only add that when building)
