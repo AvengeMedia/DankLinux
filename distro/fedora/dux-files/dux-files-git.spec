@@ -29,6 +29,7 @@ Recommends:        gvfs
 Recommends:        udisks2
 Recommends:        bubblewrap
 Recommends:        xdg-desktop-portal
+Recommends:        qt6-qtpdf
 Suggests:          ffmpegthumbnailer
 Suggests:          poppler-utils
 

@@ -18,7 +18,8 @@ Recommends: polkitd,
             gvfs,
             udisks2,
             bubblewrap,
-            xdg-desktop-portal
+            xdg-desktop-portal,
+            qml6-module-qtquick-pdf
 Suggests: ffmpegthumbnailer,
           poppler-utils
 Conflicts: dux-files-git
