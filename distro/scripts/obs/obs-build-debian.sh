@@ -321,7 +321,11 @@ else
     fi
 
     # Find extracted directory
-    EXTRACTED_DIR=$(find "$WORK_DIR" -maxdepth 1 -type d -name "${BASE_PACKAGE}*" | grep -v "^$WORK_DIR$" | head -1)
+    EXTRACTED_DIR=$(find "$WORK_DIR" -mindepth 1 -maxdepth 1 -type d -name "${BASE_PACKAGE}*" | head -1)
+    # GitHub source archives are named after the repo (dux-search-2.0.0), not the package
+    if [[ -z "$EXTRACTED_DIR" ]]; then
+        EXTRACTED_DIR=$(find "$WORK_DIR" -mindepth 1 -maxdepth 1 -type d | head -1)
+    fi
 
     if [[ -z "$EXTRACTED_DIR" ]]; then
         log_error "Failed to find extracted source directory"

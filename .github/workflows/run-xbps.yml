@@ -14,6 +14,7 @@ on:
           - dankcalendar
           - danksearch
           - dgop
+          - dux-files
         default: 'all'
       force_rebuild:
         description: 'Force rebuilding packages even if they already exist in the repository'
@@ -117,7 +118,7 @@ jobs:
           
           cd void-packages
           
-          PACKAGES=("dgop" "danksearch" "dankcalendar")
+          PACKAGES=("dgop" "danksearch" "dankcalendar" "dux-files")
           SELECTED="${{ github.event.inputs.package || 'all' }}"
           if [ "$SELECTED" != "all" ]; then
             PACKAGES=("$SELECTED")

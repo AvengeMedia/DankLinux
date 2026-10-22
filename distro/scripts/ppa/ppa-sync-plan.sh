@@ -79,9 +79,23 @@ published_version() {
     local package="$1"
     local series="$2"
     local series_url="https%3A%2F%2Fapi.launchpad.net%2F1.0%2Fubuntu%2F${series}"
-    local url="${LAUNCHPAD_API}/~${PPA_OWNER}/+archive/ubuntu/${PPA_NAME}?ws.op=getPublishedSources&source_name=${package}&status=Published&distro_series=${series_url}"
+    local url="${LAUNCHPAD_API}/~${PPA_OWNER}/+archive/ubuntu/${PPA_NAME}?ws.op=getPublishedSources&source_name=${package}&exact_match=true&status=Published&distro_series=${series_url}"
 
     curl -fsSL "$url" 2>/dev/null | jq -r '.entries[0].source_package_version // empty'
+}
+
+# Launchpad rejects a version already used by any series in the PPA, even a deleted one
+used_ppa_numbers() {
+    local package="$1"
+    local base="$2"
+    local url="${LAUNCHPAD_API}/~${PPA_OWNER}/+archive/ubuntu/${PPA_NAME}?ws.op=getPublishedSources&source_name=${package}&exact_match=true&ws.size=300"
+    local version
+
+    curl -fsSL "$url" 2>/dev/null | jq -r '.entries[].source_package_version' | while read -r version; do
+        if [[ "$(release_base "$version")" == "$base" ]]; then
+            ppa_suffix "$version"
+        fi
+    done
 }
 
 release_base() {
@@ -173,6 +187,7 @@ include_package() {
 
 TARGETS=()
 
+declare -A used_ppa=()
 for pkg_info in "${PACKAGES[@]}"; do
     IFS=':' read -r package repo type <<< "$pkg_info"
     include_package "$package" || continue
@@ -221,7 +236,15 @@ for pkg_info in "${PACKAGES[@]}"; do
         fi
 
         if [[ "$needs_update" == "true" ]]; then
-            target="${package}:${series}:$(target_ppa "$series")"
+            ppa_num="$(target_ppa "$series")"
+            if [[ "$type" == "release" && -z "$REBUILD_RELEASE" ]]; then
+                [[ -n "${used_ppa[$package]:-}" ]] || used_ppa[$package]=" $(used_ppa_numbers "$package" "$expected_base" | tr '\n' ' ') "
+                while [[ "${used_ppa[$package]}" == *" ${ppa_num} "* ]]; do
+                    ppa_num=$((ppa_num + 1))
+                done
+                used_ppa[$package]+="${ppa_num} "
+            fi
+            target="${package}:${series}:${ppa_num}"
             TARGETS+=("$target")
             echo "${package}/${series}: ${reason} (published: ${ppa_version:-none}, target: ${expected_label})" >&2
         else

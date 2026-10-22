@@ -906,7 +906,8 @@ elif [ -n "$GIT_REPO" ] && [ "${SKIP_VERSION_UPDATE:-false}" != "true" ]; then
             NEW_VERSION="${BASE_VERSION}ppa${PPA_NUM}"
         fi
 
-        if [ "$CURRENT_VERSION" != "$NEW_VERSION" ]; then
+        # Same version can still carry the other series' header; Launchpad rejects that upload
+        if [ "$CURRENT_VERSION" != "$NEW_VERSION" ] || [ "$(dpkg-parsechangelog -S Distribution 2>/dev/null)" != "$UBUNTU_SERIES" ]; then
             if [ "$PPA_NUM" -gt 1 ]; then
                 info "Updating changelog for rebuild (PPA number incremented to $PPA_NUM)"
             else

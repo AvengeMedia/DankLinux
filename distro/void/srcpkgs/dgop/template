@@ -2,7 +2,7 @@
 #
 # Stateless system and process monitoring tool with a top-like TUI, CLI, and REST API.
 pkgname=dgop
-version=1.6.2
+version=2.0.0
 revision=1
 build_style=go
 go_import_path="github.com/duxlabs-dev/dux-gop"
@@ -13,7 +13,8 @@ maintainer="AvengeMedia <AvengeMedia.US@gmail.com>"
 license="MIT"
 homepage="https://github.com/duxlabs-dev/dux-gop"
 distfiles="https://github.com/duxlabs-dev/dux-gop/archive/refs/tags/v${version}.tar.gz"
-checksum=1ed7295052f4c368f4e07472c4645e68a75b6d5f9b4cb5cb291a335a7f0d91e6
+checksum=e5d2cee5b34c9be5098423b4ee5b602c0cc1503adbfe227df1d732c5d614837e
+wrksrc="dux-gop-${version}"
 
 post_install() {
 	vlicense LICENSE

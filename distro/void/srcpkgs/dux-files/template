@@ -18,8 +18,7 @@ homepage="https://github.com/duxlabs-dev/dux-files"
 changelog="https://github.com/duxlabs-dev/dux-files/releases"
 # Release tarball ships the dank-qml-common submodule and vendored Go modules
 distfiles="https://github.com/duxlabs-dev/dux-files/releases/download/v${version}/dfiles-${version}.tar.gz"
-# TODO: fill in once v2.0.0 is released: xgensum -i dux-files
-checksum=0000000000000000000000000000000000000000000000000000000000000000
+checksum=5883246328482b37928c16a795d9f4a97f2fd71ed2f8772210284dede6a49739
 wrksrc="dfiles-${version}"
 
 depends="quickshell qt6-declarative"

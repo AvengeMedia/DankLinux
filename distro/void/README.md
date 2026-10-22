@@ -13,7 +13,7 @@ Each builds from source from its upstream release.
 standalone app. The `dms` / `dms-git` Void packages live in the
 [Dux Shell repo](https://github.com/duxlabs-dev/dux-shell/tree/master/distro/void).
 `dms-greeter` packaging lives in
-[dank-greeter](https://github.com/duxlabs-dev/dux-greeter/tree/master/distro/void)
+[dux-greeter](https://github.com/duxlabs-dev/dux-greeter/tree/master/distro/void)
 and is published to the shared `https://void.danklinux.com/dms/current` repository.
 
 ## Distribution
