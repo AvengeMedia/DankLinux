@@ -26,8 +26,12 @@ depends="quickshell qt6-declarative"
 pre_build() {
 	# go.mod needs Go 1.27, newer than Void's go; xbps-src defaults GOTOOLCHAIN to local.
 	export GOTOOLCHAIN=auto
-	# Embed the quickshell UI and build it into the binary.
-	make sync-shell
+	# Embed the quickshell UI and build it into the binary. Mirrors 'make sync-shell',
+	# which needs GNU tar (absent from the xbps-src masterdir).
+	rm -rf internal/shellembed/dist
+	cp -aL "${wrksrc}/quickshell" internal/shellembed/dist
+	rm -rf internal/shellembed/dist/scripts internal/shellembed/dist/tests
+	rm -f internal/shellembed/dist/translations/extract_translations.py
 }
 
 post_install() {
