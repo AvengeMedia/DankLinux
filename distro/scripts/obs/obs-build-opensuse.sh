@@ -223,7 +223,7 @@ EOF
         fi
         log_success "Go dependencies vendored"
 
-        if [[ "$PACKAGE" == "dankcalendar-git" || "$PACKAGE" == "dux-files-git" ]]; then
+        if bundles_go_toolchain "$PACKAGE"; then
             go_ver=$(go_toolchain_version "$SOURCE_DIR/core/go.mod" || true)
             if [[ -z "$go_ver" ]]; then
                 log_error "Could not resolve a Go toolchain release from core/go.mod"
@@ -241,6 +241,7 @@ EOF
                 fi
                 mkdir -p "$SOURCE_DIR/.go-toolchain/${arch}"
                 tar -C "$SOURCE_DIR/.go-toolchain/${arch}" -xzf "$go_dest"
+                rm -f "$go_dest"
             done
             log_success "Go toolchain bundled for amd64 and arm64"
         fi

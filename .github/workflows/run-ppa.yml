@@ -17,6 +17,8 @@ on:
           - dgop
           - dux-files
           - dux-files-git
+          - dms-greeter
+          - dms-greeter-git
           - ghostty
           - matugen
           - niri
@@ -32,11 +34,20 @@ on:
         default: ''
   schedule:
     - cron: '0 */6 * * *'  # Every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
+  # From dux-greeter notify-packaging.yml
+  repository_dispatch:
+    types: [greeter-git, greeter-release]
+
+# One planner at a time; Launchpad rejects duplicate versions.
+concurrency:
+  group: ppa-update
+  cancel-in-progress: false
 
 jobs:
   check-updates:
     name: Check package/series updates
     runs-on: ubuntu-latest
+    if: github.repository_owner == 'duxlabs-dev'
 
     outputs:
       has_updates: ${{ steps.check.outputs.has_updates }}
@@ -60,11 +71,23 @@ jobs:
         id: check
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_TYPE: ${{ github.event.action }}
         run: |
           chmod +x distro/scripts/ppa/*.sh distro/scripts/common/*.sh
 
           PACKAGE="${{ github.event.inputs.package }}"
           REBUILD_RELEASE="${{ github.event.inputs.rebuild_release }}"
+
+          if [[ "$EVENT_NAME" == "repository_dispatch" ]]; then
+            # Narrow a greeter dispatch to the package that changed
+            case "$DISPATCH_TYPE" in
+              greeter-git) PACKAGE="dms-greeter-git" ;;
+              greeter-release) PACKAGE="dms-greeter" ;;
+              *) echo "Unknown repository_dispatch type: $DISPATCH_TYPE" >&2; exit 1 ;;
+            esac
+            REBUILD_RELEASE=""
+          fi
 
           if [[ -z "$PACKAGE" ]]; then
             PACKAGE="auto"
@@ -95,7 +118,7 @@ jobs:
     name: Upload ${{ matrix.target }}
     needs: check-updates
     runs-on: ubuntu-latest
-    if: needs.check-updates.outputs.has_updates == 'true'
+    if: github.repository_owner == 'duxlabs-dev' && needs.check-updates.outputs.has_updates == 'true'
     timeout-minutes: 120
     strategy:
       fail-fast: false

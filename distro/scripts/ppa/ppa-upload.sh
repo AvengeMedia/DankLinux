@@ -67,7 +67,7 @@ fi
 TEMP_DIR=$(mktemp -d "$TEMP_BASE/ppa_build_XXXXXX")
 trap "rm -rf $TEMP_DIR" EXIT
 
-AVAILABLE_PACKAGES=(cpptrace cliphist danksearch dgop ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git dankcalendar dankcalendar-git dux-files dux-files-git)
+AVAILABLE_PACKAGES=(cpptrace cliphist danksearch dgop ghostty matugen niri niri-git quickshell quickshell-git xwayland-satellite xwayland-satellite-git dankcalendar dankcalendar-git dux-files dux-files-git dms-greeter dms-greeter-git)
 KEEP_BUILDS=false
 BUILD_ONLY=false
 REBUILD_RELEASE=""
@@ -395,8 +395,12 @@ SOURCE_NAME=$(dpkg-parsechangelog -S Source)
 info "Source package: $SOURCE_NAME"
 info "Version: $CHANGELOG_VERSION"
 
+# Debian epoch comes from the committed changelog; it must match what is already published.
+DEB_EPOCH=$(echo "$CHANGELOG_VERSION" | sed -n 's/^\([0-9]*\):.*/\1:/p')
+[ -n "$DEB_EPOCH" ] && info "Debian epoch: $DEB_EPOCH"
+
 # Native format requires directory named {source}-{version}
-VERSION_FOR_DIR=$(echo "$CHANGELOG_VERSION" | sed 's/~.*//; s/+.*//')
+VERSION_FOR_DIR=$(echo "$CHANGELOG_VERSION" | sed 's/^[0-9]*://; s/~.*//; s/+.*//')
 PROPER_BUILD_DIR="$TEMP_DIR/${SOURCE_NAME}-${VERSION_FOR_DIR}"
 if [ "$BUILD_DIR" != "$PROPER_BUILD_DIR" ]; then
     mv "$BUILD_DIR" "$PROPER_BUILD_DIR"
@@ -498,6 +502,16 @@ case "$PACKAGE_NAME" in
         IS_GIT_PACKAGE=true
         GIT_REPO="duxlabs-dev/dux-files"
         SOURCE_DIR="dux-files"
+        ;;
+    dms-greeter)
+        GIT_REPO="duxlabs-dev/dux-greeter"
+        NO_LINTIAN="true"
+        ;;
+    dms-greeter-git)
+        IS_GIT_PACKAGE=true
+        GIT_REPO="duxlabs-dev/dux-greeter"
+        SOURCE_DIR="dms-greeter-git-source"
+        NO_LINTIAN="true"
         ;;
     cliphist)
         GIT_REPO="sentriz/cliphist"
@@ -660,7 +674,7 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
         fi
         
         info "Updating changelog with git commit info..."
-        BASE_VERSION="${UPSTREAM_VERSION}+git${GIT_COMMIT_COUNT}.${GIT_COMMIT_HASH}"
+        BASE_VERSION="${DEB_EPOCH}${UPSTREAM_VERSION}+git${GIT_COMMIT_COUNT}.${GIT_COMMIT_HASH}"
         CURRENT_VERSION=$(dpkg-parsechangelog -S Version 2>/dev/null || echo "")
         PPA_NUM=1
         
@@ -765,7 +779,7 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
             fi
         fi
 
-        if [ "$PACKAGE_NAME" = "dankcalendar-git" ] || [ "$PACKAGE_NAME" = "dux-files-git" ]; then
+        if [ "$PACKAGE_NAME" = "dankcalendar-git" ] || [ "$PACKAGE_NAME" = "dux-files-git" ] || [ "$PACKAGE_NAME" = "dms-greeter-git" ]; then
             if [ -f "$SOURCE_DIR/core/go.mod" ]; then
                 info "Vendoring Go dependencies (Launchpad has no internet access)..."
                 cd "$SOURCE_DIR/core"
@@ -789,6 +803,7 @@ if [ "$IS_GIT_PACKAGE" = true ] && [ -n "$GIT_REPO" ]; then
                     fi
                     mkdir -p "$SOURCE_DIR/.go-toolchain/${arch}"
                     tar -C "$SOURCE_DIR/.go-toolchain/${arch}" -xzf "$SOURCE_DIR/.go-toolchain/${GO_TGZ}"
+                    rm -f "$SOURCE_DIR/.go-toolchain/${GO_TGZ}"
                 done
                 success "Go toolchain bundled"
             fi
@@ -857,7 +872,7 @@ elif [ -n "$GIT_REPO" ] && [ "${SKIP_VERSION_UPDATE:-false}" != "true" ]; then
         PPA_NUM=1
 
         if [[ "$SOURCE_FORMAT" == *"native"* ]]; then
-            BASE_VERSION="${DPKG_VERSION_OVERRIDE:-$LATEST_TAG}"
+            BASE_VERSION="${DEB_EPOCH}${DPKG_VERSION_OVERRIDE:-$LATEST_TAG}"
             ESCAPED_BASE=$(echo "$BASE_VERSION" | sed 's/\./\\./g' | sed 's/-/\\-/g' | sed 's/+/\\+/g')
             
             # Check if manual rebuild release number is specified
@@ -881,7 +896,7 @@ elif [ -n "$GIT_REPO" ] && [ "${SKIP_VERSION_UPDATE:-false}" != "true" ]; then
             fi
             NEW_VERSION="${BASE_VERSION}ppa${PPA_NUM}"
         else
-            BASE_VERSION="${DPKG_VERSION_OVERRIDE:-$LATEST_TAG}-1"
+            BASE_VERSION="${DEB_EPOCH}${DPKG_VERSION_OVERRIDE:-$LATEST_TAG}-1"
             ESCAPED_BASE=$(echo "$BASE_VERSION" | sed 's/\./\\./g' | sed 's/-/\\-/g' | sed 's/+/\\+/g')
             
             # Check if manual rebuild release number is specified
@@ -1097,6 +1112,46 @@ case "$PACKAGE_NAME" in
                 "dfiles-${VERSION}/LICENSE"
             rm -f dfiles-src.tar.gz
             success "Assets extracted"
+        fi
+        ;;
+    dms-greeter)
+        info "Downloading vendored release tarball for dms-greeter..."
+        # Native: 1:2.0.0ppa1 -> 2.0.0
+        VERSION=$(dpkg-parsechangelog -S Version | sed 's/^[0-9]*://' | sed 's/-[^-]*$//' | sed 's/ppa[0-9]*$//')
+        RELEASE_URL="https://github.com/duxlabs-dev/dux-greeter/releases/download/v${VERSION}"
+
+        # Vendored release tarball (submodule + core/vendor); debian/rules builds it offline.
+        if [ ! -f "dms-greeter-source.tar.gz" ]; then
+            info "Downloading dank-greeter-${VERSION}.tar.gz..."
+            if ! wget -O dms-greeter-source.tar.gz "${RELEASE_URL}/dank-greeter-${VERSION}.tar.gz"; then
+                error "Failed to download dank-greeter-${VERSION}.tar.gz"
+                exit 1
+            fi
+            success "Release tarball downloaded"
+        fi
+
+        # Bundle the Go toolchain matching core/go.mod for the offline Launchpad build.
+        if ! ls go[0-9]*.linux-amd64.tar.gz >/dev/null 2>&1; then
+            GREETER_GOMOD=$(mktemp "$TEMP_BASE/ppa_gomod_XXXXXX")
+            if ! tar -xzOf dms-greeter-source.tar.gz "dank-greeter-${VERSION}/core/go.mod" > "$GREETER_GOMOD"; then
+                error "core/go.mod not found inside dank-greeter-${VERSION}.tar.gz"
+                exit 1
+            fi
+            GO_VER=$(go_toolchain_version "$GREETER_GOMOD" || true)
+            rm -f "$GREETER_GOMOD"
+            if [ -z "$GO_VER" ]; then
+                error "Could not resolve a Go toolchain release from core/go.mod"
+                exit 1
+            fi
+            info "Bundling Go ${GO_VER} toolchain for offline Launchpad builds..."
+            for arch in amd64 arm64; do
+                GO_TGZ="go${GO_VER}.linux-${arch}.tar.gz"
+                if ! curl -fsSL -o "$GO_TGZ" "https://go.dev/dl/${GO_TGZ}"; then
+                    error "Failed to download https://go.dev/dl/${GO_TGZ}"
+                    exit 1
+                fi
+            done
+            success "Go toolchain bundled"
         fi
         ;;
     dgop)
@@ -1468,8 +1523,15 @@ else
     DEBUILD_SOURCE_FLAG="-sa"
 fi
 
+# lintian is too slow on vendored Go trees.
+DEBUILD_LINTIAN_FLAG=""
+if [ "${NO_LINTIAN:-false}" = "true" ]; then
+    info "Skipping lintian for $PACKAGE_NAME (vendored source tree)"
+    DEBUILD_LINTIAN_FLAG="--no-lintian"
+fi
+
 # Use -S for source only, -sa/-sd for source inclusion
-if yes | DEBIAN_FRONTEND=noninteractive debuild -S $DEBUILD_SOURCE_FLAG -d; then
+if yes | DEBIAN_FRONTEND=noninteractive debuild $DEBUILD_LINTIAN_FLAG -S $DEBUILD_SOURCE_FLAG -d; then
     echo
     success "Source package built successfully!"
 

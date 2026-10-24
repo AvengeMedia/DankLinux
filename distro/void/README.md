@@ -8,13 +8,20 @@ Each builds from source from its upstream release.
 | `dgop` | `dgop` | [duxlabs-dev/dux-gop](https://github.com/duxlabs-dev/dux-gop) | System monitor / telemetry CLI |
 | `danksearch` | `dsearch` | [duxlabs-dev/dux-search](https://github.com/duxlabs-dev/dux-search) | Fast filesystem search |
 | `dankcalendar` | `dcal` | [duxlabs-dev/dux-calendar](https://github.com/duxlabs-dev/dux-calendar) | Calendar app (Local, Google, CalDAV, iCloud) |
+| `dms-greeter` | `dms-greeter` | [duxlabs-dev/dux-greeter](https://github.com/duxlabs-dev/dux-greeter) | greetd login screen (stable release) |
+| `dms-greeter-git` | `dms-greeter` | [duxlabs-dev/dux-greeter](https://github.com/duxlabs-dev/dux-greeter) | greetd login screen (master snapshot) |
 
 `dgop` and `danksearch` integrate with Dux Shell; `dankcalendar` is a
 standalone app. The `dms` / `dms-git` Void packages live in the
 [Dux Shell repo](https://github.com/duxlabs-dev/dux-shell/tree/master/distro/void).
-`dms-greeter` packaging lives in
-[dux-greeter](https://github.com/duxlabs-dev/dux-greeter/tree/master/distro/void)
-and is published to the shared `https://void.danklinux.com/dms/current` repository.
+
+`dms-greeter` and `dms-greeter-git` are built here by the `build-dms-prefix`
+job of `run-xbps.yml` from a fresh `dux-greeter` clone
+(`distro/scripts/void/void-build.sh`) and published to the shared
+`https://void.danklinux.com/dms/current` repository next to `dms`, so greeter
+users only need the one `dms` repository entry. Both publishers of that prefix
+use the same `publish-void-r2.sh` with an ETag guard so one cannot overwrite
+the other's index.
 
 ## Distribution
 

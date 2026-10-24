@@ -43,6 +43,7 @@ if [[ $# -lt 1 ]]; then
     echo ""
     echo "Available packages:"
     echo "  cli11, quickshell, quickshell-git, dankcalendar, dankcalendar-git, dux-files, dux-files-git,"
+    echo "  dms-greeter, dms-greeter-git,"
     echo "  dgop, cliphist, matugen,"
     echo "  breakpad, ghostty, danksearch, material-symbols-fonts, qt6ct-kde,"
     echo "  greetd, gtk4-layer-shell, cava, alacritty, xwayland-satellite (EL10 only)"
@@ -61,6 +62,8 @@ elif [[ "$PACKAGE" == "dankcalendar-git" ]]; then
     SPEC_FILE="$REPO_ROOT/distro/fedora/dankcalendar/dankcalendar-git.spec"
 elif [[ "$PACKAGE" == "dux-files-git" ]]; then
     SPEC_FILE="$REPO_ROOT/distro/fedora/dux-files/dux-files-git.spec"
+elif [[ "$PACKAGE" == "dms-greeter-git" ]]; then
+    SPEC_FILE="$REPO_ROOT/distro/fedora/dms-greeter/dms-greeter-git.spec"
 fi
 
 if [[ ! -f "$SPEC_FILE" ]]; then

@@ -19,6 +19,8 @@ on:
           - cliphist
           - dankcalendar
           - dankcalendar-git
+          - dms-greeter
+          - dms-greeter-git
           - dux-files
           - dux-files-git
           - ghostty
@@ -49,9 +51,19 @@ on:
       - 'distro/snapshots.yaml'
       - 'distro/fedora/**/*.spec'
 
+  # From dux-greeter notify-packaging.yml; handled like a scheduled run.
+  repository_dispatch:
+    types: [greeter-git, greeter-release]
+
+# The update job pushes commits; never run two at once.
+concurrency:
+  group: copr-update
+  cancel-in-progress: false
+
 jobs:
   update-packages:
     name: Check for package updates
+    if: github.repository_owner == 'duxlabs-dev'
     runs-on: ubuntu-latest
     container:
       image: fedora:44
@@ -88,6 +100,7 @@ jobs:
       - name: Run update script
         id: update
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           COPR_REBUILD_COUNT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.rebuild_release || '' }}
           COPR_REBUILD_PACKAGE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.package || '' }}
         run: |
@@ -128,6 +141,7 @@ jobs:
             echo "spec_changes=false" >> $GITHUB_OUTPUT
             echo "📋 Manual run: HEAD~1 diff ignored"
           else
+            # schedule / repository_dispatch: only this run's auto-update commit (has_changes) matters
             echo "spec_changes=false" >> $GITHUB_OUTPUT
             echo "📋 Not a push/manual event, skipping spec change check"
           fi
@@ -195,9 +209,11 @@ jobs:
     needs: update-packages
     runs-on: ubuntu-latest
     if: |
-      needs.update-packages.outputs.has_changes == 'true' ||
-      needs.update-packages.outputs.spec_changes == 'true' ||
-      github.event.inputs.package != ''
+      github.repository_owner == 'duxlabs-dev' && (
+        needs.update-packages.outputs.has_changes == 'true' ||
+        needs.update-packages.outputs.spec_changes == 'true' ||
+        github.event.inputs.package != ''
+      )
 
     steps:
       - name: Checkout repository

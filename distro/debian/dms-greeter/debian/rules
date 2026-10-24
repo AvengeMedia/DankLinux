@@ -1,0 +1,58 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+
+DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
+
+# Repackages the prebuilt release binary staged at the source root
+ifeq ($(DEB_HOST_ARCH),amd64)
+    BINARY_FILE := dms-greeter-linux-amd64.gz
+else ifeq ($(DEB_HOST_ARCH),arm64)
+    BINARY_FILE := dms-greeter-linux-arm64.gz
+else
+    $(error Unsupported architecture: $(DEB_HOST_ARCH))
+endif
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	if [ -f $(BINARY_FILE) ]; then \
+		gunzip -c $(BINARY_FILE) > dms-greeter; \
+	elif [ -f ../SOURCES/$(BINARY_FILE) ]; then \
+		gunzip -c ../SOURCES/$(BINARY_FILE) > dms-greeter; \
+	else \
+		echo "ERROR: $(BINARY_FILE) not found!" && exit 1; \
+	fi; \
+	chmod +x dms-greeter
+	mkdir -p completions
+	./dms-greeter completion bash > completions/dms-greeter
+	./dms-greeter completion zsh > completions/_dms-greeter
+	./dms-greeter completion fish > completions/dms-greeter.fish
+
+override_dh_auto_install:
+	install -Dm755 dms-greeter debian/dms-greeter/usr/bin/dms-greeter
+
+	install -Dm644 completions/dms-greeter \
+		debian/dms-greeter/usr/share/bash-completion/completions/dms-greeter
+	install -Dm644 completions/_dms-greeter \
+		debian/dms-greeter/usr/share/zsh/vendor-completions/_dms-greeter
+	install -Dm644 completions/dms-greeter.fish \
+		debian/dms-greeter/usr/share/fish/vendor_completions.d/dms-greeter.fish
+
+	install -Dpm0644 assets/systemd/sysusers-dms-greeter.conf \
+		debian/dms-greeter/usr/lib/sysusers.d/dms-greeter.conf
+	install -Dpm0644 assets/systemd/tmpfiles-dms-greeter.conf \
+		debian/dms-greeter/usr/lib/tmpfiles.d/dms-greeter.conf
+
+	install -Dm644 README.md debian/dms-greeter/usr/share/doc/dms-greeter/README.md
+	install -Dm644 LICENSE debian/dms-greeter/usr/share/doc/dms-greeter/LICENSE
+	install -d debian/dms-greeter/usr/share/doc/dms-greeter/examples
+	install -m644 assets/examples/* debian/dms-greeter/usr/share/doc/dms-greeter/examples/
+
+override_dh_auto_test:
+	# Prebuilt binary; tests run in upstream CI
+
+override_dh_auto_clean:
+	rm -rf dms-greeter completions
+	dh_auto_clean

@@ -1,0 +1,50 @@
+# Template file for 'dms-greeter-git'
+#
+# Git snapshot of DMS Greeter. Built by CI: the workflow stages a flat local
+# source tarball (create_wrksrc=yes) and patches version/checksum/distfiles.
+pkgname=dms-greeter-git
+version=1.0.0.git
+revision=1
+create_wrksrc=yes
+build_wrksrc="core"
+build_style=go
+hostmakedepends="make tar"
+go_import_path="github.com/duxlabs-dev/dux-greeter/core"
+go_package="${go_import_path}/cmd/dms-greeter"
+go_build_tags="withshell"
+go_ldflags="-X main.Version=${version}"
+short_desc="Greetd login screen with the Dux Shell aesthetic (git)"
+maintainer="AvengeMedia <AvengeMedia.US@gmail.com>"
+license="MIT"
+homepage="https://github.com/duxlabs-dev/dux-greeter"
+# CI populates distfiles/checksum dynamically; these are placeholders.
+distfiles="https://github.com/duxlabs-dev/dux-greeter/archive/refs/heads/master.tar.gz"
+checksum=badbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadb
+
+conflicts="dms-greeter"
+provides="dms-greeter-${version}_${revision}"
+
+depends="greetd quickshell acl-progs dbus elogind pam_rundir mesa-dri"
+
+make_dirs="/var/cache/dms-greeter 0750 _greeter _greeter"
+
+pre_build() {
+	make sync-shell
+}
+
+post_install() {
+	vmkdir usr/share/bash-completion/completions
+	vmkdir usr/share/zsh/site-functions
+	vmkdir usr/share/fish/vendor_completions.d
+	if [ -z "$CROSS_BUILD" ]; then
+		"${DESTDIR}/usr/bin/dms-greeter" completion bash > "${DESTDIR}/usr/share/bash-completion/completions/dms-greeter"
+		"${DESTDIR}/usr/bin/dms-greeter" completion zsh  > "${DESTDIR}/usr/share/zsh/site-functions/_dms-greeter"
+		"${DESTDIR}/usr/bin/dms-greeter" completion fish > "${DESTDIR}/usr/share/fish/vendor_completions.d/dms-greeter.fish"
+	fi
+
+	vmkdir usr/share/examples/dms-greeter
+	vcopy "${wrksrc}/assets/examples/*" usr/share/examples/dms-greeter
+
+	vdoc "${wrksrc}/README.md"
+	vlicense "${wrksrc}/LICENSE"
+}

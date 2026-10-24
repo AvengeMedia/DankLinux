@@ -27,6 +27,29 @@ reset_release() {
     sed -i "/^%changelog$/a * $(LC_ALL=C date +'%a %b %d %Y') $CHANGELOG_AUTHOR - ${epoch}${version}-1\n- update to ${version}\n" "$spec"
 }
 
+# True when $1 is a newer RPM version than $2; stable versions must never move backwards.
+version_is_newer() {
+    local candidate="$1" current="$2"
+    [[ "$candidate" == "$current" ]] && return 1
+    if command -v rpmdev-vercmp &>/dev/null; then
+        rpmdev-vercmp "$candidate" "$current" >/dev/null 2>&1
+        [[ $? -eq 11 ]]
+    else
+        [[ "$(printf '%s\n' "$candidate" "$current" | sort -V | tail -1)" == "$candidate" ]]
+    fi
+}
+
+# True when GitHub release <tag> of <repo> already has asset <asset> (releases are created before assets upload).
+release_has_asset() {
+    local repo="$1" tag="$2" asset="$3" data
+    if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+        data=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/${repo}/releases/tags/${tag}")
+    else
+        data=$(curl -s "https://api.github.com/repos/${repo}/releases/tags/${tag}")
+    fi
+    echo "$data" | jq -e --arg a "$asset" '.assets // [] | map(.name) | index($a) != null' >/dev/null 2>&1
+}
+
 # Track if any packages were updated
 UPDATED=0
 UPDATED_PACKAGES=()
@@ -804,13 +827,137 @@ else
 fi
 
 # ============================================================================
-# DMS-GREETER (Managed separately)
+# DMS-GREETER (Stable Release)
 # ============================================================================
 echo ""
 echo "📦 Checking dms-greeter..."
-echo "   ℹ️  Builds from: https://github.com/duxlabs-dev/dux-greeter"
-echo "   Published into avengemedia/danklinux by dank-greeter CI (stable + dms-greeter-git)"
-echo "   Skipping automatic updates (managed in dank-greeter)"
+
+SPEC_FILE="dms-greeter/dms-greeter.spec"
+UPSTREAM_REPO="duxlabs-dev/dux-greeter"
+
+CURRENT_VERSION=$(grep -oP '^Version:\s+\K[0-9.]+' "$SPEC_FILE" || echo "unknown")
+echo "   Current: $CURRENT_VERSION"
+
+LATEST_TAG=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "release")
+LATEST_VERSION="${LATEST_TAG#v}"
+
+if [[ -n "$LATEST_VERSION" ]]; then
+    echo "   Latest:  $LATEST_VERSION"
+
+    if [[ "$CURRENT_VERSION" == "$LATEST_VERSION" ]]; then
+        echo "   ✓ Already up to date"
+    elif ! version_is_newer "$LATEST_VERSION" "$CURRENT_VERSION"; then
+        echo "   ⚠ Latest release $LATEST_VERSION is not newer than $CURRENT_VERSION; leaving spec alone"
+    elif ! release_has_asset "$UPSTREAM_REPO" "$LATEST_TAG" "dank-greeter-${LATEST_VERSION}.tar.gz"; then
+        echo "   ⏳ Release $LATEST_TAG has no dank-greeter-${LATEST_VERSION}.tar.gz asset yet; retrying next run"
+    else
+        echo "   ✨ Update available: $CURRENT_VERSION → $LATEST_VERSION"
+
+        sed -i "s/^Version:\s\+.*/Version:        $LATEST_VERSION/" "$SPEC_FILE"
+        reset_release "$SPEC_FILE" "$LATEST_VERSION"
+
+        UPDATED=$((UPDATED + 1))
+        UPDATED_PACKAGES+=("dms-greeter: $CURRENT_VERSION → $LATEST_VERSION")
+    fi
+else
+    echo "   ⚠ Could not fetch latest version"
+fi
+
+# ============================================================================
+# DMS-GREETER-GIT (Latest Commit)
+# ============================================================================
+echo ""
+echo "📦 Checking dms-greeter-git (development)..."
+
+SPEC_FILE="dms-greeter/dms-greeter-git.spec"
+UPSTREAM_REPO="duxlabs-dev/dux-greeter"
+
+TAG_UPDATED=false
+STABLE_REL_TAG=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "release" 2>/dev/null || echo "")
+STABLE_REL_VER="${STABLE_REL_TAG#v}"
+if [[ -n "$STABLE_REL_VER" ]]; then
+    DESIRED_GIT_TAG=$(bump_patch_triplet "$STABLE_REL_VER")
+    CURRENT_GIT_TAG=$(grep -oP '^%global tag\s+\K[0-9.]+' "$SPEC_FILE" || echo "")
+
+    if [[ -n "$DESIRED_GIT_TAG" && "$CURRENT_GIT_TAG" != "$DESIRED_GIT_TAG" ]]; then
+        if version_is_newer "$DESIRED_GIT_TAG" "$CURRENT_GIT_TAG"; then
+            echo "   ✨ %global tag (ahead of stable $STABLE_REL_VER): $CURRENT_GIT_TAG → $DESIRED_GIT_TAG"
+            sed -i "s/^%global tag\s\+.*/%global tag         $DESIRED_GIT_TAG/" "$SPEC_FILE"
+            TAG_UPDATED=true
+            UPDATED=$((UPDATED + 1))
+            UPDATED_PACKAGES+=("dms-greeter-git: tag $CURRENT_GIT_TAG → $DESIRED_GIT_TAG")
+        else
+            echo "   ⚠ stable+patch $DESIRED_GIT_TAG is not newer than %global tag $CURRENT_GIT_TAG; keeping it"
+        fi
+    fi
+else
+    echo "   ⚠ Could not fetch stable release for tag sync (skipping %global tag bump)"
+fi
+
+CURRENT_COMMIT=$(grep -oP '^%global commit\s+\K[a-f0-9]+' "$SPEC_FILE" || echo "unknown")
+CURRENT_SNAPDATE=$(grep -oP '^%global snapdate\s+\K[0-9]+' "$SPEC_FILE" || echo "unknown")
+echo "   Current commit: ${CURRENT_COMMIT:0:7} (date: $CURRENT_SNAPDATE)"
+
+COMMIT_INFO=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "commit")
+IFS='|' read -r LATEST_COMMIT LATEST_SHORT_COMMIT LATEST_SNAPDATE <<< "$COMMIT_INFO"
+
+REPO_COMMIT_TOTAL=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "repo_commit_total" 2>/dev/null || echo "")
+
+if [[ -n "$LATEST_COMMIT" ]]; then
+    echo "   Latest commit:  ${LATEST_SHORT_COMMIT} (date: $LATEST_SNAPDATE)"
+
+    if [[ "$CURRENT_COMMIT" != "$LATEST_COMMIT" ]]; then
+        echo "   ✨ Update available: ${CURRENT_COMMIT:0:7} → ${LATEST_SHORT_COMMIT}"
+
+        if [[ -n "$REPO_COMMIT_TOTAL" && "$REPO_COMMIT_TOTAL" != "0" ]]; then
+            COMMIT_COUNT="$REPO_COMMIT_TOTAL"
+            echo "   Commit index (repo total, PPA-aligned): $COMMIT_COUNT"
+        else
+            CURRENT_COUNT=$(grep -oP '^%global commits\s+\K[0-9]+' "$SPEC_FILE" || echo "0")
+            COMPARE_DATA=$("$SCRIPT_DIR/../common/fetch-version.sh" "$UPSTREAM_REPO" "compare" "$CURRENT_COMMIT" "$LATEST_COMMIT" 2>/dev/null || echo "")
+            if [[ -n "$COMPARE_DATA" ]]; then
+                AHEAD=$(echo "$COMPARE_DATA" | jq -r '.ahead_by // 0')
+                COMMIT_COUNT=$((CURRENT_COUNT + AHEAD))
+            else
+                COMMIT_COUNT=$((CURRENT_COUNT + 1))
+            fi
+            echo "   Commit count: $COMMIT_COUNT (fallback delta from $CURRENT_COUNT)"
+        fi
+
+        # Submodule commit must be resolved before the spec is touched (Source1 must match Source0).
+        COMMON_COMMIT=$(curl -s ${GITHUB_TOKEN:+-H "Authorization: token $GITHUB_TOKEN"} \
+            "https://api.github.com/repos/$UPSTREAM_REPO/contents/dux-qml-common?ref=$LATEST_COMMIT" | jq -r '.sha // empty')
+        if [[ -z "$COMMON_COMMIT" ]]; then
+            echo "   ⚠ Could not resolve dux-qml-common submodule commit for $LATEST_COMMIT; retrying next run"
+        else
+            sed -i "s/^%global commit\s\+.*/%global commit      $LATEST_COMMIT/" "$SPEC_FILE"
+            sed -i "s/^%global commits\s\+.*/%global commits     $COMMIT_COUNT/" "$SPEC_FILE"
+            sed -i "s/^%global snapdate\s\+.*/%global snapdate    $LATEST_SNAPDATE/" "$SPEC_FILE"
+            sed -i "s/^%global common_commit\s\+.*/%global common_commit $COMMON_COMMIT/" "$SPEC_FILE"
+            echo "   dux-qml-common pinned: ${COMMON_COMMIT:0:7}"
+
+            UPDATED=$((UPDATED + 1))
+            UPDATED_PACKAGES+=("dms-greeter-git: ${CURRENT_COMMIT:0:7} → ${LATEST_SHORT_COMMIT}")
+        fi
+    else
+        if [[ -n "$REPO_COMMIT_TOTAL" && "$REPO_COMMIT_TOTAL" != "0" ]]; then
+            CURRENT_COUNT=$(grep -oP '^%global commits\s+\K[0-9]+' "$SPEC_FILE" || echo "0")
+            if [[ "$CURRENT_COUNT" != "$REPO_COMMIT_TOTAL" ]]; then
+                echo "   ✨ Resync commit index: $CURRENT_COUNT → $REPO_COMMIT_TOTAL (PPA/GitHub total)"
+                sed -i "s/^%global commits\s\+.*/%global commits     $REPO_COMMIT_TOTAL/" "$SPEC_FILE"
+                UPDATED=$((UPDATED + 1))
+                UPDATED_PACKAGES+=("dms-greeter-git: commit index → $REPO_COMMIT_TOTAL")
+            fi
+        fi
+        if [[ "$TAG_UPDATED" == true ]]; then
+            echo "   ✓ Latest commit; %global tag synced to stable+patch"
+        else
+            echo "   ✓ Already up to date"
+        fi
+    fi
+else
+    echo "   ⚠ Could not fetch latest commit"
+fi
 
 # ============================================================================
 # MATERIAL SYMBOLS FONTS (rarely updates)
@@ -870,6 +1017,8 @@ if [[ -n "${COPR_REBUILD_COUNT:-}" || -n "${COPR_REBUILD_PACKAGE:-}" ]]; then
         distro/fedora/dankcalendar/dankcalendar-git.spec
         distro/fedora/dux-files/dux-files.spec
         distro/fedora/dux-files/dux-files-git.spec
+        distro/fedora/dms-greeter/dms-greeter.spec
+        distro/fedora/dms-greeter/dms-greeter-git.spec
     )
 
     case "${COPR_REBUILD_PACKAGE}" in
@@ -889,6 +1038,8 @@ if [[ -n "${COPR_REBUILD_COUNT:-}" || -n "${COPR_REBUILD_PACKAGE:-}" ]]; then
         dankcalendar-git) _copr_bump_spec_release distro/fedora/dankcalendar/dankcalendar-git.spec ;;
         dux-files) _copr_bump_spec_release distro/fedora/dux-files/dux-files.spec ;;
         dux-files-git) _copr_bump_spec_release distro/fedora/dux-files/dux-files-git.spec ;;
+        dms-greeter) _copr_bump_spec_release distro/fedora/dms-greeter/dms-greeter.spec ;;
+        dms-greeter-git) _copr_bump_spec_release distro/fedora/dms-greeter/dms-greeter-git.spec ;;
         all)
             for rel in "${ALL_SPECS_BUMP[@]}"; do
                 _copr_bump_spec_release "$rel"

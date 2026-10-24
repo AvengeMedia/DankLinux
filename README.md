@@ -201,7 +201,7 @@ All packages support:
 ## Package Variants
 
 - **Stable packages** (`dms`, `niri`, `matugen`, `cliphist`, `dms-greeter`) - Tagged releases
-- **Git packages** (`dms-git`, `niri-git`, `quickshell-git`, `dms-greeter-git`) - Latest development code, updated daily
+- **Git packages** (`dms-git`, `niri-git`, `quickshell-git`, `dms-greeter-git`) - Latest development code, rebuilt every 6 hours when upstream changes
 
 ## Getting Started
 
@@ -212,7 +212,7 @@ All packages support:
 ## Upstream Projects
 
 - [Dux Shell](https://github.com/duxlabs-dev/dux-shell) - DMS desktop environment
-- [dank-greeter](https://github.com/duxlabs-dev/dux-greeter) - greetd greeter (`dms-greeter` / `dms-greeter-git`), published into danklinux Copr/OBS/PPA/Void
+- [Dux Greeter](https://github.com/duxlabs-dev/dux-greeter) - greetd greeter (`dms-greeter` / `dms-greeter-git`); Copr, OBS, PPA and Void packages are built from this repo
 - [Niri](https://github.com/YaLTeR/niri) - Scrollable-tiling Wayland compositor  
 - [Quickshell](https://github.com/outfoxxed/quickshell) - QtQuick desktop shell toolkit  
 - [Matugen](https://github.com/InioX/matugen) - Material You color generator  

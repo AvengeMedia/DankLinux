@@ -196,6 +196,8 @@ detect_version_type() {
 normalize_version() {
     local version="$1"
 
+    # Drop a Debian epoch ("1:") if the version was read from a .dsc
+    version="${version#*:}"
     strip_db_suffixes "$version"
 }
 

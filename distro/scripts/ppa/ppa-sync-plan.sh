@@ -31,6 +31,13 @@ PACKAGES=(
     "dux-files-git:duxlabs-dev/dux-files:git"
     "danksearch:duxlabs-dev/dux-search:release"
     "dgop:duxlabs-dev/dux-gop:release"
+    "dms-greeter:duxlabs-dev/dux-greeter:release"
+    "dms-greeter-git:duxlabs-dev/dux-greeter:git"
+)
+
+# Release assets that must exist before a stable upload is planned ("<package>:<asset with {version}>").
+RELEASE_REQUIRED_ASSETS=(
+    "dms-greeter:dank-greeter-{version}.tar.gz"
 )
 
 while [[ $# -gt 0 ]]; do
@@ -98,8 +105,29 @@ used_ppa_numbers() {
     done
 }
 
+# Published version -> upstream version (drops epoch, ppaN and -N).
 release_base() {
-    echo "$1" | sed -E 's/ppa[0-9]+$//' | sed -E 's/-[0-9]+$//'
+    echo "$1" | sed -E 's/^[0-9]+://' | sed -E 's/ppa[0-9]+$//' | sed -E 's/-[0-9]+$//'
+}
+
+# True when every required release asset is attached.
+release_assets_available() {
+    local package="$1"
+    local repo="$2"
+    local version="$3"
+    local entry asset_template asset names
+
+    for entry in "${RELEASE_REQUIRED_ASSETS[@]}"; do
+        [[ "${entry%%:*}" == "$package" ]] || continue
+        asset_template="${entry#*:}"
+        asset="${asset_template//\{version\}/$version}"
+        names="$(gh_curl "https://api.github.com/repos/${repo}/releases/tags/v${version}" 2>/dev/null | jq -r '.assets[].name' 2>/dev/null || true)"
+        if ! grep -qxF "$asset" <<< "$names"; then
+            echo "${package}: release v${version} is missing asset ${asset}; retrying next run" >&2
+            return 1
+        fi
+    done
+    return 0
 }
 
 ppa_suffix() {
@@ -233,6 +261,12 @@ for pkg_info in "${PACKAGES[@]}"; do
         if [[ "$needs_update" != "true" ]] && rebuild_release_is_newer "$series" "$ppa_version"; then
             needs_update=true
             reason="rebuild ppa$(ppa_suffix "$ppa_version") -> ppa$(target_ppa "$series")"
+        fi
+
+        if [[ "$needs_update" == "true" && "$type" == "release" ]]; then
+            if ! release_assets_available "$package" "$repo" "$expected_base"; then
+                continue
+            fi
         fi
 
         if [[ "$needs_update" == "true" ]]; then

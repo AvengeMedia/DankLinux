@@ -120,6 +120,8 @@ BUILD_DANKCALENDAR=false
 BUILD_DANKCALENDAR_GIT=false
 BUILD_DUX_FILES=false
 BUILD_DUX_FILES_GIT=false
+BUILD_DMS_GREETER=false
+BUILD_DMS_GREETER_GIT=false
 BUILD_CLI11=false
 BUILD_QT6CT_KDE=false
 BUILD_GREETD=false
@@ -144,6 +146,8 @@ if [[ "${FORCE_PACKAGE:-}" == "all" ]]; then
     BUILD_DANKCALENDAR_GIT=true
     BUILD_DUX_FILES=true
     BUILD_DUX_FILES_GIT=true
+    BUILD_DMS_GREETER=true
+    BUILD_DMS_GREETER_GIT=true
     BUILD_CLI11=true
     BUILD_QT6CT_KDE=true
     BUILD_GREETD=true
@@ -208,6 +212,15 @@ if echo "$CHANGED_FILES" | grep -q "distro/fedora/dux-files/dux-files-git.spec";
     BUILD_DUX_FILES_GIT=true
 fi
 
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/dms-greeter/dms-greeter.spec"; then
+    BUILD_DMS_GREETER=true
+fi
+
+# -git spec changes only rebuild -git (stable has its own spec)
+if echo "$CHANGED_FILES" | grep -q "distro/fedora/dms-greeter/dms-greeter-git.spec"; then
+    BUILD_DMS_GREETER_GIT=true
+fi
+
 # New CLI11 package
 if echo "$CHANGED_FILES" | grep -q "distro/fedora/cli11/cli11.spec"; then
     BUILD_CLI11=true
@@ -237,9 +250,6 @@ if echo "$CHANGED_FILES" | grep -q "distro/fedora/xwayland-satellite/xwayland-sa
     BUILD_XWAYLAND_SATELLITE=true
 fi
 
-# Note: dms-greeter / dms-greeter-git build from https://github.com/duxlabs-dev/dux-greeter
-# and are published into avengemedia/danklinux by that repo's CI
-
 # If no git history, check for uncommitted changes
 if [[ -z "$CHANGED_FILES" ]]; then
     echo "ℹ️  No git history found, checking for uncommitted changes..."
@@ -258,6 +268,8 @@ if [[ -z "$CHANGED_FILES" ]]; then
     echo "$UNCOMMITTED" | grep -q "distro/fedora/dankcalendar/dankcalendar-git.spec" && BUILD_DANKCALENDAR_GIT=true
     echo "$UNCOMMITTED" | grep -q "distro/fedora/dux-files/dux-files.spec" && BUILD_DUX_FILES=true
     echo "$UNCOMMITTED" | grep -q "distro/fedora/dux-files/dux-files-git.spec" && BUILD_DUX_FILES_GIT=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/dms-greeter/dms-greeter.spec" && BUILD_DMS_GREETER=true
+    echo "$UNCOMMITTED" | grep -q "distro/fedora/dms-greeter/dms-greeter-git.spec" && BUILD_DMS_GREETER_GIT=true
 
     # New CLI11 package
     echo "$UNCOMMITTED" | grep -q "distro/fedora/cli11/cli11.spec" && BUILD_CLI11=true
@@ -323,6 +335,14 @@ fi
 
 if [[ "$BUILD_DUX_FILES_GIT" == true ]] || [[ "$FORCE_PACKAGE" == "dux-files-git" ]]; then
     trigger_build "dux-files-git" "distro/fedora/dux-files/dux-files-git.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+fi
+
+if [[ "$BUILD_DMS_GREETER" == true ]] || [[ "$FORCE_PACKAGE" == "dms-greeter" ]]; then
+    trigger_build "dms-greeter" "distro/fedora/dms-greeter/dms-greeter.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
+fi
+
+if [[ "$BUILD_DMS_GREETER_GIT" == true ]] || [[ "$FORCE_PACKAGE" == "dms-greeter-git" ]]; then
+    trigger_build "dms-greeter-git" "distro/fedora/dms-greeter/dms-greeter-git.spec" && BUILDS_TRIGGERED=$((BUILDS_TRIGGERED + 1))
 fi
 
 if [[ "$BUILD_CLI11" == true ]] || [[ "$FORCE_PACKAGE" == "cli11" ]]; then

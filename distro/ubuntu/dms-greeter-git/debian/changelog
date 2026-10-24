@@ -1,0 +1,7 @@
+dms-greeter-git (1:2.0.0+git96.920def34ppa2) resolute; urgency=medium
+
+  * Packaging moved from dux-greeter to dux-packaging; version mirrors the
+    currently published PPA upload. ppa-upload.sh rewrites this stanza with
+    the current git snapshot version on each upload.
+
+ -- Avenge Media <AvengeMedia.US@gmail.com>  Fri, 24 Oct 2026 00:00:00 +0000

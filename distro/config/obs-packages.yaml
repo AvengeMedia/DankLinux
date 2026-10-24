@@ -139,6 +139,24 @@ packages:
       directory_name: "dux-files-{version}"
       compression: gz
 
+  dms-greeter:
+    type: stable
+    upstream:
+      repo: duxlabs-dev/dux-greeter
+      source_type: github_release
+    distros:
+      - debian
+      - opensuse
+    build:
+      language: go
+      # Release binaries already embed the UI; no Go build on OBS.
+      binary_release: true
+      # Must match the epoch already published for this package.
+      debian_epoch: 1
+    tarball:
+      directory_name: "dms-greeter-{version}"
+      compression: gz
+
   ghostty:
     type: stable
     upstream:
@@ -329,6 +347,7 @@ packages:
       language: go
       go_version: "1.25"
       vendor_deps: true
+      bundle_go_toolchain: true
     tarball:
       directory_name: "dankcalendar"
       compression: gz
@@ -349,8 +368,30 @@ packages:
       language: go
       go_version: "1.27"
       vendor_deps: true
+      bundle_go_toolchain: true
     tarball:
       directory_name: "dux-files"
+      compression: gz
+
+  dms-greeter-git:
+    type: git
+    upstream:
+      repo: duxlabs-dev/dux-greeter
+      branch: master
+    base_version:
+      from_stable: dms-greeter
+      fallback: "1.0.0"
+    distros:
+      - debian
+      - opensuse
+    build:
+      language: go
+      go_version: "1.27"
+      vendor_deps: true
+      bundle_go_toolchain: true
+      debian_epoch: 1
+    tarball:
+      directory_name: "dms-greeter-git-source"
       compression: gz
 
 # ============================================================================
@@ -401,6 +442,7 @@ groups:
     - danksearch
     - dankcalendar
     - dux-files
+    - dms-greeter
     - dgop
     - ghostty
     - matugen
@@ -416,11 +458,13 @@ groups:
     - xwayland-satellite-git
     - dankcalendar-git
     - dux-files-git
+    - dms-greeter-git
 
   all:
     - danksearch
     - dankcalendar
     - dux-files
+    - dms-greeter
     - dgop
     - ghostty
     - matugen
@@ -434,6 +478,7 @@ groups:
     - xwayland-satellite-git
     - dankcalendar-git
     - dux-files-git
+    - dms-greeter-git
 
   debian-only:
     - niri  # niri stable is Debian-only; OpenSUSE uses niri-git
@@ -458,6 +503,8 @@ groups:
     - dgop
     - dankcalendar-git
     - dux-files-git
+    - dms-greeter
+    - dms-greeter-git
 
   cpp-packages:
     - quickshell
@@ -469,4 +516,5 @@ groups:
     - danksearch
     - dankcalendar
     - dux-files
+    - dms-greeter
     - dgop

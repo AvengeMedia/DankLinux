@@ -104,6 +104,13 @@ packages:
 2. Create `debian/<package>/debian/` and `opensuse/<package>.spec`
 3. Run `./obs-orchestrator.sh <package>`
 
+**Package options (`build:` in obs-packages.yaml):**
+
+- `vendor_deps: true` — vendor Go/Rust dependencies into the source tarball (OBS builds are offline)
+- `bundle_go_toolchain: true` — download go.dev tarballs (version from upstream `core/go.mod`) into `.go-toolchain/{amd64,arm64}/go`; `debian/rules` and the spec put `.go-toolchain/<arch>/go/bin` on `PATH`
+- `binary_release: true` — download prebuilt `<pkg>-linux-{amd64,arm64}.gz` release assets instead of building (`binary_template` overrides the name)
+- `debian_epoch: N` — emit `N:` in `debian/changelog` versions (packages that already carry an epoch, e.g. dms-greeter)
+
 ## Version Format
 
 **Git:** `BASE+gitCOUNT.HASH[.dbN]` (e.g., `25.11+git2576.7c089857.db2`)
@@ -120,8 +127,8 @@ Same source, incremented `.db` suffix. Use for packaging fixes, dependency updat
 
 ## Packages
 
-**Stable:** dankcalendar, danksearch, dgop, dux-files, ghostty, matugen, niri (Debian), quickshell, xwayland-satellite
-**Git:** dankcalendar-git, dux-files-git, niri-git, quickshell-git, xwayland-satellite-git
+**Stable:** dankcalendar, danksearch, dgop, dms-greeter, dux-files, ghostty, matugen, niri (Debian), quickshell, xwayland-satellite
+**Git:** dankcalendar-git, dms-greeter-git, dux-files-git, niri-git, quickshell-git, xwayland-satellite-git
 **Snapshot (stable):** quickshell (stable) uses [snapshots.yaml](../../snapshots.yaml) to track the upstream commit until a newer release than `base_version` appears.
 
 ## Testing

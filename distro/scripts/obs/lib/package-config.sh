@@ -210,6 +210,31 @@ requires_vendor_deps() {
     fi
 }
 
+# Debian epoch for package (empty when none)
+get_debian_epoch() {
+    local package="$1"
+    local config=$(load_package_config "$package")
+
+    local epoch=$(echo "$config" | yq eval '.build.debian_epoch // ""' -)
+    if [[ "$epoch" =~ ^[0-9]+$ ]]; then
+        echo "$epoch"
+    fi
+}
+
+# Whether the package bundles a Go toolchain into .go-toolchain/ for offline builds
+bundles_go_toolchain() {
+    local package="$1"
+    local config=$(load_package_config "$package")
+
+    local bundle=$(echo "$config" | yq eval '.build.bundle_go_toolchain // false' -)
+
+    if [[ "$bundle" == "true" ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 # Get tarball directory name template
 get_tarball_directory() {
     local package="$1"

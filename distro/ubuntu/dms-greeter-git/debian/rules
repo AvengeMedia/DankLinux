@@ -1,0 +1,65 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+
+DEB_VERSION := $(shell dpkg-parsechangelog -S Version)
+UPSTREAM_VERSION := $(shell echo $(DEB_VERSION) | sed 's/^[0-9]*://; s/ppa[0-9]*$$//')
+COMMIT_HASH := $(shell echo $(UPSTREAM_VERSION) | sed -n 's/.*\.\([a-f0-9]\{7,8\}\)$$/\1/p')
+SRCDIR := dms-greeter-git-source
+
+DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
+GO_HOST_ARCH := $(if $(filter arm64,$(DEB_HOST_ARCH)),arm64,amd64)
+# Bundled Go toolchain (Launchpad is offline)
+export PATH := $(CURDIR)/$(SRCDIR)/.go-toolchain/$(GO_HOST_ARCH)/go/bin:$(PATH)
+
+# Go needs writable directories for its caches
+export HOME := $(CURDIR)/debian/tmp-home
+export GOCACHE := $(CURDIR)/debian/tmp-home/go-cache
+export GOMODCACHE := $(CURDIR)/debian/tmp-home/go-mod
+
+# Launchpad has no network access: dependencies are vendored in the source
+# and the Go toolchain is bundled (distro golang-go lags go.mod)
+export GOTOOLCHAIN := local
+export GOFLAGS := -mod=vendor
+
+%:
+	dh $@
+
+override_dh_auto_test:
+	@echo "Skipping dh_auto_test (Launchpad offline; tests run in CI)"
+
+override_dh_auto_build:
+	mkdir -p $(HOME) $(GOCACHE) $(GOMODCACHE)
+
+	test -d $(SRCDIR)/core || (echo "ERROR: $(SRCDIR)/core not found!" && exit 1)
+	test -d $(SRCDIR)/core/vendor || (echo "ERROR: vendored Go dependencies missing!" && exit 1)
+	test -e $(SRCDIR)/quickshell/DCommon/Widgets/DIcon.qml || (echo "ERROR: DCommon missing!" && exit 1)
+
+	test -x $(SRCDIR)/.go-toolchain/$(GO_HOST_ARCH)/go/bin/go || (echo "ERROR: Missing bundled Go toolchain for $(GO_HOST_ARCH)" && exit 1)
+	go version
+	$(MAKE) -C $(SRCDIR)/core build VERSION="$(UPSTREAM_VERSION)" COMMIT="$(COMMIT_HASH)"
+
+override_dh_auto_install:
+	install -Dm755 $(SRCDIR)/core/bin/dms-greeter debian/dms-greeter-git/usr/bin/dms-greeter
+
+	install -d debian/dms-greeter-git/usr/share/bash-completion/completions
+	install -d debian/dms-greeter-git/usr/share/zsh/vendor-completions
+	install -d debian/dms-greeter-git/usr/share/fish/vendor_completions.d
+	$(SRCDIR)/core/bin/dms-greeter completion bash > debian/dms-greeter-git/usr/share/bash-completion/completions/dms-greeter
+	$(SRCDIR)/core/bin/dms-greeter completion zsh > debian/dms-greeter-git/usr/share/zsh/vendor-completions/_dms-greeter
+	$(SRCDIR)/core/bin/dms-greeter completion fish > debian/dms-greeter-git/usr/share/fish/vendor_completions.d/dms-greeter.fish
+
+	install -Dpm0644 $(SRCDIR)/assets/systemd/sysusers-dms-greeter.conf \
+		debian/dms-greeter-git/usr/lib/sysusers.d/dms-greeter.conf
+	install -Dpm0644 $(SRCDIR)/assets/systemd/tmpfiles-dms-greeter.conf \
+		debian/dms-greeter-git/usr/lib/tmpfiles.d/dms-greeter.conf
+
+	install -Dm644 $(SRCDIR)/README.md debian/dms-greeter-git/usr/share/doc/dms-greeter/README.md
+	install -Dm644 $(SRCDIR)/LICENSE debian/dms-greeter-git/usr/share/doc/dms-greeter/LICENSE
+	install -d debian/dms-greeter-git/usr/share/doc/dms-greeter/examples
+	install -m644 $(SRCDIR)/assets/examples/* debian/dms-greeter-git/usr/share/doc/dms-greeter/examples/
+
+override_dh_auto_clean:
+	rm -rf $(SRCDIR)/core/bin $(SRCDIR)/core/internal/shellembed/dist
+	rm -rf debian/tmp-home
+	dh_auto_clean

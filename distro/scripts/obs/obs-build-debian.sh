@@ -236,7 +236,7 @@ EOF
         fi
         log_success "Go dependencies vendored"
 
-        if [[ "$PACKAGE" == "dankcalendar-git" || "$PACKAGE" == "dux-files-git" ]]; then
+        if bundles_go_toolchain "$PACKAGE"; then
             go_ver=$(go_toolchain_version "$SOURCE_DIR/core/go.mod" || true)
             if [[ -z "$go_ver" ]]; then
                 log_error "Could not resolve a Go toolchain release from core/go.mod"
@@ -254,6 +254,7 @@ EOF
                 fi
                 mkdir -p "$SOURCE_DIR/.go-toolchain/${arch}"
                 tar -C "$SOURCE_DIR/.go-toolchain/${arch}" -xzf "$go_dest"
+                rm -f "$go_dest"
             done
             log_success "Go toolchain bundled for amd64 and arm64"
         fi
@@ -618,9 +619,16 @@ log_info "Updating debian/changelog to version $VERSION..."
 CHANGELOG="$SOURCE_DIR/debian/changelog"
 SOURCE_NAME=$(head -1 "$CHANGELOG" | cut -d' ' -f1)
 
+# Debian epoch must match what is already published or dpkg sorts the new version below the old.
+DEB_EPOCH=$(get_debian_epoch "$PACKAGE")
+DEB_VERSION="${DEB_EPOCH:+$DEB_EPOCH:}$VERSION"
+if [[ -n "$DEB_EPOCH" ]]; then
+    log_info "Debian epoch: $DEB_EPOCH (changelog version $DEB_VERSION)"
+fi
+
 TEMP_CHANGELOG=$(mktemp)
 {
-    echo "$SOURCE_NAME ($VERSION) unstable; urgency=medium"
+    echo "$SOURCE_NAME ($DEB_VERSION) unstable; urgency=medium"
     echo ""
     if [[ -n "$REBUILD_NUM" ]]; then
         echo "  * Rebuild #$REBUILD_NUM"

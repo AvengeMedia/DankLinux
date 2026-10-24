@@ -1,0 +1,1 @@
+# ppa-upload.sh stages dms-greeter-git-source/ (checkout + submodule + vendor + Go toolchain) before debuild.

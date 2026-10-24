@@ -1,0 +1,61 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+
+# Go needs writable directories for its caches
+export HOME := $(CURDIR)/debian/tmp-home
+export GOCACHE := $(CURDIR)/debian/tmp-home/go-cache
+export GOMODCACHE := $(CURDIR)/debian/tmp-home/go-mod
+
+# Offline build: core/vendor and .go-toolchain/<arch>/go are staged into the source tarball
+export GOTOOLCHAIN := local
+export GOFLAGS := -mod=vendor
+
+DEB_VERSION := $(shell dpkg-parsechangelog -S Version)
+# Strip epoch and .dbN suffix
+UPSTREAM_VERSION := $(shell echo $(DEB_VERSION) | sed 's/^[0-9]*://; s/\.db[0-9]*$$//')
+COMMIT_HASH := $(shell echo $(UPSTREAM_VERSION) | sed -n 's/.*\.\([a-f0-9]\{8\}\)$$/\1/p')
+
+DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
+GO_HOST_ARCH := $(if $(filter arm64,$(DEB_HOST_ARCH)),arm64,amd64)
+export PATH := $(CURDIR)/.go-toolchain/$(GO_HOST_ARCH)/go/bin:$(PATH)
+
+%:
+	dh $@
+
+# Tests run in upstream CI
+override_dh_auto_test:
+	@echo "Skipping dh_auto_test (tests run in CI)"
+
+override_dh_auto_build:
+	mkdir -p $(HOME) $(GOCACHE) $(GOMODCACHE)
+	test -d core || (echo "ERROR: core directory not found!" && exit 1)
+	test -d core/vendor || (echo "ERROR: vendored Go dependencies missing!" && exit 1)
+	test -e quickshell/DCommon/Widgets/DIcon.qml || (echo "ERROR: DCommon missing!" && exit 1)
+	go version
+	$(MAKE) -C core build VERSION="$(UPSTREAM_VERSION)" COMMIT="$(if $(COMMIT_HASH),$(COMMIT_HASH),unknown)"
+
+override_dh_auto_install:
+	install -Dm755 core/bin/dms-greeter debian/dms-greeter-git/usr/bin/dms-greeter
+
+	install -d debian/dms-greeter-git/usr/share/bash-completion/completions
+	install -d debian/dms-greeter-git/usr/share/zsh/vendor-completions
+	install -d debian/dms-greeter-git/usr/share/fish/vendor_completions.d
+	core/bin/dms-greeter completion bash > debian/dms-greeter-git/usr/share/bash-completion/completions/dms-greeter
+	core/bin/dms-greeter completion zsh > debian/dms-greeter-git/usr/share/zsh/vendor-completions/_dms-greeter
+	core/bin/dms-greeter completion fish > debian/dms-greeter-git/usr/share/fish/vendor_completions.d/dms-greeter.fish
+
+	install -Dpm0644 assets/systemd/sysusers-dms-greeter.conf \
+		debian/dms-greeter-git/usr/lib/sysusers.d/dms-greeter.conf
+	install -Dpm0644 assets/systemd/tmpfiles-dms-greeter.conf \
+		debian/dms-greeter-git/usr/lib/tmpfiles.d/dms-greeter.conf
+
+	install -Dm644 README.md debian/dms-greeter-git/usr/share/doc/dms-greeter/README.md
+	install -Dm644 LICENSE debian/dms-greeter-git/usr/share/doc/dms-greeter/LICENSE
+	install -d debian/dms-greeter-git/usr/share/doc/dms-greeter/examples
+	install -m644 assets/examples/* debian/dms-greeter-git/usr/share/doc/dms-greeter/examples/
+
+# Never remove .go-toolchain in clean; dpkg-buildpackage cleans before build
+override_dh_auto_clean:
+	rm -rf core/bin core/internal/shellembed/dist debian/tmp-home
+	dh_auto_clean

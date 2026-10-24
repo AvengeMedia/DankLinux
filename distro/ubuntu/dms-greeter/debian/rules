@@ -1,0 +1,69 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+
+DEB_VERSION := $(shell dpkg-parsechangelog -S Version)
+UPSTREAM_VERSION := $(shell echo $(DEB_VERSION) | sed 's/^[0-9]*://; s/ppa[0-9]*$$//')
+SRCDIR := dank-greeter-$(UPSTREAM_VERSION)
+
+DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
+
+# Go needs writable directories for its caches
+export HOME := $(CURDIR)/debian/tmp-home
+export GOCACHE := $(CURDIR)/debian/tmp-home/go-cache
+export GOMODCACHE := $(CURDIR)/debian/tmp-home/go-mod
+
+# Launchpad has no network access: dependencies are vendored in the source
+# and the Go toolchain is bundled (distro golang-go lags go.mod)
+export GOTOOLCHAIN := local
+export GOFLAGS := -mod=vendor
+
+%:
+	dh $@
+
+override_dh_auto_test:
+	@echo "Skipping dh_auto_test (Launchpad offline; tests run in CI)"
+
+override_dh_auto_build:
+	mkdir -p $(HOME) $(GOCACHE) $(GOMODCACHE)
+
+	test -f dms-greeter-source.tar.gz || (echo "ERROR: dms-greeter-source.tar.gz not found!" && exit 1)
+	tar -xzf dms-greeter-source.tar.gz
+	test -d $(SRCDIR)/core/vendor || (echo "ERROR: vendored Go dependencies missing!" && exit 1)
+
+	# Bundled Go (go$$VER.linux-{amd64,arm64}.tar.gz), staged by ppa-upload.sh
+	GO_TARBALL=$$(ls "$(CURDIR)"/go[0-9]*.linux-$(DEB_HOST_ARCH).tar.gz 2>/dev/null | head -n1); \
+	test -f "$$GO_TARBALL" || (echo "ERROR: Missing bundled Go toolchain for $(DEB_HOST_ARCH)" && exit 1); \
+	rm -rf "$(CURDIR)/go-bootstrap" "$(CURDIR)/.go-toolchain"; \
+	mkdir -p "$(CURDIR)/go-bootstrap"; \
+	tar -xzf "$$GO_TARBALL" -C "$(CURDIR)/go-bootstrap"; \
+	mv "$(CURDIR)/go-bootstrap/go" "$(CURDIR)/.go-toolchain"; \
+	export PATH="$(CURDIR)/.go-toolchain/bin:$$PATH"; \
+	export GOROOT="$(CURDIR)/.go-toolchain"; \
+	go version; \
+	$(MAKE) -C $(SRCDIR)/core build VERSION="$(UPSTREAM_VERSION)" COMMIT=release
+
+override_dh_auto_install:
+	install -Dm755 $(SRCDIR)/core/bin/dms-greeter debian/dms-greeter/usr/bin/dms-greeter
+
+	install -d debian/dms-greeter/usr/share/bash-completion/completions
+	install -d debian/dms-greeter/usr/share/zsh/vendor-completions
+	install -d debian/dms-greeter/usr/share/fish/vendor_completions.d
+	$(SRCDIR)/core/bin/dms-greeter completion bash > debian/dms-greeter/usr/share/bash-completion/completions/dms-greeter
+	$(SRCDIR)/core/bin/dms-greeter completion zsh > debian/dms-greeter/usr/share/zsh/vendor-completions/_dms-greeter
+	$(SRCDIR)/core/bin/dms-greeter completion fish > debian/dms-greeter/usr/share/fish/vendor_completions.d/dms-greeter.fish
+
+	install -Dpm0644 $(SRCDIR)/assets/systemd/sysusers-dms-greeter.conf \
+		debian/dms-greeter/usr/lib/sysusers.d/dms-greeter.conf
+	install -Dpm0644 $(SRCDIR)/assets/systemd/tmpfiles-dms-greeter.conf \
+		debian/dms-greeter/usr/lib/tmpfiles.d/dms-greeter.conf
+
+	install -Dm644 $(SRCDIR)/README.md debian/dms-greeter/usr/share/doc/dms-greeter/README.md
+	install -Dm644 $(SRCDIR)/LICENSE debian/dms-greeter/usr/share/doc/dms-greeter/LICENSE
+	install -d debian/dms-greeter/usr/share/doc/dms-greeter/examples
+	install -m644 $(SRCDIR)/assets/examples/* debian/dms-greeter/usr/share/doc/dms-greeter/examples/
+
+override_dh_auto_clean:
+	rm -rf dank-greeter-*
+	rm -rf debian/tmp-home go-bootstrap .go-toolchain
+	dh_auto_clean

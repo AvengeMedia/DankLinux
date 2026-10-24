@@ -1,0 +1,3 @@
+# Include the release source tarball normally excluded by .gitignore patterns;
+# Launchpad builds have no network access
+tar-ignore = !dms-greeter-source.tar.gz
