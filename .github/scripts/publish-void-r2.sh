@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Download / publish an XBPS repository prefix on Cloudflare R2.
-# Shared by dux-shell and dux-packaging (same prefix); keep both copies identical.
+# Shared by dux-shell and dux-repo (same prefix); keep both copies identical.
 # ETag guard: publish aborts if another writer replaced x86_64-repodata mid-run.
 
 set -euo pipefail

@@ -5,7 +5,7 @@ set -euo pipefail
 COPR_OWNER="avengemedia"
 COPR_PROJECT="danklinux"
 # The SCM default source method of the existing packages
-COPR_CLONE_URL="https://github.com/duxlabs-dev/dux-packaging.git"
+COPR_CLONE_URL="https://github.com/duxlabs-dev/dux-repo.git"
 
 if ! command -v copr-cli &> /dev/null; then
     echo "❌ copr-cli not found. Install with: sudo dnf install copr-cli" >&2

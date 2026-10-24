@@ -9,8 +9,8 @@
 
   Built with [Quickshell](https://quickshell.org/) and [Go](https://go.dev/)
 
-[![GitHub stars](https://img.shields.io/github/stars/duxlabs-dev/dux-packaging?style=for-the-badge&labelColor=101418&color=ffd700)](https://github.com/duxlabs-dev/dux-packaging/stargazers)
-[![GitHub License](https://img.shields.io/github/license/duxlabs-dev/dux-packaging?style=for-the-badge&labelColor=101418&color=b9c8da)](https://github.com/duxlabs-dev/dux-packaging/blob/master/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/duxlabs-dev/dux-repo?style=for-the-badge&labelColor=101418&color=ffd700)](https://github.com/duxlabs-dev/dux-repo/stargazers)
+[![GitHub License](https://img.shields.io/github/license/duxlabs-dev/dux-repo?style=for-the-badge&labelColor=101418&color=b9c8da)](https://github.com/duxlabs-dev/dux-repo/blob/master/LICENSE)
 [![OBS Build](https://img.shields.io/badge/OBS-building-success?style=for-the-badge&labelColor=101418&color=73ba25&logo=opensuse)](https://build.opensuse.org/project/show/home:AvengeMedia:danklinux)
 [![Ko-Fi donate](https://img.shields.io/badge/donate-kofi?style=for-the-badge&logo=ko-fi&logoColor=ffffff&label=ko-fi&labelColor=101418&color=f16061)](https://ko-fi.com/avengemediallc)
 
@@ -247,7 +247,7 @@ Debian and Ubuntu get the same treatment from `Rebuild for Debian/Ubuntu Qt upda
 
 Packaging specs and automation maintained in this repository.
 
-- **Packaging issues**: [GitHub Issues](https://github.com/duxlabs-dev/dux-packaging/issues)  
+- **Packaging issues**: [GitHub Issues](https://github.com/duxlabs-dev/dux-repo/issues)  
 - **Upstream bugs**: Report to respective project repositories
 
 ## License

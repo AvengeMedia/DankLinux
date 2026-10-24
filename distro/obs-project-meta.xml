@@ -11,7 +11,7 @@
   <title>Dux Labs Repository</title>
   <description>The Dux Labs Repository can be used to install standalone packages or core dependencies for the Dux Shell desktop environment like dgop, danksearch, ghostty, matugen, niri, xwayland-satellite and quickshell. 
 
-https://github.com/duxlabs-dev/dux-packaging</description>
+https://github.com/duxlabs-dev/dux-repo</description>
   <url>https://duxlabs.dev/docs/packaging/</url>
   <person userid="AvengeMedia" role="maintainer"/>
   <repository name="openSUSE_Tumbleweed">
